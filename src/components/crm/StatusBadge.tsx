@@ -2,20 +2,36 @@ import { cn } from '@/lib/utils';
 
 type StatusType = 
   | 'active' | 'inactive'
-  | 'new' | 'contacted' | 'qualified' | 'unqualified' | 'converted'
+  // Contact statuses
+  | 'client' | 'lead' | 'not-interested' | 'left-voicemail' | 'sent-email' | 'contact-later' | 'contacted' | 'appointment-set'
+  // Lead status
+  | 'new' | 'qualified' | 'unqualified' | 'converted'
+  // Account type
   | 'customer' | 'partner' | 'prospect'
+  // Deal stage
   | 'prospecting' | 'qualification' | 'proposal' | 'negotiation' | 'closed-won' | 'closed-lost'
+  // Task status
   | 'not-started' | 'in-progress' | 'completed' | 'deferred'
+  // Priority
   | 'low' | 'medium' | 'high' | 'urgent';
 
 const statusStyles: Record<StatusType, string> = {
-  // Contact status
+  // Legacy contact status
   active: 'bg-success/10 text-success border-success/20',
   inactive: 'bg-muted text-muted-foreground border-muted',
   
+  // New contact statuses
+  client: 'bg-success/10 text-success border-success/20',
+  lead: 'bg-primary/10 text-primary border-primary/20',
+  'not-interested': 'bg-muted text-muted-foreground border-muted',
+  'left-voicemail': 'bg-warning/10 text-warning border-warning/20',
+  'sent-email': 'bg-chart-4/10 text-chart-4 border-chart-4/20',
+  'contact-later': 'bg-warning/10 text-warning border-warning/20',
+  contacted: 'bg-success/10 text-success border-success/20',
+  'appointment-set': 'bg-chart-4/10 text-chart-4 border-chart-4/20',
+  
   // Lead status
   new: 'bg-primary/10 text-primary border-primary/20',
-  contacted: 'bg-warning/10 text-warning border-warning/20',
   qualified: 'bg-success/10 text-success border-success/20',
   unqualified: 'bg-muted text-muted-foreground border-muted',
   converted: 'bg-chart-4/10 text-chart-4 border-chart-4/20',
@@ -49,8 +65,15 @@ const statusStyles: Record<StatusType, string> = {
 const statusLabels: Record<StatusType, string> = {
   active: 'Active',
   inactive: 'Inactive',
-  new: 'New',
+  client: 'Client',
+  lead: 'Lead',
+  'not-interested': 'Not Interested',
+  'left-voicemail': 'Left Voicemail',
+  'sent-email': 'Sent Email',
+  'contact-later': 'Contact Later',
   contacted: 'Contacted',
+  'appointment-set': 'Appointment Set',
+  new: 'New',
   qualified: 'Qualified',
   unqualified: 'Unqualified',
   converted: 'Converted',

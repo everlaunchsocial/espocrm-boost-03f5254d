@@ -12,19 +12,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Contact } from '@/types/crm';
+import { Contact, ContactStatus } from '@/types/crm';
 import { toast } from 'sonner';
+
+const statusOptions = [
+  { value: 'client', label: 'Client' },
+  { value: 'lead', label: 'Lead' },
+  { value: 'not-interested', label: 'Not Interested' },
+  { value: 'left-voicemail', label: 'Left Voicemail' },
+  { value: 'sent-email', label: 'Sent Email' },
+  { value: 'contact-later', label: 'Contact Later' },
+  { value: 'contacted', label: 'Contacted' },
+  { value: 'appointment-set', label: 'Appointment Set' },
+];
 
 const contactFields = [
   { name: 'firstName', label: 'First Name', type: 'text' as const, required: true },
   { name: 'lastName', label: 'Last Name', type: 'text' as const, required: true },
   { name: 'email', label: 'Email', type: 'email' as const, required: true },
-  { name: 'phone', label: 'Phone', type: 'tel' as const, required: true },
+  { name: 'phone', label: 'Business Phone', type: 'tel' as const, required: true },
+  { name: 'cellPhone', label: 'Cell Phone', type: 'tel' as const },
   { name: 'title', label: 'Title', type: 'text' as const },
-  { name: 'status', label: 'Status', type: 'select' as const, required: true, options: [
-    { value: 'active', label: 'Active' },
-    { value: 'inactive', label: 'Inactive' },
-  ]},
+  { name: 'status', label: 'Status', type: 'select' as const, required: true, options: statusOptions },
+  { name: 'secondaryContactName', label: 'Secondary Contact Name', type: 'text' as const },
+  { name: 'secondaryContactEmail', label: 'Secondary Contact Email', type: 'email' as const },
+  { name: 'secondaryContactPhone', label: 'Secondary Contact Phone', type: 'tel' as const },
 ];
 
 export default function Contacts() {
@@ -71,7 +83,7 @@ export default function Contacts() {
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="bg-popover border border-border">
             <DropdownMenuItem onClick={() => handleEdit(contact)}>
               <Pencil className="h-4 w-4 mr-2" />
               Edit
@@ -88,7 +100,7 @@ export default function Contacts() {
 
   const handleCreate = () => {
     setEditingContact(null);
-    setFormValues({ status: 'active' });
+    setFormValues({ status: 'lead' });
     setFormOpen(true);
   };
 
@@ -99,8 +111,12 @@ export default function Contacts() {
       lastName: contact.lastName,
       email: contact.email,
       phone: contact.phone,
+      cellPhone: contact.cellPhone || '',
       title: contact.title || '',
       status: contact.status,
+      secondaryContactName: contact.secondaryContactName || '',
+      secondaryContactEmail: contact.secondaryContactEmail || '',
+      secondaryContactPhone: contact.secondaryContactPhone || '',
     });
     setFormOpen(true);
   };
@@ -124,6 +140,11 @@ export default function Contacts() {
   const handleRowClick = (contact: Contact) => {
     setSelectedContact(contact);
     setDetailOpen(true);
+  };
+
+  const handleEditFromDetail = (contact: Contact) => {
+    setDetailOpen(false);
+    handleEdit(contact);
   };
 
   return (
@@ -151,6 +172,7 @@ export default function Contacts() {
         contact={selectedContact}
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
+        onEdit={handleEditFromDetail}
       />
 
       <EntityForm
