@@ -8,6 +8,18 @@ export type ContactStatus =
   | 'contacted'
   | 'appointment-set';
 
+// Generic email recipient type for sending emails to both Contacts and Leads
+export interface EmailRecipient {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  title?: string;
+  company?: string;  // For leads
+  accountName?: string;  // For contacts
+  entityType: 'contact' | 'lead';
+}
+
 export interface Contact {
   id: string;
   firstName: string;

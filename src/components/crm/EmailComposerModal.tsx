@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Contact } from '@/types/crm';
+import { EmailRecipient } from '@/types/crm';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -31,12 +31,12 @@ interface SenderAddress {
 }
 
 interface EmailComposerModalProps {
-  contact: Contact | null;
+  recipient: EmailRecipient | null;
   open: boolean;
   onClose: () => void;
 }
 
-export function EmailComposerModal({ contact, open, onClose }: EmailComposerModalProps) {
+export function EmailComposerModal({ recipient, open, onClose }: EmailComposerModalProps) {
   const { addActivity } = useCRMStore();
   const [senderAddresses, setSenderAddresses] = useState<SenderAddress[]>([]);
   const [selectedSender, setSelectedSender] = useState<string>('');
@@ -78,10 +78,10 @@ export function EmailComposerModal({ contact, open, onClose }: EmailComposerModa
       setBody('');
       setShowAIAssistant(false);
     }
-  }, [open, contact]);
+  }, [open, recipient]);
 
   const handleSend = async () => {
-    if (!contact || !selectedSender || !subject.trim() || !body.trim()) {
+    if (!recipient || !selectedSender || !subject.trim() || !body.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -97,11 +97,11 @@ export function EmailComposerModal({ contact, open, onClose }: EmailComposerModa
     try {
       const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
-          contactId: contact.id,
+          contactId: recipient.id,
           senderAddress: sender.email,
           senderName: sender.name,
-          toEmail: contact.email,
-          toName: `${contact.firstName} ${contact.lastName}`,
+          toEmail: recipient.email,
+          toName: `${recipient.firstName} ${recipient.lastName}`,
           subject,
           body: body.replace(/\n/g, '<br>'),
         },
@@ -109,15 +109,15 @@ export function EmailComposerModal({ contact, open, onClose }: EmailComposerModa
 
       if (error) throw error;
 
-      // Log activity
+      // Log activity with correct entity type
       addActivity({
         type: 'email',
         subject: `Email sent: ${subject}`,
-        description: `Sent to ${contact.email}`,
+        description: `Sent to ${recipient.email}`,
         relatedTo: {
-          type: 'contact',
-          id: contact.id,
-          name: `${contact.firstName} ${contact.lastName}`,
+          type: recipient.entityType,
+          id: recipient.id,
+          name: `${recipient.firstName} ${recipient.lastName}`,
         },
       });
 
@@ -143,7 +143,7 @@ export function EmailComposerModal({ contact, open, onClose }: EmailComposerModa
     setShowAIAssistant(false);
   };
 
-  if (!contact) return null;
+  if (!recipient) return null;
 
   const sender = senderAddresses.find((s) => s.id === selectedSender);
 
@@ -187,7 +187,7 @@ export function EmailComposerModal({ contact, open, onClose }: EmailComposerModa
           <div className="space-y-2">
             <Label>To</Label>
             <Input
-              value={`${contact.firstName} ${contact.lastName} <${contact.email}>`}
+              value={`${recipient.firstName} ${recipient.lastName} <${recipient.email}>`}
               disabled
               className="bg-muted"
             />
@@ -206,7 +206,7 @@ export function EmailComposerModal({ contact, open, onClose }: EmailComposerModa
           {/* AI Assistant toggle */}
           {showAIAssistant ? (
             <AIEmailAssistant
-              contact={contact}
+              recipient={recipient}
               senderName={sender?.name || 'Your Name'}
               onGenerated={handleAIGenerated}
               onCancel={() => setShowAIAssistant(false)}

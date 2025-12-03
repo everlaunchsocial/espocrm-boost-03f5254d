@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Contact, Activity, Deal, Task } from '@/types/crm';
+import { Contact, Activity, Deal, Task, EmailRecipient } from '@/types/crm';
 import { useCRMStore } from '@/stores/crmStore';
 import {
   Sheet,
@@ -443,7 +443,15 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
       />
 
       <EmailComposerModal
-        contact={contact}
+        recipient={{
+          id: contact.id,
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          email: contact.email,
+          title: contact.title,
+          accountName: contact.accountName,
+          entityType: 'contact',
+        }}
         open={emailComposerOpen}
         onClose={() => setEmailComposerOpen(false)}
       />

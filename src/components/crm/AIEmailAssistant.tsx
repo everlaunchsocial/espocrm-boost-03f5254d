@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Contact } from '@/types/crm';
+import { EmailRecipient } from '@/types/crm';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +8,7 @@ import { Loader2, Wand2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AIEmailAssistantProps {
-  contact: Contact;
+  recipient: EmailRecipient;
   senderName: string;
   onGenerated: (body: string) => void;
   onCancel: () => void;
@@ -22,7 +22,7 @@ const PROMPT_OPTIONS = [
   { id: 'custom', label: 'Custom', description: 'Write your own prompt' },
 ] as const;
 
-export function AIEmailAssistant({ contact, senderName, onGenerated, onCancel }: AIEmailAssistantProps) {
+export function AIEmailAssistant({ recipient, senderName, onGenerated, onCancel }: AIEmailAssistantProps) {
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [additionalContext, setAdditionalContext] = useState('');
@@ -42,13 +42,16 @@ export function AIEmailAssistant({ contact, senderName, onGenerated, onCancel }:
     setGenerating(true);
 
     try {
+      // Get company name from either accountName (contact) or company (lead)
+      const companyName = recipient.accountName || recipient.company;
+
       const { data, error } = await supabase.functions.invoke('ai-email-writer', {
         body: {
           promptType: selectedPrompt,
           customPrompt: selectedPrompt === 'custom' ? customPrompt : undefined,
-          contactName: `${contact.firstName} ${contact.lastName}`,
-          contactCompany: contact.accountName,
-          contactTitle: contact.title,
+          contactName: `${recipient.firstName} ${recipient.lastName}`,
+          contactCompany: companyName,
+          contactTitle: recipient.title,
           senderName,
           additionalContext: additionalContext.trim() || undefined,
         },
@@ -69,6 +72,8 @@ export function AIEmailAssistant({ contact, senderName, onGenerated, onCancel }:
       setGenerating(false);
     }
   };
+
+  const companyName = recipient.accountName || recipient.company;
 
   return (
     <div className="space-y-4 p-4 bg-muted/50 rounded-lg border border-border">
@@ -127,11 +132,11 @@ export function AIEmailAssistant({ contact, senderName, onGenerated, onCancel }:
         />
       </div>
 
-      {/* Contact info preview */}
+      {/* Recipient info preview */}
       <div className="text-xs text-muted-foreground p-2 bg-background rounded border border-border">
-        <p>Writing to: <strong>{contact.firstName} {contact.lastName}</strong></p>
-        {contact.title && <p>Title: {contact.title}</p>}
-        {contact.accountName && <p>Company: {contact.accountName}</p>}
+        <p>Writing to: <strong>{recipient.firstName} {recipient.lastName}</strong></p>
+        {recipient.title && <p>Title: {recipient.title}</p>}
+        {companyName && <p>Company: {companyName}</p>}
       </div>
 
       {/* Generate button */}

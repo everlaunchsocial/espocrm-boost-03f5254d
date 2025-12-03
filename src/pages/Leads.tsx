@@ -3,6 +3,7 @@ import { useCRMStore } from '@/stores/crmStore';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
+import { LeadDetail } from '@/components/crm/LeadDetail';
 import { Button } from '@/components/ui/button';
 import { Plus, MoreHorizontal, Pencil, Trash2, UserCheck } from 'lucide-react';
 import {
@@ -41,6 +42,8 @@ export default function Leads() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const columns = [
     {
@@ -80,22 +83,30 @@ export default function Leads() {
       render: (lead: Lead) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={(e) => e.stopPropagation()}
+            >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleEdit(lead)}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(lead); }}>
               <Pencil className="h-4 w-4 mr-2" />
               Edit
             </DropdownMenuItem>
             {lead.status !== 'converted' && (
-              <DropdownMenuItem onClick={() => handleConvert(lead.id)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleConvert(lead.id); }}>
                 <UserCheck className="h-4 w-4 mr-2" />
                 Convert to Contact
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={() => handleDelete(lead.id)} className="text-destructive">
+            <DropdownMenuItem 
+              onClick={(e) => { e.stopPropagation(); handleDelete(lead.id); }} 
+              className="text-destructive"
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </DropdownMenuItem>
@@ -104,6 +115,11 @@ export default function Leads() {
       ),
     },
   ];
+
+  const handleRowClick = (lead: Lead) => {
+    setSelectedLead(lead);
+    setDetailOpen(true);
+  };
 
   const handleCreate = () => {
     setEditingLead(null);
@@ -124,6 +140,7 @@ export default function Leads() {
       status: lead.status,
     });
     setFormOpen(true);
+    setDetailOpen(false);
   };
 
   const handleDelete = (id: string) => {
@@ -165,6 +182,7 @@ export default function Leads() {
         columns={columns}
         searchPlaceholder="Search leads..."
         searchKeys={['firstName', 'lastName', 'email', 'company']}
+        onRowClick={handleRowClick}
       />
 
       <EntityForm
@@ -176,6 +194,13 @@ export default function Leads() {
         onChange={(name, value) => setFormValues((prev) => ({ ...prev, [name]: value }))}
         onSubmit={handleSubmit}
         submitLabel={editingLead ? 'Update' : 'Create'}
+      />
+
+      <LeadDetail
+        lead={selectedLead}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        onEdit={handleEdit}
       />
     </div>
   );
