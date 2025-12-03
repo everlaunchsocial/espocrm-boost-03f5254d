@@ -3,6 +3,7 @@ import { useCRMStore } from '@/stores/crmStore';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
+import { ContactDetail } from '@/components/crm/ContactDetail';
 import { Button } from '@/components/ui/button';
 import { Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -31,6 +32,8 @@ export default function Contacts() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const columns = [
     {
@@ -118,6 +121,11 @@ export default function Contacts() {
     setFormOpen(false);
   };
 
+  const handleRowClick = (contact: Contact) => {
+    setSelectedContact(contact);
+    setDetailOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -136,6 +144,13 @@ export default function Contacts() {
         columns={columns}
         searchPlaceholder="Search contacts..."
         searchKeys={['firstName', 'lastName', 'email']}
+        onRowClick={handleRowClick}
+      />
+
+      <ContactDetail
+        contact={selectedContact}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
       />
 
       <EntityForm
