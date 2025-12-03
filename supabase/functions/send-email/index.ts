@@ -48,11 +48,15 @@ serve(async (req: Request): Promise<Response> => {
     `;
 
     // Send email via Resend
+    // Reply-to uses CRM subdomain so replies are captured by inbound webhook
+    const replyToAddress = `${senderAddress.split('@')[0]}@crm.localsearch365.com`;
+    
     const emailResponse = await resend.emails.send({
       from: `${senderName} <${senderAddress}>`,
       to: toName ? [`${toName} <${toEmail}>`] : [toEmail],
       subject: subject,
       html: htmlWithTracking,
+      replyTo: replyToAddress,
     });
 
     console.log("Resend response:", emailResponse);
