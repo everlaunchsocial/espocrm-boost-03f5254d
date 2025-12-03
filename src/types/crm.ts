@@ -1,13 +1,30 @@
+export type ContactStatus = 
+  | 'client'
+  | 'lead' 
+  | 'not-interested'
+  | 'left-voicemail'
+  | 'sent-email'
+  | 'contact-later'
+  | 'contacted'
+  | 'appointment-set';
+
 export interface Contact {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
+  phone: string;           // Business phone
+  cellPhone?: string;      // Cell phone
   accountId?: string;
   accountName?: string;
   title?: string;
-  status: 'active' | 'inactive';
+  
+  // Secondary contact
+  secondaryContactName?: string;
+  secondaryContactEmail?: string;
+  secondaryContactPhone?: string;
+  
+  status: ContactStatus;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,8 +36,11 @@ export interface Account {
   industry?: string;
   phone?: string;
   email?: string;
+  companyEmail?: string;   // General inbox like info@company.com
   address?: string;
   city?: string;
+  state?: string;
+  zipCode?: string;
   country?: string;
   type: 'customer' | 'partner' | 'prospect';
   createdAt: Date;

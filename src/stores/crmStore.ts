@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Contact, Account, Lead, Deal, Task, Activity } from '@/types/crm';
+import { Contact, Account, Lead, Deal, Task, Activity, ContactStatus } from '@/types/crm';
 
 interface CRMStore {
   contacts: Contact[];
@@ -42,17 +42,106 @@ interface CRMStore {
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
-// Sample data
+// Sample data with enhanced contact and account fields
 const sampleContacts: Contact[] = [
-  { id: '1', firstName: 'John', lastName: 'Smith', email: 'john.smith@acme.com', phone: '+1 555-0101', accountId: '1', accountName: 'Acme Corp', title: 'CEO', status: 'active', createdAt: new Date('2024-01-15'), updatedAt: new Date('2024-01-15') },
-  { id: '2', firstName: 'Sarah', lastName: 'Johnson', email: 'sarah.j@techstart.io', phone: '+1 555-0102', accountId: '2', accountName: 'TechStart Inc', title: 'CTO', status: 'active', createdAt: new Date('2024-02-10'), updatedAt: new Date('2024-02-10') },
-  { id: '3', firstName: 'Michael', lastName: 'Brown', email: 'michael.b@globaltech.com', phone: '+1 555-0103', accountId: '3', accountName: 'GlobalTech', title: 'VP Sales', status: 'active', createdAt: new Date('2024-03-05'), updatedAt: new Date('2024-03-05') },
+  { 
+    id: '1', 
+    firstName: 'John', 
+    lastName: 'Smith', 
+    email: 'john.smith@acme.com', 
+    phone: '+1 555-0101', 
+    cellPhone: '+1 555-0111',
+    accountId: '1', 
+    accountName: 'Acme Corp', 
+    title: 'CEO', 
+    status: 'client',
+    secondaryContactName: 'Jane Smith',
+    secondaryContactEmail: 'jane.smith@acme.com',
+    secondaryContactPhone: '+1 555-0112',
+    createdAt: new Date('2024-01-15'), 
+    updatedAt: new Date('2024-01-15') 
+  },
+  { 
+    id: '2', 
+    firstName: 'Sarah', 
+    lastName: 'Johnson', 
+    email: 'sarah.j@techstart.io', 
+    phone: '+1 555-0102',
+    cellPhone: '+1 555-0122',
+    accountId: '2', 
+    accountName: 'TechStart Inc', 
+    title: 'CTO', 
+    status: 'contacted',
+    createdAt: new Date('2024-02-10'), 
+    updatedAt: new Date('2024-02-10') 
+  },
+  { 
+    id: '3', 
+    firstName: 'Michael', 
+    lastName: 'Brown', 
+    email: 'michael.b@globaltech.com', 
+    phone: '+1 555-0103',
+    accountId: '3', 
+    accountName: 'GlobalTech', 
+    title: 'VP Sales', 
+    status: 'lead',
+    createdAt: new Date('2024-03-05'), 
+    updatedAt: new Date('2024-03-05') 
+  },
 ];
 
 const sampleAccounts: Account[] = [
-  { id: '1', name: 'Acme Corp', website: 'https://acme.com', industry: 'Technology', phone: '+1 555-1000', email: 'info@acme.com', address: '123 Main St', city: 'San Francisco', country: 'USA', type: 'customer', createdAt: new Date('2024-01-10'), updatedAt: new Date('2024-01-10') },
-  { id: '2', name: 'TechStart Inc', website: 'https://techstart.io', industry: 'Software', phone: '+1 555-2000', email: 'hello@techstart.io', address: '456 Tech Ave', city: 'Austin', country: 'USA', type: 'prospect', createdAt: new Date('2024-02-05'), updatedAt: new Date('2024-02-05') },
-  { id: '3', name: 'GlobalTech', website: 'https://globaltech.com', industry: 'Consulting', phone: '+1 555-3000', email: 'contact@globaltech.com', address: '789 Global Blvd', city: 'New York', country: 'USA', type: 'partner', createdAt: new Date('2024-03-01'), updatedAt: new Date('2024-03-01') },
+  { 
+    id: '1', 
+    name: 'Acme Corp', 
+    website: 'https://acme.com', 
+    industry: 'Technology', 
+    phone: '+1 555-1000', 
+    email: 'info@acme.com',
+    companyEmail: 'info@acme.com',
+    address: '123 Main St', 
+    city: 'San Francisco',
+    state: 'CA',
+    zipCode: '94102',
+    country: 'USA', 
+    type: 'customer', 
+    createdAt: new Date('2024-01-10'), 
+    updatedAt: new Date('2024-01-10') 
+  },
+  { 
+    id: '2', 
+    name: 'TechStart Inc', 
+    website: 'https://techstart.io', 
+    industry: 'Software', 
+    phone: '+1 555-2000', 
+    email: 'hello@techstart.io',
+    companyEmail: 'hello@techstart.io',
+    address: '456 Tech Ave', 
+    city: 'Austin',
+    state: 'TX',
+    zipCode: '78701',
+    country: 'USA', 
+    type: 'prospect', 
+    createdAt: new Date('2024-02-05'), 
+    updatedAt: new Date('2024-02-05') 
+  },
+  { 
+    id: '3', 
+    name: 'GlobalTech', 
+    website: 'https://globaltech.com', 
+    industry: 'Consulting', 
+    phone: '+1 555-3000', 
+    email: 'contact@globaltech.com',
+    companyEmail: 'contact@globaltech.com',
+    address: '789 Global Blvd', 
+    city: 'New York',
+    state: 'NY',
+    zipCode: '10001',
+    country: 'USA', 
+    type: 'partner', 
+    createdAt: new Date('2024-03-01'), 
+    updatedAt: new Date('2024-03-01') 
+  },
 ];
 
 const sampleLeads: Lead[] = [
@@ -165,7 +254,7 @@ export const useCRMStore = create<CRMStore>()(
             email: lead.email,
             phone: lead.phone || '',
             title: lead.title,
-            status: 'active',
+            status: 'lead',
           });
           get().updateLead(leadId, { status: 'converted' });
         }

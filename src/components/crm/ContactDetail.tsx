@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
+import { StatusDropdown } from './StatusDropdown';
 import { ActivityTimeline } from './ActivityTimeline';
 import { LogActivityModal } from './LogActivityModal';
 import { QuickTaskForm } from './QuickTaskForm';
@@ -22,6 +23,10 @@ import {
   User,
   Calendar,
   ExternalLink,
+  Globe,
+  MapPin,
+  Pencil,
+  Smartphone,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
@@ -30,10 +35,11 @@ interface ContactDetailProps {
   contact: Contact | null;
   open: boolean;
   onClose: () => void;
+  onEdit?: (contact: Contact) => void;
 }
 
-export function ContactDetail({ contact, open, onClose }: ContactDetailProps) {
-  const { activities, deals, tasks } = useCRMStore();
+export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailProps) {
+  const { activities, deals, tasks, accounts, updateContact } = useCRMStore();
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [activityType, setActivityType] = useState<'call' | 'email' | 'meeting' | 'note'>('call');
   const [taskFormOpen, setTaskFormOpen] = useState(false);
@@ -49,33 +55,78 @@ export function ContactDetail({ contact, open, onClose }: ContactDetailProps) {
     (t) => t.relatedTo?.type === 'contact' && t.relatedTo.id === contact.id
   );
 
+  // Get linked account for business info
+  const linkedAccount = contact.accountId 
+    ? accounts.find((a) => a.id === contact.accountId) 
+    : null;
+
   const handleQuickAction = (type: 'call' | 'email' | 'meeting' | 'note') => {
     setActivityType(type);
     setActivityModalOpen(true);
   };
 
+  const handleStatusChange = (status: typeof contact.status) => {
+    updateContact(contact.id, { status });
+  };
+
+  const formatAddress = () => {
+    if (!linkedAccount) return null;
+    const parts = [
+      linkedAccount.address,
+      linkedAccount.city,
+      linkedAccount.state,
+      linkedAccount.zipCode,
+      linkedAccount.country,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : null;
+  };
+
   return (
     <>
       <Sheet open={open} onOpenChange={onClose}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader className="pb-4 border-b border-border">
-            <div className="flex items-start gap-4">
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-xl font-semibold text-primary">
-                  {contact.firstName[0]}{contact.lastName[0]}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <SheetTitle className="text-xl">
-                  {contact.firstName} {contact.lastName}
-                </SheetTitle>
-                <p className="text-muted-foreground">{contact.title || 'No title'}</p>
-                <div className="mt-2">
-                  <StatusBadge status={contact.status} />
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xl font-semibold text-primary">
+                    {contact.firstName[0]}{contact.lastName[0]}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <SheetTitle className="text-xl">
+                    {contact.firstName} {contact.lastName}
+                  </SheetTitle>
+                  <p className="text-muted-foreground">{contact.title || 'No title'}</p>
+                  {linkedAccount && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {linkedAccount.name}
+                    </p>
+                  )}
                 </div>
               </div>
+              {onEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEdit(contact)}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
             </div>
           </SheetHeader>
+
+          {/* Status Section */}
+          <div className="py-4 border-b border-border">
+            <p className="text-sm font-medium text-muted-foreground mb-3">Status</p>
+            <StatusDropdown
+              value={contact.status}
+              onChange={handleStatusChange}
+              className="w-48"
+            />
+          </div>
 
           {/* Quick Actions */}
           <div className="py-4 border-b border-border">
@@ -124,34 +175,131 @@ export function ContactDetail({ contact, open, onClose }: ContactDetailProps) {
             </div>
           </div>
 
-          {/* Contact Info */}
+          {/* Business Information */}
+          {linkedAccount && (
+            <div className="py-4 border-b border-border space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">Business Information</p>
+              <div className="grid gap-3">
+                <div className="flex items-center gap-3">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{linkedAccount.name}</span>
+                  {linkedAccount.industry && (
+                    <span className="text-xs text-muted-foreground">({linkedAccount.industry})</span>
+                  )}
+                </div>
+                {formatAddress() && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <span className="text-sm">{formatAddress()}</span>
+                  </div>
+                )}
+                {linkedAccount.website && (
+                  <div className="flex items-center gap-3">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <a 
+                      href={linkedAccount.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline flex items-center gap-1"
+                    >
+                      {linkedAccount.website}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+                {(linkedAccount.companyEmail || linkedAccount.email) && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <a 
+                      href={`mailto:${linkedAccount.companyEmail || linkedAccount.email}`} 
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {linkedAccount.companyEmail || linkedAccount.email}
+                    </a>
+                  </div>
+                )}
+                {linkedAccount.phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${linkedAccount.phone}`} className="text-sm hover:underline">
+                      {linkedAccount.phone}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Primary Contact Info */}
           <div className="py-4 border-b border-border space-y-3">
-            <p className="text-sm font-medium text-muted-foreground">Contact Information</p>
+            <p className="text-sm font-medium text-muted-foreground">Primary Contact</p>
             <div className="grid gap-3">
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">
+                  {contact.firstName} {contact.lastName}
+                </span>
+                {contact.title && (
+                  <span className="text-xs text-muted-foreground">({contact.title})</span>
+                )}
+              </div>
               <div className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <a href={`mailto:${contact.email}`} className="text-sm text-primary hover:underline">
                   {contact.email}
                 </a>
               </div>
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <a href={`tel:${contact.phone}`} className="text-sm hover:underline">
-                  {contact.phone}
-                </a>
-              </div>
-              {contact.accountName && (
+              {contact.phone && (
                 <div className="flex items-center gap-3">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{contact.accountName}</span>
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <a href={`tel:${contact.phone}`} className="text-sm hover:underline">
+                    {contact.phone}
+                  </a>
+                  <span className="text-xs text-muted-foreground">(Business)</span>
                 </div>
               )}
-              <div className="flex items-center gap-3">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{contact.title || 'No title'}</span>
-              </div>
+              {contact.cellPhone && (
+                <div className="flex items-center gap-3">
+                  <Smartphone className="h-4 w-4 text-muted-foreground" />
+                  <a href={`tel:${contact.cellPhone}`} className="text-sm hover:underline">
+                    {contact.cellPhone}
+                  </a>
+                  <span className="text-xs text-muted-foreground">(Cell)</span>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Secondary Contact Info */}
+          {(contact.secondaryContactName || contact.secondaryContactEmail || contact.secondaryContactPhone) && (
+            <div className="py-4 border-b border-border space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">Secondary Contact</p>
+              <div className="grid gap-3">
+                {contact.secondaryContactName && (
+                  <div className="flex items-center gap-3">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{contact.secondaryContactName}</span>
+                  </div>
+                )}
+                {contact.secondaryContactEmail && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <a href={`mailto:${contact.secondaryContactEmail}`} className="text-sm text-primary hover:underline">
+                      {contact.secondaryContactEmail}
+                    </a>
+                  </div>
+                )}
+                {contact.secondaryContactPhone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${contact.secondaryContactPhone}`} className="text-sm hover:underline">
+                      {contact.secondaryContactPhone}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Tabs for related data */}
           <Tabs defaultValue="activity" className="mt-4">
