@@ -14,6 +14,7 @@ import { ActivityTimeline } from './ActivityTimeline';
 import { LogActivityModal } from './LogActivityModal';
 import { QuickTaskForm } from './QuickTaskForm';
 import { NotesSection } from './NotesSection';
+import { EmailComposerModal } from './EmailComposerModal';
 import {
   Phone,
   Mail,
@@ -28,6 +29,7 @@ import {
   MapPin,
   Pencil,
   Smartphone,
+  Send,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
@@ -44,6 +46,7 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [activityType, setActivityType] = useState<'call' | 'email' | 'meeting' | 'note'>('call');
   const [taskFormOpen, setTaskFormOpen] = useState(false);
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
 
   if (!contact) return null;
 
@@ -137,6 +140,14 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
           <div className="py-4 border-b border-border">
             <p className="text-sm font-medium text-muted-foreground mb-3">Quick Actions</p>
             <div className="flex flex-wrap gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setEmailComposerOpen(true)}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Send Email
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -429,6 +440,12 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
           id: contact.id,
           name: `${contact.firstName} ${contact.lastName}`,
         }}
+      />
+
+      <EmailComposerModal
+        contact={contact}
+        open={emailComposerOpen}
+        onClose={() => setEmailComposerOpen(false)}
       />
     </>
   );
