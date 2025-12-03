@@ -1,4 +1,4 @@
-import { useCRMStore } from '@/stores/crmStore';
+import { useContacts, useAccounts, useLeads, useDeals, useTasks, useActivities } from '@/hooks/useCRMData';
 import { StatCard } from '@/components/crm/StatCard';
 import { ActivityTimeline } from '@/components/crm/ActivityTimeline';
 import { StatusBadge } from '@/components/crm/StatusBadge';
@@ -7,7 +7,12 @@ import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 export default function Dashboard() {
-  const { contacts, accounts, leads, deals, tasks, activities } = useCRMStore();
+  const { data: contacts = [] } = useContacts();
+  const { data: accounts = [] } = useAccounts();
+  const { data: leads = [] } = useLeads();
+  const { data: deals = [] } = useDeals();
+  const { data: tasks = [] } = useTasks();
+  const { data: activities = [] } = useActivities();
 
   const openDeals = deals.filter(d => !d.stage.includes('closed'));
   const wonDeals = deals.filter(d => d.stage === 'closed-won');
@@ -35,13 +40,11 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground mt-1">Welcome back! Here's your sales overview.</p>
       </div>
 
-      {/* Stats grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Contacts"
@@ -77,9 +80,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Deals by Stage */}
         <div className="bg-card rounded-xl border border-border p-6">
           <h2 className="text-lg font-semibold text-card-foreground mb-4">Deals by Stage</h2>
           <ResponsiveContainer width="100%" height={250}>
@@ -99,7 +100,6 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Leads by Status */}
         <div className="bg-card rounded-xl border border-border p-6">
           <h2 className="text-lg font-semibold text-card-foreground mb-4">Leads by Status</h2>
           <ResponsiveContainer width="100%" height={250}>
@@ -137,9 +137,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Deals */}
         <div className="bg-card rounded-xl border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-card-foreground">Recent Deals</h2>
@@ -158,10 +156,12 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
+            {recentDeals.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No deals yet</p>
+            )}
           </div>
         </div>
 
-        {/* Recent Activity */}
         <div className="bg-card rounded-xl border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-card-foreground">Recent Activity</h2>

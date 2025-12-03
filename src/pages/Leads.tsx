@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCRMStore } from '@/stores/crmStore';
+import { useLeads, useAddLead, useUpdateLead, useDeleteLead, useConvertLeadToContact } from '@/hooks/useCRMData';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
@@ -38,7 +38,12 @@ const leadFields = [
 ];
 
 export default function Leads() {
-  const { leads, addLead, updateLead, deleteLead, convertLeadToContact } = useCRMStore();
+  const { data: leads = [], isLoading } = useLeads();
+  const addLead = useAddLead();
+  const updateLead = useUpdateLead();
+  const deleteLead = useDeleteLead();
+  const convertLeadToContact = useConvertLeadToContact();
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -98,7 +103,7 @@ export default function Leads() {
               Edit
             </DropdownMenuItem>
             {lead.status !== 'converted' && (
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleConvert(lead.id); }}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleConvert(lead); }}>
                 <UserCheck className="h-4 w-4 mr-2" />
                 Convert to Contact
               </DropdownMenuItem>
@@ -143,26 +148,30 @@ export default function Leads() {
     setDetailOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    deleteLead(id);
+  const handleDelete = async (id: string) => {
+    await deleteLead.mutateAsync(id);
     toast.success('Lead deleted successfully');
   };
 
-  const handleConvert = (id: string) => {
-    convertLeadToContact(id);
+  const handleConvert = async (lead: Lead) => {
+    await convertLeadToContact.mutateAsync(lead);
     toast.success('Lead converted to contact successfully');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (editingLead) {
-      updateLead(editingLead.id, formValues);
+      await updateLead.mutateAsync({ id: editingLead.id, lead: formValues });
       toast.success('Lead updated successfully');
     } else {
-      addLead(formValues as any);
+      await addLead.mutateAsync(formValues as any);
       toast.success('Lead created successfully');
     }
     setFormOpen(false);
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64">Loading leads...</div>;
+  }
 
   return (
     <div className="space-y-6">

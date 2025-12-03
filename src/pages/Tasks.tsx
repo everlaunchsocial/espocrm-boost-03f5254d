@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCRMStore } from '@/stores/crmStore';
+import { useTasks, useAddTask, useUpdateTask, useDeleteTask } from '@/hooks/useCRMData';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
@@ -35,7 +35,11 @@ const taskFields = [
 ];
 
 export default function Tasks() {
-  const { tasks, addTask, updateTask, deleteTask } = useCRMStore();
+  const { data: tasks = [], isLoading } = useTasks();
+  const addTask = useAddTask();
+  const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -151,29 +155,30 @@ export default function Tasks() {
     setFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    deleteTask(id);
+  const handleDelete = async (id: string) => {
+    await deleteTask.mutateAsync(id);
     toast.success('Task deleted successfully');
   };
 
-  const handleToggleComplete = (task: Task) => {
-    updateTask(task.id, {
-      status: task.status === 'completed' ? 'not-started' : 'completed',
+  const handleToggleComplete = async (task: Task) => {
+    await updateTask.mutateAsync({ 
+      id: task.id, 
+      task: { status: task.status === 'completed' ? 'not-started' : 'completed' }
     });
     toast.success(task.status === 'completed' ? 'Task reopened' : 'Task completed');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const taskData = {
       ...formValues,
       dueDate: formValues.dueDate ? new Date(formValues.dueDate) : undefined,
     };
 
     if (editingTask) {
-      updateTask(editingTask.id, taskData);
+      await updateTask.mutateAsync({ id: editingTask.id, task: taskData });
       toast.success('Task updated successfully');
     } else {
-      addTask(taskData as any);
+      await addTask.mutateAsync(taskData as any);
       toast.success('Task created successfully');
     }
     setFormOpen(false);
@@ -186,6 +191,10 @@ export default function Tasks() {
     const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
     return priorityOrder[a.priority] - priorityOrder[b.priority];
   });
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64">Loading tasks...</div>;
+  }
 
   return (
     <div className="space-y-6">

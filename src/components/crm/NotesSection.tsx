@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Note } from '@/types/crm';
-import { useCRMStore } from '@/stores/crmStore';
+import { useNotes, useAddNote, useDeleteNote } from '@/hooks/useCRMData';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -12,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import { StickyNote, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface NotesSectionProps {
   relatedTo: {
@@ -22,31 +22,37 @@ interface NotesSectionProps {
 }
 
 export function NotesSection({ relatedTo }: NotesSectionProps) {
-  const { notes, addNote, deleteNote } = useCRMStore();
+  const { data: notes = [] } = useNotes();
+  const addNote = useAddNote();
+  const deleteNote = useDeleteNote();
   const [newNoteContent, setNewNoteContent] = useState('');
   const [sortOrder, setSortOrder] = useState<'recent-first' | 'oldest-first'>('recent-first');
 
-  // Filter notes for this entity
   const entityNotes = notes.filter(
     (note) => note.relatedTo.type === relatedTo.type && note.relatedTo.id === relatedTo.id
   );
 
-  // Sort notes
   const sortedNotes = [...entityNotes].sort((a, b) => {
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
     return sortOrder === 'recent-first' ? dateB - dateA : dateA - dateB;
   });
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!newNoteContent.trim()) return;
     
-    addNote({
+    await addNote.mutateAsync({
       content: newNoteContent.trim(),
       relatedTo,
-      createdBy: 'Current User', // In a real app, this would come from auth
+      createdBy: 'Current User',
     });
     setNewNoteContent('');
+    toast.success('Note added');
+  };
+
+  const handleDeleteNote = async (id: string) => {
+    await deleteNote.mutateAsync(id);
+    toast.success('Note deleted');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -57,7 +63,6 @@ export function NotesSection({ relatedTo }: NotesSectionProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header with sort */}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium text-muted-foreground">Notes</h4>
         <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as typeof sortOrder)}>
@@ -71,14 +76,10 @@ export function NotesSection({ relatedTo }: NotesSectionProps) {
         </Select>
       </div>
 
-      {/* Notes list */}
       {sortedNotes.length > 0 ? (
         <div className="space-y-3">
           {sortedNotes.map((note) => (
-            <div
-              key={note.id}
-              className="group p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
-            >
+            <div key={note.id} className="group p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors">
               <div className="flex items-start gap-3">
                 <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
                   <StickyNote className="h-4 w-4 text-muted-foreground" />
@@ -88,9 +89,7 @@ export function NotesSection({ relatedTo }: NotesSectionProps) {
                   <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                     <span className="text-primary">{relatedTo.type} - {relatedTo.name}</span>
                     <span>•</span>
-                    <span>
-                      {format(new Date(note.createdAt), 'MMM d, yyyy h:mm a')}
-                    </span>
+                    <span>{format(new Date(note.createdAt), 'MMM d, yyyy h:mm a')}</span>
                     {note.createdBy && (
                       <>
                         <span>•</span>
@@ -103,7 +102,7 @@ export function NotesSection({ relatedTo }: NotesSectionProps) {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => deleteNote(note.id)}
+                  onClick={() => handleDeleteNote(note.id)}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -112,12 +111,9 @@ export function NotesSection({ relatedTo }: NotesSectionProps) {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground text-center py-4">
-          No notes yet. Add your first note below.
-        </p>
+        <p className="text-sm text-muted-foreground text-center py-4">No notes yet. Add your first note below.</p>
       )}
 
-      {/* Add note input */}
       <div className="border border-border rounded-lg p-3 bg-muted/30">
         <Textarea
           placeholder="Add a note..."
@@ -127,14 +123,8 @@ export function NotesSection({ relatedTo }: NotesSectionProps) {
           className="min-h-[60px] resize-none border-0 bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
         />
         <div className="flex items-center justify-between mt-2">
-          <span className="text-xs text-muted-foreground">
-            Press Cmd/Ctrl + Enter to save
-          </span>
-          <Button
-            size="sm"
-            onClick={handleAddNote}
-            disabled={!newNoteContent.trim()}
-          >
+          <span className="text-xs text-muted-foreground">Press Cmd/Ctrl + Enter to save</span>
+          <Button size="sm" onClick={handleAddNote} disabled={!newNoteContent.trim()}>
             <Plus className="h-4 w-4 mr-1" />
             Add Note
           </Button>

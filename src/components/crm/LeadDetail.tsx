@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Lead, EmailRecipient } from '@/types/crm';
-import { useCRMStore } from '@/stores/crmStore';
+import { useActivities, useTasks, useNotes, useUpdateLead, useConvertLeadToContact } from '@/hooks/useCRMData';
 import {
   Sheet,
   SheetContent,
@@ -20,7 +20,6 @@ import {
   Calendar,
   MessageSquare,
   CheckSquare,
-  Briefcase,
   Building2,
   User,
   Pencil,
@@ -54,7 +53,12 @@ const LEAD_STATUSES = [
 ];
 
 export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
-  const { activities, tasks, notes, updateLead, convertLeadToContact } = useCRMStore();
+  const { data: activities = [] } = useActivities();
+  const { data: tasks = [] } = useTasks();
+  const { data: notes = [] } = useNotes();
+  const updateLead = useUpdateLead();
+  const convertLeadToContact = useConvertLeadToContact();
+
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [activityType, setActivityType] = useState<'call' | 'email' | 'meeting' | 'note'>('call');
   const [taskFormOpen, setTaskFormOpen] = useState(false);
@@ -79,18 +83,17 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
     setActivityModalOpen(true);
   };
 
-  const handleStatusChange = (status: Lead['status']) => {
-    updateLead(lead.id, { status });
+  const handleStatusChange = async (status: Lead['status']) => {
+    await updateLead.mutateAsync({ id: lead.id, lead: { status } });
     toast.success(`Status updated to ${status}`);
   };
 
-  const handleConvert = () => {
-    convertLeadToContact(lead.id);
+  const handleConvert = async () => {
+    await convertLeadToContact.mutateAsync(lead);
     toast.success('Lead converted to contact');
     onClose();
   };
 
-  // Create email recipient from lead
   const emailRecipient: EmailRecipient = {
     id: lead.id,
     firstName: lead.firstName,
@@ -127,18 +130,12 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   </SheetTitle>
                   <p className="text-muted-foreground">{lead.title || 'No title'}</p>
                   {lead.company && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {lead.company}
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">{lead.company}</p>
                   )}
                 </div>
               </div>
               {onEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(lead)}
-                >
+                <Button variant="outline" size="sm" onClick={() => onEdit(lead)}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
@@ -155,9 +152,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
               </SelectTrigger>
               <SelectContent>
                 {LEAD_STATUSES.map((status) => (
-                  <SelectItem key={status.value} value={status.value}>
-                    {status.label}
-                  </SelectItem>
+                  <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -167,60 +162,32 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
           <div className="py-4 border-b border-border">
             <p className="text-sm font-medium text-muted-foreground mb-3">Quick Actions</p>
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setEmailComposerOpen(true)}
-              >
+              <Button variant="default" size="sm" onClick={() => setEmailComposerOpen(true)}>
                 <Send className="h-4 w-4 mr-2" />
                 Send Email
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickAction('call')}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleQuickAction('call')}>
                 <Phone className="h-4 w-4 mr-2" />
                 Log Call
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickAction('email')}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleQuickAction('email')}>
                 <Mail className="h-4 w-4 mr-2" />
                 Log Email
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickAction('meeting')}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleQuickAction('meeting')}>
                 <Calendar className="h-4 w-4 mr-2" />
                 Log Meeting
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickAction('note')}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleQuickAction('note')}>
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Add Note
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTaskFormOpen(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setTaskFormOpen(true)}>
                 <CheckSquare className="h-4 w-4 mr-2" />
                 Create Task
               </Button>
               {lead.status !== 'converted' && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleConvert}
-                >
+                <Button variant="secondary" size="sm" onClick={handleConvert}>
                   <UserCheck className="h-4 w-4 mr-2" />
                   Convert to Contact
                 </Button>
@@ -234,12 +201,8 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             <div className="grid gap-3">
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">
-                  {lead.firstName} {lead.lastName}
-                </span>
-                {lead.title && (
-                  <span className="text-xs text-muted-foreground">({lead.title})</span>
-                )}
+                <span className="text-sm font-medium">{lead.firstName} {lead.lastName}</span>
+                {lead.title && <span className="text-xs text-muted-foreground">({lead.title})</span>}
               </div>
               {lead.company && (
                 <div className="flex items-center gap-3">
@@ -249,58 +212,38 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
               )}
               <div className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <a href={`mailto:${lead.email}`} className="text-sm text-primary hover:underline">
-                  {lead.email}
-                </a>
+                <a href={`mailto:${lead.email}`} className="text-sm text-primary hover:underline">{lead.email}</a>
               </div>
               {lead.phone && (
                 <div className="flex items-center gap-3">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${lead.phone}`} className="text-sm hover:underline">
-                    {lead.phone}
-                  </a>
+                  <a href={`tel:${lead.phone}`} className="text-sm hover:underline">{lead.phone}</a>
                 </div>
               )}
               <div className="flex items-center gap-3">
                 <Globe className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Source: {sourceLabels[lead.source] || lead.source}
-                </span>
+                <span className="text-sm text-muted-foreground">Source: {sourceLabels[lead.source] || lead.source}</span>
               </div>
             </div>
           </div>
 
-          {/* Tabs for related data */}
+          {/* Tabs */}
           <Tabs defaultValue="notes" className="mt-4">
             <TabsList className="w-full">
-              <TabsTrigger value="notes" className="flex-1">
-                Notes ({leadNotes.length})
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="flex-1">
-                Activity ({leadActivities.length})
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="flex-1">
-                Tasks ({leadTasks.length})
-              </TabsTrigger>
+              <TabsTrigger value="notes" className="flex-1">Notes ({leadNotes.length})</TabsTrigger>
+              <TabsTrigger value="activity" className="flex-1">Activity ({leadActivities.length})</TabsTrigger>
+              <TabsTrigger value="tasks" className="flex-1">Tasks ({leadTasks.length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="notes" className="mt-4">
-              <NotesSection
-                relatedTo={{
-                  type: 'lead',
-                  id: lead.id,
-                  name: `${lead.firstName} ${lead.lastName}`,
-                }}
-              />
+              <NotesSection relatedTo={{ type: 'lead', id: lead.id, name: `${lead.firstName} ${lead.lastName}` }} />
             </TabsContent>
 
             <TabsContent value="activity" className="mt-4">
               {leadActivities.length > 0 ? (
                 <ActivityTimeline activities={leadActivities} />
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No activities yet. Use the quick actions above to log your first interaction.
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-8">No activities yet.</p>
               )}
             </TabsContent>
 
@@ -308,31 +251,22 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
               {leadTasks.length > 0 ? (
                 <div className="space-y-3">
                   {leadTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
-                    >
+                    <div key={task.id} className="p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium">{task.name}</p>
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground">{task.description}</p>
-                          )}
+                          {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
                         </div>
                         <StatusBadge status={task.status} />
                       </div>
                       {task.dueDate && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Due: {new Date(task.dueDate).toLocaleDateString()}
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">Due: {new Date(task.dueDate).toLocaleDateString()}</p>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No tasks for this lead.
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-8">No tasks.</p>
               )}
             </TabsContent>
           </Tabs>
@@ -343,21 +277,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
         open={activityModalOpen}
         onClose={() => setActivityModalOpen(false)}
         type={activityType}
-        relatedTo={{
-          type: 'lead',
-          id: lead.id,
-          name: `${lead.firstName} ${lead.lastName}`,
-        }}
+        relatedTo={{ type: 'lead', id: lead.id, name: `${lead.firstName} ${lead.lastName}` }}
       />
 
       <QuickTaskForm
         open={taskFormOpen}
         onClose={() => setTaskFormOpen(false)}
-        relatedTo={{
-          type: 'lead',
-          id: lead.id,
-          name: `${lead.firstName} ${lead.lastName}`,
-        }}
+        relatedTo={{ type: 'lead', id: lead.id, name: `${lead.firstName} ${lead.lastName}` }}
       />
 
       <EmailComposerModal

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Contact, Activity, Deal, Task, EmailRecipient } from '@/types/crm';
-import { useCRMStore } from '@/stores/crmStore';
+import { Contact, EmailRecipient } from '@/types/crm';
+import { useAccounts, useDeals, useTasks, useActivities, useNotes, useUpdateContact } from '@/hooks/useCRMData';
 import {
   Sheet,
   SheetContent,
@@ -8,19 +8,18 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { StatusBadge } from './StatusBadge';
 import { StatusDropdown } from './StatusDropdown';
 import { ActivityTimeline } from './ActivityTimeline';
 import { LogActivityModal } from './LogActivityModal';
 import { QuickTaskForm } from './QuickTaskForm';
 import { NotesSection } from './NotesSection';
 import { EmailComposerModal } from './EmailComposerModal';
+import { StatusBadge } from './StatusBadge';
 import {
   Phone,
   Mail,
   MessageSquare,
   CheckSquare,
-  Briefcase,
   Building2,
   User,
   Calendar,
@@ -33,6 +32,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface ContactDetailProps {
   contact: Contact | null;
@@ -42,7 +42,13 @@ interface ContactDetailProps {
 }
 
 export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailProps) {
-  const { activities, deals, tasks, accounts, notes, updateContact } = useCRMStore();
+  const { data: accounts = [] } = useAccounts();
+  const { data: deals = [] } = useDeals();
+  const { data: tasks = [] } = useTasks();
+  const { data: activities = [] } = useActivities();
+  const { data: notes = [] } = useNotes();
+  const updateContact = useUpdateContact();
+
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [activityType, setActivityType] = useState<'call' | 'email' | 'meeting' | 'note'>('call');
   const [taskFormOpen, setTaskFormOpen] = useState(false);
@@ -63,7 +69,6 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
     (t) => t.relatedTo?.type === 'contact' && t.relatedTo.id === contact.id
   );
 
-  // Get linked account for business info
   const linkedAccount = contact.accountId 
     ? accounts.find((a) => a.id === contact.accountId) 
     : null;
@@ -73,8 +78,13 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
     setActivityModalOpen(true);
   };
 
-  const handleStatusChange = (status: typeof contact.status) => {
-    updateContact(contact.id, { status });
+  const handleStatusChange = async (status: typeof contact.status) => {
+    await updateContact.mutateAsync({ 
+      id: contact.id, 
+      contact: { status },
+      oldStatus: contact.status 
+    });
+    toast.success(`Status updated to ${status}`);
   };
 
   const formatAddress = () => {
@@ -114,11 +124,7 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
                 </div>
               </div>
               {onEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(contact)}
-                >
+                <Button variant="outline" size="sm" onClick={() => onEdit(contact)}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
@@ -129,62 +135,34 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
           {/* Status Section */}
           <div className="py-4 border-b border-border">
             <p className="text-sm font-medium text-muted-foreground mb-3">Status</p>
-            <StatusDropdown
-              value={contact.status}
-              onChange={handleStatusChange}
-              className="w-48"
-            />
+            <StatusDropdown value={contact.status} onChange={handleStatusChange} className="w-48" />
           </div>
 
           {/* Quick Actions */}
           <div className="py-4 border-b border-border">
             <p className="text-sm font-medium text-muted-foreground mb-3">Quick Actions</p>
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => setEmailComposerOpen(true)}
-              >
+              <Button variant="default" size="sm" onClick={() => setEmailComposerOpen(true)}>
                 <Send className="h-4 w-4 mr-2" />
                 Send Email
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickAction('call')}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleQuickAction('call')}>
                 <Phone className="h-4 w-4 mr-2" />
                 Log Call
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickAction('email')}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleQuickAction('email')}>
                 <Mail className="h-4 w-4 mr-2" />
                 Log Email
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickAction('meeting')}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleQuickAction('meeting')}>
                 <Calendar className="h-4 w-4 mr-2" />
                 Log Meeting
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleQuickAction('note')}
-              >
+              <Button variant="outline" size="sm" onClick={() => handleQuickAction('note')}>
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Add Note
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTaskFormOpen(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setTaskFormOpen(true)}>
                 <CheckSquare className="h-4 w-4 mr-2" />
                 Create Task
               </Button>
@@ -212,12 +190,7 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
                 {linkedAccount.website && (
                   <div className="flex items-center gap-3">
                     <Globe className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href={linkedAccount.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary hover:underline flex items-center gap-1"
-                    >
+                    <a href={linkedAccount.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
                       {linkedAccount.website}
                       <ExternalLink className="h-3 w-3" />
                     </a>
@@ -226,10 +199,7 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
                 {(linkedAccount.companyEmail || linkedAccount.email) && (
                   <div className="flex items-center gap-3">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href={`mailto:${linkedAccount.companyEmail || linkedAccount.email}`} 
-                      className="text-sm text-primary hover:underline"
-                    >
+                    <a href={`mailto:${linkedAccount.companyEmail || linkedAccount.email}`} className="text-sm text-primary hover:underline">
                       {linkedAccount.companyEmail || linkedAccount.email}
                     </a>
                   </div>
@@ -252,34 +222,24 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
             <div className="grid gap-3">
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">
-                  {contact.firstName} {contact.lastName}
-                </span>
-                {contact.title && (
-                  <span className="text-xs text-muted-foreground">({contact.title})</span>
-                )}
+                <span className="text-sm font-medium">{contact.firstName} {contact.lastName}</span>
+                {contact.title && <span className="text-xs text-muted-foreground">({contact.title})</span>}
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <a href={`mailto:${contact.email}`} className="text-sm text-primary hover:underline">
-                  {contact.email}
-                </a>
+                <a href={`mailto:${contact.email}`} className="text-sm text-primary hover:underline">{contact.email}</a>
               </div>
               {contact.phone && (
                 <div className="flex items-center gap-3">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${contact.phone}`} className="text-sm hover:underline">
-                    {contact.phone}
-                  </a>
+                  <a href={`tel:${contact.phone}`} className="text-sm hover:underline">{contact.phone}</a>
                   <span className="text-xs text-muted-foreground">(Business)</span>
                 </div>
               )}
               {contact.cellPhone && (
                 <div className="flex items-center gap-3">
                   <Smartphone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${contact.cellPhone}`} className="text-sm hover:underline">
-                    {contact.cellPhone}
-                  </a>
+                  <a href={`tel:${contact.cellPhone}`} className="text-sm hover:underline">{contact.cellPhone}</a>
                   <span className="text-xs text-muted-foreground">(Cell)</span>
                 </div>
               )}
@@ -300,57 +260,37 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
                 {contact.secondaryContactEmail && (
                   <div className="flex items-center gap-3">
                     <Mail className="h-4 w-4 text-muted-foreground" />
-                    <a href={`mailto:${contact.secondaryContactEmail}`} className="text-sm text-primary hover:underline">
-                      {contact.secondaryContactEmail}
-                    </a>
+                    <a href={`mailto:${contact.secondaryContactEmail}`} className="text-sm text-primary hover:underline">{contact.secondaryContactEmail}</a>
                   </div>
                 )}
                 {contact.secondaryContactPhone && (
                   <div className="flex items-center gap-3">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${contact.secondaryContactPhone}`} className="text-sm hover:underline">
-                      {contact.secondaryContactPhone}
-                    </a>
+                    <a href={`tel:${contact.secondaryContactPhone}`} className="text-sm hover:underline">{contact.secondaryContactPhone}</a>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Tabs for related data */}
+          {/* Tabs */}
           <Tabs defaultValue="notes" className="mt-4">
             <TabsList className="w-full">
-              <TabsTrigger value="notes" className="flex-1">
-                Notes ({contactNotes.length})
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="flex-1">
-                Activity ({contactActivities.length})
-              </TabsTrigger>
-              <TabsTrigger value="deals" className="flex-1">
-                Deals ({contactDeals.length})
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="flex-1">
-                Tasks ({contactTasks.length})
-              </TabsTrigger>
+              <TabsTrigger value="notes" className="flex-1">Notes ({contactNotes.length})</TabsTrigger>
+              <TabsTrigger value="activity" className="flex-1">Activity ({contactActivities.length})</TabsTrigger>
+              <TabsTrigger value="deals" className="flex-1">Deals ({contactDeals.length})</TabsTrigger>
+              <TabsTrigger value="tasks" className="flex-1">Tasks ({contactTasks.length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="notes" className="mt-4">
-              <NotesSection
-                relatedTo={{
-                  type: 'contact',
-                  id: contact.id,
-                  name: `${contact.firstName} ${contact.lastName}`,
-                }}
-              />
+              <NotesSection relatedTo={{ type: 'contact', id: contact.id, name: `${contact.firstName} ${contact.lastName}` }} />
             </TabsContent>
 
             <TabsContent value="activity" className="mt-4">
               {contactActivities.length > 0 ? (
                 <ActivityTimeline activities={contactActivities} />
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No activities yet. Use the quick actions above to log your first interaction.
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-8">No activities yet.</p>
               )}
             </TabsContent>
 
@@ -358,31 +298,22 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
               {contactDeals.length > 0 ? (
                 <div className="space-y-3">
                   {contactDeals.map((deal) => (
-                    <div
-                      key={deal.id}
-                      className="p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
-                    >
+                    <div key={deal.id} className="p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium">{deal.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            ${deal.amount.toLocaleString()} • {deal.stage}
-                          </p>
+                          <p className="text-sm text-muted-foreground">${deal.amount.toLocaleString()} • {deal.stage}</p>
                         </div>
                         <StatusBadge status={deal.stage} />
                       </div>
                       {deal.expectedCloseDate && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Expected close: {format(new Date(deal.expectedCloseDate), 'MMM d, yyyy')}
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">Expected close: {format(new Date(deal.expectedCloseDate), 'MMM d, yyyy')}</p>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No deals associated with this contact.
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-8">No deals associated.</p>
               )}
             </TabsContent>
 
@@ -390,31 +321,22 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
               {contactTasks.length > 0 ? (
                 <div className="space-y-3">
                   {contactTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
-                    >
+                    <div key={task.id} className="p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium">{task.name}</p>
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground">{task.description}</p>
-                          )}
+                          {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
                         </div>
                         <StatusBadge status={task.status} />
                       </div>
                       {task.dueDate && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Due: {format(new Date(task.dueDate), 'MMM d, yyyy')}
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">Due: {format(new Date(task.dueDate), 'MMM d, yyyy')}</p>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No tasks for this contact.
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-8">No tasks.</p>
               )}
             </TabsContent>
           </Tabs>
@@ -425,21 +347,13 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
         open={activityModalOpen}
         onClose={() => setActivityModalOpen(false)}
         type={activityType}
-        relatedTo={{
-          type: 'contact',
-          id: contact.id,
-          name: `${contact.firstName} ${contact.lastName}`,
-        }}
+        relatedTo={{ type: 'contact', id: contact.id, name: `${contact.firstName} ${contact.lastName}` }}
       />
 
       <QuickTaskForm
         open={taskFormOpen}
         onClose={() => setTaskFormOpen(false)}
-        relatedTo={{
-          type: 'contact',
-          id: contact.id,
-          name: `${contact.firstName} ${contact.lastName}`,
-        }}
+        relatedTo={{ type: 'contact', id: contact.id, name: `${contact.firstName} ${contact.lastName}` }}
       />
 
       <EmailComposerModal

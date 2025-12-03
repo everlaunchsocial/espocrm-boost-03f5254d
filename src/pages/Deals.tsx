@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCRMStore } from '@/stores/crmStore';
+import { useDeals, useAccounts, useContacts, useAddDeal, useUpdateDeal, useDeleteDeal } from '@/hooks/useCRMData';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
@@ -16,7 +16,13 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 export default function Deals() {
-  const { deals, accounts, contacts, addDeal, updateDeal, deleteDeal } = useCRMStore();
+  const { data: deals = [], isLoading } = useDeals();
+  const { data: accounts = [] } = useAccounts();
+  const { data: contacts = [] } = useContacts();
+  const addDeal = useAddDeal();
+  const updateDeal = useUpdateDeal();
+  const deleteDeal = useDeleteDeal();
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -126,12 +132,12 @@ export default function Deals() {
     setFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    deleteDeal(id);
+  const handleDelete = async (id: string) => {
+    await deleteDeal.mutateAsync(id);
     toast.success('Deal deleted successfully');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const account = accounts.find(a => a.id === formValues.accountId);
     const contact = contacts.find(c => c.id === formValues.contactId);
     
@@ -145,14 +151,18 @@ export default function Deals() {
     };
 
     if (editingDeal) {
-      updateDeal(editingDeal.id, dealData);
+      await updateDeal.mutateAsync({ id: editingDeal.id, deal: dealData });
       toast.success('Deal updated successfully');
     } else {
-      addDeal(dealData as any);
+      await addDeal.mutateAsync(dealData as any);
       toast.success('Deal created successfully');
     }
     setFormOpen(false);
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64">Loading deals...</div>;
+  }
 
   return (
     <div className="space-y-6">

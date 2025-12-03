@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCRMStore } from '@/stores/crmStore';
+import { useAddActivity } from '@/hooks/useCRMData';
 import {
   Dialog,
   DialogContent,
@@ -33,14 +33,14 @@ const typeConfig = {
 };
 
 export function LogActivityModal({ open, onClose, type, relatedTo }: LogActivityModalProps) {
-  const { addActivity } = useCRMStore();
+  const addActivity = useAddActivity();
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
 
   const config = typeConfig[type];
   const Icon = config.icon;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!subject.trim()) {
@@ -48,7 +48,7 @@ export function LogActivityModal({ open, onClose, type, relatedTo }: LogActivity
       return;
     }
 
-    addActivity({
+    await addActivity.mutateAsync({
       type,
       subject,
       description: description || undefined,
@@ -80,12 +80,7 @@ export function LogActivityModal({ open, onClose, type, relatedTo }: LogActivity
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="related">Related To</Label>
-            <Input
-              id="related"
-              value={relatedTo.name}
-              disabled
-              className="bg-muted"
-            />
+            <Input id="related" value={relatedTo.name} disabled className="bg-muted" />
           </div>
 
           <div className="space-y-2">
@@ -111,9 +106,7 @@ export function LogActivityModal({ open, onClose, type, relatedTo }: LogActivity
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
+            <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
             <Button type="submit">Save</Button>
           </DialogFooter>
         </form>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCRMStore } from '@/stores/crmStore';
+import { useAddTask } from '@/hooks/useCRMData';
 import {
   Dialog,
   DialogContent,
@@ -32,13 +32,13 @@ interface QuickTaskFormProps {
 }
 
 export function QuickTaskForm({ open, onClose, relatedTo }: QuickTaskFormProps) {
-  const { addTask } = useCRMStore();
+  const addTask = useAddTask();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [dueDate, setDueDate] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim()) {
@@ -46,7 +46,7 @@ export function QuickTaskForm({ open, onClose, relatedTo }: QuickTaskFormProps) 
       return;
     }
 
-    addTask({
+    await addTask.mutateAsync({
       name,
       description: description || undefined,
       status: 'not-started',
@@ -85,12 +85,7 @@ export function QuickTaskForm({ open, onClose, relatedTo }: QuickTaskFormProps) 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="related">Related To</Label>
-            <Input
-              id="related"
-              value={relatedTo.name}
-              disabled
-              className="bg-muted"
-            />
+            <Input id="related" value={relatedTo.name} disabled className="bg-muted" />
           </div>
 
           <div className="space-y-2">
@@ -143,9 +138,7 @@ export function QuickTaskForm({ open, onClose, relatedTo }: QuickTaskFormProps) 
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
+            <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
             <Button type="submit">Create Task</Button>
           </DialogFooter>
         </form>

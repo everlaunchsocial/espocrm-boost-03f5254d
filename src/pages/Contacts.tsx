@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCRMStore } from '@/stores/crmStore';
+import { useContacts, useAddContact, useUpdateContact, useDeleteContact } from '@/hooks/useCRMData';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
@@ -40,7 +40,11 @@ const contactFields = [
 ];
 
 export default function Contacts() {
-  const { contacts, accounts, addContact, updateContact, deleteContact } = useCRMStore();
+  const { data: contacts = [], isLoading } = useContacts();
+  const addContact = useAddContact();
+  const updateContact = useUpdateContact();
+  const deleteContact = useDeleteContact();
+  
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -79,16 +83,16 @@ export default function Contacts() {
       render: (contact: Contact) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-popover border border-border">
-            <DropdownMenuItem onClick={() => handleEdit(contact)}>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(contact); }}>
               <Pencil className="h-4 w-4 mr-2" />
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleDelete(contact.id)} className="text-destructive">
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(contact.id); }} className="text-destructive">
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </DropdownMenuItem>
@@ -121,17 +125,21 @@ export default function Contacts() {
     setFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    deleteContact(id);
+  const handleDelete = async (id: string) => {
+    await deleteContact.mutateAsync(id);
     toast.success('Contact deleted successfully');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (editingContact) {
-      updateContact(editingContact.id, formValues);
+      await updateContact.mutateAsync({ 
+        id: editingContact.id, 
+        contact: formValues,
+        oldStatus: editingContact.status,
+      });
       toast.success('Contact updated successfully');
     } else {
-      addContact(formValues as any);
+      await addContact.mutateAsync(formValues as any);
       toast.success('Contact created successfully');
     }
     setFormOpen(false);
@@ -146,6 +154,10 @@ export default function Contacts() {
     setDetailOpen(false);
     handleEdit(contact);
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64">Loading contacts...</div>;
+  }
 
   return (
     <div className="space-y-6">

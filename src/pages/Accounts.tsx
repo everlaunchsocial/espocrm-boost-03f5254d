@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCRMStore } from '@/stores/crmStore';
+import { useAccounts, useAddAccount, useUpdateAccount, useDeleteAccount } from '@/hooks/useCRMData';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
@@ -31,7 +31,11 @@ const accountFields = [
 ];
 
 export default function Accounts() {
-  const { accounts, addAccount, updateAccount, deleteAccount } = useCRMStore();
+  const { data: accounts = [], isLoading } = useAccounts();
+  const addAccount = useAddAccount();
+  const updateAccount = useUpdateAccount();
+  const deleteAccount = useDeleteAccount();
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -57,12 +61,19 @@ export default function Accounts() {
     {
       key: 'website',
       label: 'Website',
-      render: (account: Account) => account.website ? (
-        <a href={account.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
-          <Globe className="h-3 w-3" />
-          {new URL(account.website).hostname}
-        </a>
-      ) : '-',
+      render: (account: Account) => {
+        if (!account.website) return '-';
+        try {
+          return (
+            <a href={account.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+              <Globe className="h-3 w-3" />
+              {new URL(account.website).hostname}
+            </a>
+          );
+        } catch {
+          return account.website;
+        }
+      },
     },
     { key: 'phone', label: 'Phone', render: (a: Account) => a.phone || '-' },
     {
@@ -122,21 +133,25 @@ export default function Accounts() {
     setFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    deleteAccount(id);
+  const handleDelete = async (id: string) => {
+    await deleteAccount.mutateAsync(id);
     toast.success('Account deleted successfully');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (editingAccount) {
-      updateAccount(editingAccount.id, formValues);
+      await updateAccount.mutateAsync({ id: editingAccount.id, account: formValues });
       toast.success('Account updated successfully');
     } else {
-      addAccount(formValues as any);
+      await addAccount.mutateAsync(formValues as any);
       toast.success('Account created successfully');
     }
     setFormOpen(false);
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64">Loading accounts...</div>;
+  }
 
   return (
     <div className="space-y-6">
