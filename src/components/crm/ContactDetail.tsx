@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Contact, EmailRecipient } from '@/types/crm';
-import { useAccounts, useDeals, useTasks, useActivities, useNotes, useUpdateContact } from '@/hooks/useCRMData';
+import { useAccounts, useDeals, useTasks, useActivities, useNotes, useUpdateContact, useEmails } from '@/hooks/useCRMData';
 import {
   Sheet,
   SheetContent,
@@ -14,6 +14,7 @@ import { LogActivityModal } from './LogActivityModal';
 import { QuickTaskForm } from './QuickTaskForm';
 import { NotesSection } from './NotesSection';
 import { EmailComposerModal } from './EmailComposerModal';
+import { EmailStatusIndicator } from './EmailStatusIndicator';
 import { StatusBadge } from './StatusBadge';
 import {
   Phone,
@@ -29,6 +30,7 @@ import {
   Pencil,
   Smartphone,
   Send,
+  Inbox,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
@@ -47,6 +49,7 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
   const { data: tasks = [] } = useTasks();
   const { data: activities = [] } = useActivities();
   const { data: notes = [] } = useNotes();
+  const { data: emails = [] } = useEmails(contact?.id);
   const updateContact = useUpdateContact();
 
   const [activityModalOpen, setActivityModalOpen] = useState(false);
@@ -277,6 +280,7 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
           <Tabs defaultValue="notes" className="mt-4">
             <TabsList className="w-full">
               <TabsTrigger value="notes" className="flex-1">Notes ({contactNotes.length})</TabsTrigger>
+              <TabsTrigger value="emails" className="flex-1">Emails ({emails.length})</TabsTrigger>
               <TabsTrigger value="activity" className="flex-1">Activity ({contactActivities.length})</TabsTrigger>
               <TabsTrigger value="deals" className="flex-1">Deals ({contactDeals.length})</TabsTrigger>
               <TabsTrigger value="tasks" className="flex-1">Tasks ({contactTasks.length})</TabsTrigger>
@@ -284,6 +288,34 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
 
             <TabsContent value="notes" className="mt-4">
               <NotesSection relatedTo={{ type: 'contact', id: contact.id, name: `${contact.firstName} ${contact.lastName}` }} />
+            </TabsContent>
+
+            <TabsContent value="emails" className="mt-4">
+              {emails.length > 0 ? (
+                <div className="space-y-3">
+                  {emails.map((email) => (
+                    <div key={email.id} className="p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{email.subject}</p>
+                          <p className="text-sm text-muted-foreground truncate">{email.body.replace(/<[^>]*>/g, '').slice(0, 100)}...</p>
+                        </div>
+                        <EmailStatusIndicator 
+                          status={email.openCount > 0 ? 'opened' : email.status as 'pending' | 'sent' | 'opened' | 'failed'}
+                          openedAt={email.openedAt?.toISOString()}
+                          openCount={email.openCount}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                        <span>From: {email.senderName || email.senderAddress}</span>
+                        <span>{format(email.sentAt, 'MMM d, yyyy h:mm a')}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">No emails sent yet.</p>
+              )}
             </TabsContent>
 
             <TabsContent value="activity" className="mt-4">
