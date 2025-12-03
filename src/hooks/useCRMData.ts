@@ -698,3 +698,50 @@ export function useEmails(entityId?: string) {
     enabled: !!entityId || entityId === undefined,
   });
 }
+
+// Inbox emails (received replies)
+export function useInboxEmails() {
+  return useQuery({
+    queryKey: ['emails', 'inbox'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('emails')
+        .select('*')
+        .eq('status', 'received')
+        .order('sent_at', { ascending: false });
+      if (error) throw error;
+      return data.map(toEmail);
+    },
+  });
+}
+
+// Sent emails (all outbound)
+export function useSentEmails() {
+  return useQuery({
+    queryKey: ['emails', 'sent'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('emails')
+        .select('*')
+        .in('status', ['sent', 'opened', 'pending', 'failed'])
+        .order('sent_at', { ascending: false });
+      if (error) throw error;
+      return data.map(toEmail);
+    },
+  });
+}
+
+// All emails for the dashboard
+export function useAllEmails() {
+  return useQuery({
+    queryKey: ['emails', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('emails')
+        .select('*')
+        .order('sent_at', { ascending: false });
+      if (error) throw error;
+      return data.map(toEmail);
+    },
+  });
+}
