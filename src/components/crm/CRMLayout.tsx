@@ -8,6 +8,7 @@ import {
   UserPlus,
   Handshake,
   CheckSquare,
+  Mail,
   Search,
   Bell,
   Menu,
@@ -29,6 +30,7 @@ interface CRMLayoutProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Email', href: '/email', icon: Mail },
   { name: 'Contacts', href: '/contacts', icon: Users },
   { name: 'Accounts', href: '/accounts', icon: Building2 },
   { name: 'Leads', href: '/leads', icon: UserPlus },

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CRMLayout } from "@/components/crm/CRMLayout";
 import Dashboard from "./pages/Dashboard";
+import Email from "./pages/Email";
 import Contacts from "./pages/Contacts";
 import Accounts from "./pages/Accounts";
 import Leads from "./pages/Leads";
@@ -23,6 +24,7 @@ const App = () => (
         <CRMLayout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/email" element={<Email />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/leads" element={<Leads />} />
