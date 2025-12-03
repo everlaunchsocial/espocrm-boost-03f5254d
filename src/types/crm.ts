@@ -95,7 +95,7 @@ export interface Task {
 
 export interface Activity {
   id: string;
-  type: 'call' | 'email' | 'meeting' | 'note' | 'task';
+  type: 'call' | 'email' | 'meeting' | 'note' | 'task' | 'status-change';
   subject: string;
   description?: string;
   relatedTo?: {
@@ -104,4 +104,19 @@ export interface Activity {
     name: string;
   };
   createdAt: Date;
+  isSystemGenerated?: boolean; // True for auto-tracked changes
+}
+
+// Notes - manual entries by the user
+export interface Note {
+  id: string;
+  content: string;
+  relatedTo: {
+    type: 'contact' | 'account' | 'lead' | 'deal';
+    id: string;
+    name: string;
+  };
+  createdBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

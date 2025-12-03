@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Contact, Account, Lead, Deal, Task, Activity, ContactStatus } from '@/types/crm';
+import { Contact, Account, Lead, Deal, Task, Activity, Note, ContactStatus } from '@/types/crm';
 
 interface CRMStore {
   contacts: Contact[];
@@ -9,6 +9,7 @@ interface CRMStore {
   deals: Deal[];
   tasks: Task[];
   activities: Activity[];
+  notes: Note[];
   
   // Contact actions
   addContact: (contact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -38,6 +39,11 @@ interface CRMStore {
   
   // Activity actions
   addActivity: (activity: Omit<Activity, 'id' | 'createdAt'>) => void;
+  
+  // Note actions
+  addNote: (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateNote: (id: string, note: Partial<Note>) => void;
+  deleteNote: (id: string) => void;
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -167,7 +173,14 @@ const sampleActivities: Activity[] = [
   { id: '1', type: 'call', subject: 'Initial discovery call', description: 'Discussed requirements and budget', relatedTo: { type: 'lead', id: '1', name: 'Emily Davis' }, createdAt: new Date('2024-11-28T10:30:00') },
   { id: '2', type: 'email', subject: 'Sent proposal document', description: 'Attached pricing proposal', relatedTo: { type: 'deal', id: '1', name: 'Acme Enterprise License' }, createdAt: new Date('2024-11-27T14:15:00') },
   { id: '3', type: 'meeting', subject: 'Contract negotiation meeting', description: 'Negotiated final terms', relatedTo: { type: 'account', id: '1', name: 'Acme Corp' }, createdAt: new Date('2024-11-26T09:00:00') },
-  { id: '4', type: 'note', subject: 'Customer feedback', description: 'Positive feedback on demo', relatedTo: { type: 'contact', id: '2', name: 'Sarah Johnson' }, createdAt: new Date('2024-11-25T16:45:00') },
+  { id: '4', type: 'status-change', subject: 'Status changed to Client', description: 'Contact status updated from Lead to Client', relatedTo: { type: 'contact', id: '1', name: 'John Smith' }, createdAt: new Date('2024-11-25T16:45:00'), isSystemGenerated: true },
+  { id: '5', type: 'email', subject: 'Follow-up email sent', description: 'Sent follow-up after demo', relatedTo: { type: 'contact', id: '2', name: 'Sarah Johnson' }, createdAt: new Date('2024-11-24T11:30:00') },
+];
+
+const sampleNotes: Note[] = [
+  { id: '1', content: 'This is a test note about the phone call. It went well.', relatedTo: { type: 'contact', id: '1', name: 'John Smith' }, createdBy: 'John Stevens', createdAt: new Date('2024-11-28T10:30:00'), updatedAt: new Date('2024-11-28T10:30:00') },
+  { id: '2', content: 'Client mentioned they need a proposal by end of week. Follow up with pricing team.', relatedTo: { type: 'contact', id: '1', name: 'John Smith' }, createdBy: 'John Stevens', createdAt: new Date('2024-11-27T14:15:00'), updatedAt: new Date('2024-11-27T14:15:00') },
+  { id: '3', content: 'Interested in the premium package. Budget appears to be flexible.', relatedTo: { type: 'contact', id: '2', name: 'Sarah Johnson' }, createdBy: 'John Stevens', createdAt: new Date('2024-11-26T09:00:00'), updatedAt: new Date('2024-11-26T09:00:00') },
 ];
 
 export const useCRMStore = create<CRMStore>()(
@@ -179,6 +192,7 @@ export const useCRMStore = create<CRMStore>()(
       deals: sampleDeals,
       tasks: sampleTasks,
       activities: sampleActivities,
+      notes: sampleNotes,
 
       // Contact actions
       addContact: (contact) => {
@@ -190,14 +204,28 @@ export const useCRMStore = create<CRMStore>()(
         };
         set((state) => ({ contacts: [...state.contacts, newContact] }));
         get().addActivity({
-          type: 'note',
+          type: 'status-change',
           subject: `Contact created: ${contact.firstName} ${contact.lastName}`,
           relatedTo: { type: 'contact', id: newContact.id, name: `${contact.firstName} ${contact.lastName}` },
+          isSystemGenerated: true,
         });
       },
-      updateContact: (id, contact) => set((state) => ({
-        contacts: state.contacts.map((c) => c.id === id ? { ...c, ...contact, updatedAt: new Date() } : c),
-      })),
+      updateContact: (id, contact) => {
+        const existingContact = get().contacts.find(c => c.id === id);
+        set((state) => ({
+          contacts: state.contacts.map((c) => c.id === id ? { ...c, ...contact, updatedAt: new Date() } : c),
+        }));
+        // Track status changes
+        if (existingContact && contact.status && existingContact.status !== contact.status) {
+          get().addActivity({
+            type: 'status-change',
+            subject: `Status changed to ${contact.status}`,
+            description: `Contact status updated from ${existingContact.status} to ${contact.status}`,
+            relatedTo: { type: 'contact', id, name: `${existingContact.firstName} ${existingContact.lastName}` },
+            isSystemGenerated: true,
+          });
+        }
+      },
       deleteContact: (id) => set((state) => ({
         contacts: state.contacts.filter((c) => c.id !== id),
       })),
@@ -212,9 +240,10 @@ export const useCRMStore = create<CRMStore>()(
         };
         set((state) => ({ accounts: [...state.accounts, newAccount] }));
         get().addActivity({
-          type: 'note',
+          type: 'status-change',
           subject: `Account created: ${account.name}`,
           relatedTo: { type: 'account', id: newAccount.id, name: account.name },
+          isSystemGenerated: true,
         });
       },
       updateAccount: (id, account) => set((state) => ({
@@ -234,9 +263,10 @@ export const useCRMStore = create<CRMStore>()(
         };
         set((state) => ({ leads: [...state.leads, newLead] }));
         get().addActivity({
-          type: 'note',
+          type: 'status-change',
           subject: `Lead created: ${lead.firstName} ${lead.lastName}`,
           relatedTo: { type: 'lead', id: newLead.id, name: `${lead.firstName} ${lead.lastName}` },
+          isSystemGenerated: true,
         });
       },
       updateLead: (id, lead) => set((state) => ({
@@ -270,9 +300,10 @@ export const useCRMStore = create<CRMStore>()(
         };
         set((state) => ({ deals: [...state.deals, newDeal] }));
         get().addActivity({
-          type: 'note',
+          type: 'status-change',
           subject: `Deal created: ${deal.name}`,
           relatedTo: { type: 'deal', id: newDeal.id, name: deal.name },
+          isSystemGenerated: true,
         });
       },
       updateDeal: (id, deal) => set((state) => ({
@@ -309,6 +340,23 @@ export const useCRMStore = create<CRMStore>()(
           },
           ...state.activities,
         ],
+      })),
+
+      // Note actions
+      addNote: (note) => {
+        const newNote: Note = {
+          ...note,
+          id: generateId(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        set((state) => ({ notes: [newNote, ...state.notes] }));
+      },
+      updateNote: (id, note) => set((state) => ({
+        notes: state.notes.map((n) => n.id === id ? { ...n, ...note, updatedAt: new Date() } : n),
+      })),
+      deleteNote: (id) => set((state) => ({
+        notes: state.notes.filter((n) => n.id !== id),
       })),
     }),
     {

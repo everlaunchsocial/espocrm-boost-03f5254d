@@ -13,6 +13,7 @@ import { StatusDropdown } from './StatusDropdown';
 import { ActivityTimeline } from './ActivityTimeline';
 import { LogActivityModal } from './LogActivityModal';
 import { QuickTaskForm } from './QuickTaskForm';
+import { NotesSection } from './NotesSection';
 import {
   Phone,
   Mail,
@@ -39,7 +40,7 @@ interface ContactDetailProps {
 }
 
 export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailProps) {
-  const { activities, deals, tasks, accounts, updateContact } = useCRMStore();
+  const { activities, deals, tasks, accounts, notes, updateContact } = useCRMStore();
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [activityType, setActivityType] = useState<'call' | 'email' | 'meeting' | 'note'>('call');
   const [taskFormOpen, setTaskFormOpen] = useState(false);
@@ -48,6 +49,10 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
 
   const contactActivities = activities.filter(
     (a) => a.relatedTo?.type === 'contact' && a.relatedTo.id === contact.id
+  );
+
+  const contactNotes = notes.filter(
+    (n) => n.relatedTo.type === 'contact' && n.relatedTo.id === contact.id
   );
 
   const contactDeals = deals.filter((d) => d.contactId === contact.id);
@@ -302,8 +307,11 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
           )}
 
           {/* Tabs for related data */}
-          <Tabs defaultValue="activity" className="mt-4">
+          <Tabs defaultValue="notes" className="mt-4">
             <TabsList className="w-full">
+              <TabsTrigger value="notes" className="flex-1">
+                Notes ({contactNotes.length})
+              </TabsTrigger>
               <TabsTrigger value="activity" className="flex-1">
                 Activity ({contactActivities.length})
               </TabsTrigger>
@@ -314,6 +322,16 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
                 Tasks ({contactTasks.length})
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="notes" className="mt-4">
+              <NotesSection
+                relatedTo={{
+                  type: 'contact',
+                  id: contact.id,
+                  name: `${contact.firstName} ${contact.lastName}`,
+                }}
+              />
+            </TabsContent>
 
             <TabsContent value="activity" className="mt-4">
               {contactActivities.length > 0 ? (

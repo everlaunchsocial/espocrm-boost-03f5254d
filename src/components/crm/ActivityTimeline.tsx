@@ -1,5 +1,5 @@
 import { Activity } from '@/types/crm';
-import { Phone, Mail, Calendar, FileText, CheckSquare } from 'lucide-react';
+import { Phone, Mail, Calendar, FileText, CheckSquare, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -8,20 +8,22 @@ interface ActivityTimelineProps {
   limit?: number;
 }
 
-const activityIcons = {
+const activityIcons: Record<Activity['type'], typeof Phone> = {
   call: Phone,
   email: Mail,
   meeting: Calendar,
   note: FileText,
   task: CheckSquare,
+  'status-change': RefreshCw,
 };
 
-const activityColors = {
+const activityColors: Record<Activity['type'], string> = {
   call: 'bg-success/10 text-success',
   email: 'bg-primary/10 text-primary',
   meeting: 'bg-chart-4/10 text-chart-4',
   note: 'bg-warning/10 text-warning',
   task: 'bg-chart-5/10 text-chart-5',
+  'status-change': 'bg-muted text-muted-foreground',
 };
 
 export function ActivityTimeline({ activities, limit }: ActivityTimelineProps) {
@@ -31,14 +33,29 @@ export function ActivityTimeline({ activities, limit }: ActivityTimelineProps) {
     <div className="space-y-4">
       {displayActivities.map((activity, index) => {
         const Icon = activityIcons[activity.type];
+        const isSystemGenerated = activity.isSystemGenerated;
         return (
-          <div key={activity.id} className="flex gap-4 animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+          <div 
+            key={activity.id} 
+            className={cn(
+              "flex gap-4 animate-fade-in",
+              isSystemGenerated && "opacity-70"
+            )} 
+            style={{ animationDelay: `${index * 50}ms` }}
+          >
             <div className={cn('h-10 w-10 rounded-full flex items-center justify-center shrink-0', activityColors[activity.type])}>
               <Icon className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-medium text-card-foreground truncate">{activity.subject}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-card-foreground truncate">{activity.subject}</p>
+                  {isSystemGenerated && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                      Auto
+                    </span>
+                  )}
+                </div>
                 <time className="text-xs text-muted-foreground shrink-0">
                   {format(new Date(activity.createdAt), 'MMM d, h:mm a')}
                 </time>
