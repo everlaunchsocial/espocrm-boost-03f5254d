@@ -642,3 +642,59 @@ export function useDeleteNote() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] }),
   });
 }
+
+// ============ EMAILS ============
+export interface Email {
+  id: string;
+  contactId: string;
+  senderAddress: string;
+  senderName: string | null;
+  toEmail: string;
+  toName: string | null;
+  subject: string;
+  body: string;
+  status: string;
+  trackingId: string;
+  openCount: number;
+  openedAt: Date | null;
+  sentAt: Date;
+  createdAt: Date;
+}
+
+const toEmail = (row: any): Email => ({
+  id: row.id,
+  contactId: row.contact_id,
+  senderAddress: row.sender_address,
+  senderName: row.sender_name,
+  toEmail: row.to_email,
+  toName: row.to_name,
+  subject: row.subject,
+  body: row.body,
+  status: row.status,
+  trackingId: row.tracking_id,
+  openCount: row.open_count,
+  openedAt: row.opened_at ? new Date(row.opened_at) : null,
+  sentAt: new Date(row.sent_at),
+  createdAt: new Date(row.created_at),
+});
+
+export function useEmails(entityId?: string) {
+  return useQuery({
+    queryKey: ['emails', entityId],
+    queryFn: async () => {
+      let query = supabase
+        .from('emails')
+        .select('*')
+        .order('sent_at', { ascending: false });
+      
+      if (entityId) {
+        query = query.eq('contact_id', entityId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data.map(toEmail);
+    },
+    enabled: !!entityId || entityId === undefined,
+  });
+}

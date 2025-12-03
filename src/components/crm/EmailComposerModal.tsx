@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AIEmailAssistant } from './AIEmailAssistant';
-import { useCRMStore } from '@/stores/crmStore';
+import { useAddActivity } from '@/hooks/useCRMData';
 import { Send, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -37,7 +37,7 @@ interface EmailComposerModalProps {
 }
 
 export function EmailComposerModal({ recipient, open, onClose }: EmailComposerModalProps) {
-  const { addActivity } = useCRMStore();
+  const addActivity = useAddActivity();
   const [senderAddresses, setSenderAddresses] = useState<SenderAddress[]>([]);
   const [selectedSender, setSelectedSender] = useState<string>('');
   const [subject, setSubject] = useState('');
@@ -110,7 +110,7 @@ export function EmailComposerModal({ recipient, open, onClose }: EmailComposerMo
       if (error) throw error;
 
       // Log activity with correct entity type
-      addActivity({
+      addActivity.mutate({
         type: 'email',
         subject: `Email sent: ${subject}`,
         description: `Sent to ${recipient.email}`,

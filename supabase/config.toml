@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.ai-email-writer]
 verify_jwt = false
+
+[functions.inbound-email]
+verify_jwt = false
