@@ -45,8 +45,7 @@ export const TotalsSummary = ({
   const overallDiscount = calculateOverallDiscount();
   const balanceDue = amountPaid !== undefined ? total - amountPaid : total;
 
-  const subtotalAfterLineDiscounts = subtotal - lineItemDiscounts;
-  const subtotalAfterAllDiscounts = subtotalAfterLineDiscounts - overallDiscount;
+  const totalDiscount = lineItemDiscounts + overallDiscount;
 
   return (
     <div className="bg-muted/50 rounded-lg p-4 space-y-2">
@@ -55,34 +54,20 @@ export const TotalsSummary = ({
         <span>${subtotal.toFixed(2)}</span>
       </div>
       
-      {lineItemDiscounts > 0 && (
+      {totalDiscount > 0 && (
         <div className="flex justify-between text-sm text-orange-600">
-          <span>Discount (Line Items)</span>
-          <span>-${lineItemDiscounts.toFixed(2)}</span>
+          <span>Discount</span>
+          <span>-${totalDiscount.toFixed(2)}</span>
         </div>
       )}
       
-      {overallDiscount > 0 && (
-        <div className="flex justify-between text-sm text-orange-600">
-          <span>
-            Discount
-            {overallDiscountType === 'percentage' && ` (${overallDiscountAmount}%)`}
-          </span>
-          <span>-${overallDiscount.toFixed(2)}</span>
-        </div>
-      )}
-
-      {(lineItemDiscounts > 0 || overallDiscount > 0) && (
-        <div className="flex justify-between text-sm font-medium border-t pt-2">
-          <span>Subtotal After Discounts</span>
-          <span>${subtotalAfterAllDiscounts.toFixed(2)}</span>
+      {taxRate > 0 && (
+        <div className="flex justify-between text-sm">
+          <span>Tax ({taxRate}%)</span>
+          <span>${taxAmount.toFixed(2)}</span>
         </div>
       )}
       
-      <div className="flex justify-between text-sm">
-        <span>Tax ({taxRate}%)</span>
-        <span>${taxAmount.toFixed(2)}</span>
-      </div>
       <div className="border-t pt-2 flex justify-between font-semibold">
         <span>Total</span>
         <span>${total.toFixed(2)}</span>
