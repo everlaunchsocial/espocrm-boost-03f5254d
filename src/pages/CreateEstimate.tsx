@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -28,6 +29,7 @@ const CreateEstimate = () => {
   const addEstimate = useAddEstimate();
   const addContact = useAddContact();
 
+  const [estimateMode, setEstimateMode] = useState<'generic' | 'home-improvement'>('generic');
   const [customerType, setCustomerType] = useState<'contact' | 'lead' | 'new'>('new');
   const [contactId, setContactId] = useState<string>();
   const [leadId, setLeadId] = useState<string>();
@@ -86,7 +88,7 @@ const CreateEstimate = () => {
       toast.error('Customer name is required');
       return;
     }
-    if (!jobTitle.trim()) {
+    if (estimateMode === 'home-improvement' && !jobTitle.trim()) {
       toast.error('Job title is required');
       return;
     }
@@ -94,6 +96,9 @@ const CreateEstimate = () => {
       toast.error('At least one line item is required');
       return;
     }
+
+    // For generic mode, use a default job title
+    const finalJobTitle = estimateMode === 'generic' ? 'Services' : jobTitle;
 
     try {
       let newContactId = contactId;
@@ -129,8 +134,8 @@ const CreateEstimate = () => {
           customerCity,
           customerState,
           customerZip,
-          jobTitle,
-          jobDescription,
+          jobTitle: finalJobTitle,
+          jobDescription: estimateMode === 'generic' ? '' : jobDescription,
           subtotal,
           taxRate,
           taxAmount,
@@ -167,6 +172,24 @@ const CreateEstimate = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Estimate Mode Toggle */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-medium">Estimate Type</Label>
+                  <p className="text-sm text-muted-foreground">Choose the type of estimate you're creating</p>
+                </div>
+                <Tabs value={estimateMode} onValueChange={(v) => setEstimateMode(v as 'generic' | 'home-improvement')}>
+                  <TabsList>
+                    <TabsTrigger value="generic">Generic</TabsTrigger>
+                    <TabsTrigger value="home-improvement">Home Improvement</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Customer Information */}
           <Card>
             <CardHeader>
@@ -265,34 +288,36 @@ const CreateEstimate = () => {
             </CardContent>
           </Card>
 
-          {/* Job Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="jobTitle">Job Title *</Label>
-                <Input
-                  id="jobTitle"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  placeholder="e.g., Bathroom Renovation"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="jobDescription">Job Description</Label>
-                <Textarea
-                  id="jobDescription"
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  placeholder="Describe the work to be done..."
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Job Details - Only show in home-improvement mode */}
+          {estimateMode === 'home-improvement' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Job Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="jobTitle">Job Title *</Label>
+                  <Input
+                    id="jobTitle"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="e.g., Bathroom Renovation"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="jobDescription">Job Description</Label>
+                  <Textarea
+                    id="jobDescription"
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    placeholder="Describe the work to be done..."
+                    rows={3}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Line Items */}
           <Card>
