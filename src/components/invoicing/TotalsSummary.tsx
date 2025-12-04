@@ -1,8 +1,6 @@
 interface TotalsSummaryProps {
-  subtotal: number;
-  lineItemDiscounts?: number;
-  overallDiscountType?: 'percentage' | 'fixed';
-  overallDiscountAmount?: number;
+  subtotal: number; // Pre-discount subtotal (sum of all line_subtotals)
+  totalDiscount: number; // Total dollar discount (line items + overall)
   taxRate: number;
   taxAmount: number;
   total: number;
@@ -14,9 +12,7 @@ interface TotalsSummaryProps {
 
 export const TotalsSummary = ({
   subtotal,
-  lineItemDiscounts = 0,
-  overallDiscountType,
-  overallDiscountAmount = 0,
+  totalDiscount,
   taxRate,
   taxAmount,
   total,
@@ -33,19 +29,7 @@ export const TotalsSummary = ({
     return depositAmount;
   };
 
-  const calculateOverallDiscount = () => {
-    if (!overallDiscountAmount || overallDiscountAmount <= 0) return 0;
-    const subtotalAfterLineDiscounts = subtotal - lineItemDiscounts;
-    if (overallDiscountType === 'percentage') {
-      return subtotalAfterLineDiscounts * (overallDiscountAmount / 100);
-    }
-    return overallDiscountAmount;
-  };
-
-  const overallDiscount = calculateOverallDiscount();
   const balanceDue = amountPaid !== undefined ? total - amountPaid : total;
-
-  const totalDiscount = lineItemDiscounts + overallDiscount;
 
   return (
     <div className="space-y-2">
