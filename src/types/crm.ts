@@ -63,12 +63,32 @@ export interface Lead {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
   phone?: string;
   company?: string;
   title?: string;
   source: 'web' | 'referral' | 'campaign' | 'social' | 'other';
   status: 'new' | 'contacted' | 'qualified' | 'unqualified' | 'converted';
+  // Address fields
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  // Business fields
+  website?: string;
+  serviceCategory?: string;
+  industry?: string;
+  // Social media
+  facebookUrl?: string;
+  instagramHandle?: string;
+  // Metrics
+  googleRating?: number;
+  googleReviewCount?: number;
+  // Flags
+  hasWebsite?: boolean;
+  notes?: string;
+  // Import tracking
+  importBatchId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

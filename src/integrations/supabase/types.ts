@@ -327,43 +327,85 @@ export type Database = {
       }
       leads: {
         Row: {
+          address: string | null
+          city: string | null
           company: string | null
           created_at: string
-          email: string
+          email: string | null
+          facebook_url: string | null
           first_name: string
+          google_rating: number | null
+          google_review_count: number | null
+          has_website: boolean | null
           id: string
+          import_batch_id: string | null
+          industry: string | null
+          instagram_handle: string | null
           last_name: string
+          notes: string | null
           phone: string | null
+          service_category: string | null
           source: string
+          state: string | null
           status: string
           title: string | null
           updated_at: string
+          website: string | null
+          zip_code: string | null
         }
         Insert: {
+          address?: string | null
+          city?: string | null
           company?: string | null
           created_at?: string
-          email: string
+          email?: string | null
+          facebook_url?: string | null
           first_name: string
+          google_rating?: number | null
+          google_review_count?: number | null
+          has_website?: boolean | null
           id?: string
+          import_batch_id?: string | null
+          industry?: string | null
+          instagram_handle?: string | null
           last_name: string
+          notes?: string | null
           phone?: string | null
+          service_category?: string | null
           source?: string
+          state?: string | null
           status?: string
           title?: string | null
           updated_at?: string
+          website?: string | null
+          zip_code?: string | null
         }
         Update: {
+          address?: string | null
+          city?: string | null
           company?: string | null
           created_at?: string
-          email?: string
+          email?: string | null
+          facebook_url?: string | null
           first_name?: string
+          google_rating?: number | null
+          google_review_count?: number | null
+          has_website?: boolean | null
           id?: string
+          import_batch_id?: string | null
+          industry?: string | null
+          instagram_handle?: string | null
           last_name?: string
+          notes?: string | null
           phone?: string | null
+          service_category?: string | null
           source?: string
+          state?: string | null
           status?: string
           title?: string | null
           updated_at?: string
+          website?: string | null
+          zip_code?: string | null
         }
         Relationships: []
       }

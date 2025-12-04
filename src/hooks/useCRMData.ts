@@ -50,6 +50,26 @@ const toLead = (row: any): Lead => ({
   title: row.title,
   source: row.source as Lead['source'],
   status: row.status as Lead['status'],
+  // Address fields
+  address: row.address,
+  city: row.city,
+  state: row.state,
+  zipCode: row.zip_code,
+  // Business fields
+  website: row.website,
+  serviceCategory: row.service_category,
+  industry: row.industry,
+  // Social media
+  facebookUrl: row.facebook_url,
+  instagramHandle: row.instagram_handle,
+  // Metrics
+  googleRating: row.google_rating ? Number(row.google_rating) : undefined,
+  googleReviewCount: row.google_review_count,
+  // Flags
+  hasWebsite: row.has_website,
+  notes: row.notes,
+  // Import tracking
+  importBatchId: row.import_batch_id,
   createdAt: new Date(row.created_at),
   updatedAt: new Date(row.updated_at),
 });
@@ -322,12 +342,26 @@ export function useAddLead() {
       const { data, error } = await supabase.from('leads').insert({
         first_name: lead.firstName,
         last_name: lead.lastName,
-        email: lead.email,
+        email: lead.email || null,
         phone: lead.phone,
         company: lead.company,
         title: lead.title,
         source: lead.source,
         status: lead.status,
+        address: lead.address,
+        city: lead.city,
+        state: lead.state,
+        zip_code: lead.zipCode,
+        website: lead.website,
+        service_category: lead.serviceCategory,
+        industry: lead.industry,
+        facebook_url: lead.facebookUrl,
+        instagram_handle: lead.instagramHandle,
+        google_rating: lead.googleRating,
+        google_review_count: lead.googleReviewCount,
+        has_website: lead.hasWebsite,
+        notes: lead.notes,
+        import_batch_id: lead.importBatchId,
       }).select().single();
       if (error) throw error;
 
@@ -362,6 +396,19 @@ export function useUpdateLead() {
       if (lead.title !== undefined) updateData.title = lead.title;
       if (lead.source !== undefined) updateData.source = lead.source;
       if (lead.status !== undefined) updateData.status = lead.status;
+      if (lead.address !== undefined) updateData.address = lead.address;
+      if (lead.city !== undefined) updateData.city = lead.city;
+      if (lead.state !== undefined) updateData.state = lead.state;
+      if (lead.zipCode !== undefined) updateData.zip_code = lead.zipCode;
+      if (lead.website !== undefined) updateData.website = lead.website;
+      if (lead.serviceCategory !== undefined) updateData.service_category = lead.serviceCategory;
+      if (lead.industry !== undefined) updateData.industry = lead.industry;
+      if (lead.facebookUrl !== undefined) updateData.facebook_url = lead.facebookUrl;
+      if (lead.instagramHandle !== undefined) updateData.instagram_handle = lead.instagramHandle;
+      if (lead.googleRating !== undefined) updateData.google_rating = lead.googleRating;
+      if (lead.googleReviewCount !== undefined) updateData.google_review_count = lead.googleReviewCount;
+      if (lead.hasWebsite !== undefined) updateData.has_website = lead.hasWebsite;
+      if (lead.notes !== undefined) updateData.notes = lead.notes;
 
       const { error } = await supabase.from('leads').update(updateData).eq('id', id);
       if (error) throw error;
@@ -381,6 +428,74 @@ export function useDeleteLead() {
   });
 }
 
+// Bulk import leads with batch tracking for rollback
+export function useBulkImportLeads() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (leads: Array<Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>>) => {
+      const batchId = crypto.randomUUID();
+      
+      const leadsToInsert = leads.map(lead => ({
+        first_name: lead.firstName,
+        last_name: lead.lastName,
+        email: lead.email || null,
+        phone: lead.phone,
+        company: lead.company,
+        title: lead.title,
+        source: lead.source,
+        status: lead.status,
+        address: lead.address,
+        city: lead.city,
+        state: lead.state,
+        zip_code: lead.zipCode,
+        website: lead.website,
+        service_category: lead.serviceCategory,
+        industry: lead.industry,
+        facebook_url: lead.facebookUrl,
+        instagram_handle: lead.instagramHandle,
+        google_rating: lead.googleRating,
+        google_review_count: lead.googleReviewCount,
+        has_website: lead.hasWebsite,
+        notes: lead.notes,
+        import_batch_id: batchId,
+      }));
+
+      const { data, error } = await supabase
+        .from('leads')
+        .insert(leadsToInsert)
+        .select();
+      
+      if (error) throw error;
+      
+      return { batchId, count: data.length, leads: data };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+}
+
+// Rollback/delete leads by batch ID
+export function useRollbackLeadImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (batchId: string) => {
+      const { data, error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('import_batch_id', batchId)
+        .select();
+      
+      if (error) throw error;
+      return { deletedCount: data.length };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Import rolled back successfully');
+    },
+  });
+}
+
 export function useConvertLeadToContact() {
   const queryClient = useQueryClient();
   const addContact = useAddContact();
@@ -388,11 +503,11 @@ export function useConvertLeadToContact() {
 
   return useMutation({
     mutationFn: async (lead: Lead) => {
-      // Add as contact
+      // Add as contact (use placeholder email if none provided)
       await addContact.mutateAsync({
         firstName: lead.firstName,
         lastName: lead.lastName,
-        email: lead.email,
+        email: lead.email || `${lead.firstName.toLowerCase()}.${lead.lastName.toLowerCase()}@placeholder.com`,
         phone: lead.phone || '',
         title: lead.title,
         status: 'lead',

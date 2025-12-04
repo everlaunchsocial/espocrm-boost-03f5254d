@@ -9,6 +9,7 @@ import Email from "./pages/Email";
 import Contacts from "./pages/Contacts";
 import Accounts from "./pages/Accounts";
 import Leads from "./pages/Leads";
+import LeadImport from "./pages/LeadImport";
 import Deals from "./pages/Deals";
 import Tasks from "./pages/Tasks";
 import MediaLibrary from "./pages/MediaLibrary";
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/leads/import" element={<LeadImport />} />
             <Route path="/deals" element={<Deals />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/media-library" element={<MediaLibrary />} />
