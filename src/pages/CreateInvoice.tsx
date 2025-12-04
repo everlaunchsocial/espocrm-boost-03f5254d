@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CustomerSelector } from '@/components/invoicing/CustomerSelector';
 import { LineItemsEditor } from '@/components/invoicing/LineItemsEditor';
 import { TotalsSummary } from '@/components/invoicing/TotalsSummary';
@@ -21,6 +22,7 @@ const CreateInvoice = () => {
   const addInvoice = useAddInvoice();
   const addContact = useAddContact();
 
+  const [invoiceMode, setInvoiceMode] = useState<'generic' | 'home-improvement'>('generic');
   const [customerType, setCustomerType] = useState<'contact' | 'lead' | 'new'>('new');
   const [contactId, setContactId] = useState<string>();
   const [leadId, setLeadId] = useState<string>();
@@ -76,7 +78,7 @@ const CreateInvoice = () => {
       toast.error('Customer name is required');
       return;
     }
-    if (!jobTitle.trim()) {
+    if (invoiceMode === 'home-improvement' && !jobTitle.trim()) {
       toast.error('Job title is required');
       return;
     }
@@ -84,6 +86,9 @@ const CreateInvoice = () => {
       toast.error('At least one line item is required');
       return;
     }
+    
+    // For generic mode, use a default job title
+    const finalJobTitle = invoiceMode === 'generic' ? 'Services' : jobTitle;
 
     try {
       let newContactId = contactId;
@@ -119,8 +124,8 @@ const CreateInvoice = () => {
           customerCity,
           customerState,
           customerZip,
-          jobTitle,
-          jobDescription,
+          jobTitle: finalJobTitle,
+          jobDescription: invoiceMode === 'generic' ? '' : jobDescription,
           subtotal,
           taxRate,
           taxAmount,
@@ -154,6 +159,24 @@ const CreateInvoice = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Invoice Mode Toggle */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-medium">Invoice Type</Label>
+                  <p className="text-sm text-muted-foreground">Choose the type of invoice you're creating</p>
+                </div>
+                <Tabs value={invoiceMode} onValueChange={(v) => setInvoiceMode(v as 'generic' | 'home-improvement')}>
+                  <TabsList>
+                    <TabsTrigger value="generic">Generic</TabsTrigger>
+                    <TabsTrigger value="home-improvement">Home Improvement</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Customer Information */}
           <Card>
             <CardHeader>
@@ -252,34 +275,36 @@ const CreateInvoice = () => {
             </CardContent>
           </Card>
 
-          {/* Job Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="jobTitle">Job Title *</Label>
-                <Input
-                  id="jobTitle"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  placeholder="e.g., Bathroom Renovation"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="jobDescription">Job Description</Label>
-                <Textarea
-                  id="jobDescription"
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  placeholder="Describe the work completed..."
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Job Details - Only show in home-improvement mode */}
+          {invoiceMode === 'home-improvement' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Job Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="jobTitle">Job Title *</Label>
+                  <Input
+                    id="jobTitle"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="e.g., Bathroom Renovation"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="jobDescription">Job Description</Label>
+                  <Textarea
+                    id="jobDescription"
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    placeholder="Describe the work completed..."
+                    rows={3}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Line Items */}
           <Card>
