@@ -45,6 +45,9 @@ export const TotalsSummary = ({
   const overallDiscount = calculateOverallDiscount();
   const balanceDue = amountPaid !== undefined ? total - amountPaid : total;
 
+  const subtotalAfterLineDiscounts = subtotal - lineItemDiscounts;
+  const subtotalAfterAllDiscounts = subtotalAfterLineDiscounts - overallDiscount;
+
   return (
     <div className="bg-muted/50 rounded-lg p-4 space-y-2">
       <div className="flex justify-between text-sm">
@@ -54,7 +57,7 @@ export const TotalsSummary = ({
       
       {lineItemDiscounts > 0 && (
         <div className="flex justify-between text-sm text-orange-600">
-          <span>Line Item Discounts</span>
+          <span>Discount (Line Items)</span>
           <span>-${lineItemDiscounts.toFixed(2)}</span>
         </div>
       )}
@@ -66,6 +69,13 @@ export const TotalsSummary = ({
             {overallDiscountType === 'percentage' && ` (${overallDiscountAmount}%)`}
           </span>
           <span>-${overallDiscount.toFixed(2)}</span>
+        </div>
+      )}
+
+      {(lineItemDiscounts > 0 || overallDiscount > 0) && (
+        <div className="flex justify-between text-sm font-medium border-t pt-2">
+          <span>Subtotal After Discounts</span>
+          <span>${subtotalAfterAllDiscounts.toFixed(2)}</span>
         </div>
       )}
       
