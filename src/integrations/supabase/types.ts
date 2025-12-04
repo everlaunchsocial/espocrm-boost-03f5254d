@@ -325,6 +325,344 @@ export type Database = {
         }
         Relationships: []
       }
+      estimate_items: {
+        Row: {
+          created_at: string
+          description: string
+          estimate_id: string
+          id: string
+          line_total: number
+          quantity: number
+          sort_order: number | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          estimate_id: string
+          id?: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number | null
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          estimate_id?: string
+          id?: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_items_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      estimates: {
+        Row: {
+          accepted_at: string | null
+          after_photo_url: string | null
+          before_photo_url: string | null
+          contact_id: string | null
+          created_at: string
+          customer_address: string | null
+          customer_city: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          customer_state: string | null
+          customer_zip: string | null
+          declined_at: string | null
+          deposit_amount: number | null
+          deposit_required: boolean | null
+          deposit_type: string | null
+          during_photo_url: string | null
+          estimate_number: string
+          id: string
+          invoice_generated: boolean | null
+          job_description: string | null
+          job_title: string
+          lead_id: string | null
+          notes: string | null
+          sent_at: string | null
+          signature_data: string | null
+          signer_ip: string | null
+          signer_name: string | null
+          status: string
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          terms_and_conditions: string | null
+          total_amount: number
+          updated_at: string
+          valid_until: string | null
+          viewed_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          after_photo_url?: string | null
+          before_photo_url?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          customer_state?: string | null
+          customer_zip?: string | null
+          declined_at?: string | null
+          deposit_amount?: number | null
+          deposit_required?: boolean | null
+          deposit_type?: string | null
+          during_photo_url?: string | null
+          estimate_number: string
+          id?: string
+          invoice_generated?: boolean | null
+          job_description?: string | null
+          job_title: string
+          lead_id?: string | null
+          notes?: string | null
+          sent_at?: string | null
+          signature_data?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          terms_and_conditions?: string | null
+          total_amount?: number
+          updated_at?: string
+          valid_until?: string | null
+          viewed_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          after_photo_url?: string | null
+          before_photo_url?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          customer_state?: string | null
+          customer_zip?: string | null
+          declined_at?: string | null
+          deposit_amount?: number | null
+          deposit_required?: boolean | null
+          deposit_type?: string | null
+          during_photo_url?: string | null
+          estimate_number?: string
+          id?: string
+          invoice_generated?: boolean | null
+          job_description?: string | null
+          job_title?: string
+          lead_id?: string | null
+          notes?: string | null
+          sent_at?: string | null
+          signature_data?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          terms_and_conditions?: string | null
+          total_amount?: number
+          updated_at?: string
+          valid_until?: string | null
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimates_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          line_total: number
+          quantity: number
+          sort_order: number | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number | null
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          after_photo_url: string | null
+          amount_paid: number | null
+          before_photo_url: string | null
+          contact_id: string | null
+          created_at: string
+          customer_address: string | null
+          customer_city: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          customer_state: string | null
+          customer_zip: string | null
+          due_date: string | null
+          during_photo_url: string | null
+          estimate_id: string | null
+          id: string
+          invoice_number: string
+          job_description: string | null
+          job_title: string
+          lead_id: string | null
+          notes: string | null
+          paid_date: string | null
+          sent_at: string | null
+          status: string
+          subtotal: number
+          tax_amount: number | null
+          tax_rate: number | null
+          total_amount: number
+          updated_at: string
+          viewed_at: string | null
+        }
+        Insert: {
+          after_photo_url?: string | null
+          amount_paid?: number | null
+          before_photo_url?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          customer_state?: string | null
+          customer_zip?: string | null
+          due_date?: string | null
+          during_photo_url?: string | null
+          estimate_id?: string | null
+          id?: string
+          invoice_number: string
+          job_description?: string | null
+          job_title: string
+          lead_id?: string | null
+          notes?: string | null
+          paid_date?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_amount?: number
+          updated_at?: string
+          viewed_at?: string | null
+        }
+        Update: {
+          after_photo_url?: string | null
+          amount_paid?: number | null
+          before_photo_url?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          customer_state?: string | null
+          customer_zip?: string | null
+          due_date?: string | null
+          during_photo_url?: string | null
+          estimate_id?: string | null
+          id?: string
+          invoice_number?: string
+          job_description?: string | null
+          job_title?: string
+          lead_id?: string | null
+          notes?: string | null
+          paid_date?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_amount?: number
+          updated_at?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           address: string | null

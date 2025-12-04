@@ -13,6 +13,10 @@ import LeadImport from "./pages/LeadImport";
 import Deals from "./pages/Deals";
 import Tasks from "./pages/Tasks";
 import MediaLibrary from "./pages/MediaLibrary";
+import Estimates from "./pages/Estimates";
+import CreateEstimate from "./pages/CreateEstimate";
+import Invoices from "./pages/Invoices";
+import CreateInvoice from "./pages/CreateInvoice";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +38,10 @@ const App = () => (
             <Route path="/deals" element={<Deals />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/media-library" element={<MediaLibrary />} />
+            <Route path="/estimates" element={<Estimates />} />
+            <Route path="/estimates/new" element={<CreateEstimate />} />
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/invoices/new" element={<CreateInvoice />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </CRMLayout>
