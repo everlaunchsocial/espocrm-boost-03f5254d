@@ -48,7 +48,7 @@ export const TotalsSummary = ({
   const totalDiscount = lineItemDiscounts + overallDiscount;
 
   return (
-    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+    <div className="space-y-2">
       <div className="flex justify-between text-sm">
         <span>Subtotal</span>
         <span>${subtotal.toFixed(2)}</span>
@@ -61,12 +61,10 @@ export const TotalsSummary = ({
         </div>
       )}
       
-      {taxRate > 0 && (
-        <div className="flex justify-between text-sm">
-          <span>Tax ({taxRate}%)</span>
-          <span>${taxAmount.toFixed(2)}</span>
-        </div>
-      )}
+      <div className="flex justify-between text-sm">
+        <span>Tax ({taxRate}%)</span>
+        <span>${taxAmount.toFixed(2)}</span>
+      </div>
       
       <div className="border-t pt-2 flex justify-between font-semibold">
         <span>Total</span>
