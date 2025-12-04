@@ -41,17 +41,19 @@ export const LineItemsEditor = ({ items, onChange }: LineItemsEditorProps) => {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-16 gap-2 text-sm font-medium text-muted-foreground px-1">
+      {/* Header */}
+      <div className="grid grid-cols-12 gap-2 text-sm font-medium text-muted-foreground px-1">
         <div className="col-span-4">Description</div>
-        <div className="col-span-2 text-right">Qty</div>
+        <div className="col-span-1 text-right">Qty</div>
         <div className="col-span-2 text-right">Price</div>
-        <div className="col-span-3 text-center">Discount</div>
+        <div className="col-span-2 text-center">Discount</div>
         <div className="col-span-2 text-right">Total</div>
         <div className="col-span-1"></div>
       </div>
       
+      {/* Items */}
       {items.map((item, index) => (
-        <div key={index} className="grid grid-cols-16 gap-2 items-center">
+        <div key={index} className="grid grid-cols-12 gap-2 items-center">
           <div className="col-span-4">
             <Input
               placeholder="Item description"
@@ -59,7 +61,7 @@ export const LineItemsEditor = ({ items, onChange }: LineItemsEditorProps) => {
               onChange={(e) => updateItem(index, 'description', e.target.value)}
             />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-1">
             <Input
               type="number"
               min="1"
@@ -78,21 +80,21 @@ export const LineItemsEditor = ({ items, onChange }: LineItemsEditorProps) => {
               className="text-right"
             />
           </div>
-          <div className="col-span-3 flex gap-1">
+          <div className="col-span-2 flex gap-1">
             <Input
               type="number"
               min="0"
               step="0.01"
               value={item.discountAmount || ''}
               onChange={(e) => updateItem(index, 'discountAmount', parseFloat(e.target.value) || 0)}
-              className="text-right w-16"
+              className="text-right flex-1"
               placeholder="0"
             />
             <Select
               value={item.discountType || 'fixed'}
               onValueChange={(v) => updateItem(index, 'discountType', v)}
             >
-              <SelectTrigger className="w-16">
+              <SelectTrigger className="w-14">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
