@@ -11,6 +11,7 @@ import Accounts from "./pages/Accounts";
 import Leads from "./pages/Leads";
 import Deals from "./pages/Deals";
 import Tasks from "./pages/Tasks";
+import MediaLibrary from "./pages/MediaLibrary";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/leads" element={<Leads />} />
             <Route path="/deals" element={<Deals />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/media-library" element={<MediaLibrary />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </CRMLayout>

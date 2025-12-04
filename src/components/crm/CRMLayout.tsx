@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  FolderOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ const navigation = [
   { name: 'Leads', href: '/leads', icon: UserPlus },
   { name: 'Deals', href: '/deals', icon: Handshake },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
+  { name: 'Media Library', href: '/media-library', icon: FolderOpen },
 ];
 
 export function CRMLayout({ children }: CRMLayoutProps) {

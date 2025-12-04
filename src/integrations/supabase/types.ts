@@ -104,6 +104,63 @@ export type Database = {
         }
         Relationships: []
       }
+      call_logs: {
+        Row: {
+          action_items: Json | null
+          contact_id: string | null
+          created_at: string
+          duration_seconds: number | null
+          entity_type: string
+          id: string
+          lead_id: string | null
+          suggested_email: Json | null
+          suggested_status: string | null
+          summary: string | null
+          transcript: string
+        }
+        Insert: {
+          action_items?: Json | null
+          contact_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          entity_type: string
+          id?: string
+          lead_id?: string | null
+          suggested_email?: Json | null
+          suggested_status?: string | null
+          summary?: string | null
+          transcript: string
+        }
+        Update: {
+          action_items?: Json | null
+          contact_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          entity_type?: string
+          id?: string
+          lead_id?: string | null
+          suggested_email?: Json | null
+          suggested_status?: string | null
+          summary?: string | null
+          transcript?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           account_id: string | null
@@ -307,6 +364,39 @@ export type Database = {
           status?: string
           title?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      media_library: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          keywords: string[] | null
+          name: string
+          type: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          keywords?: string[] | null
+          name: string
+          type?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          keywords?: string[] | null
+          name?: string
+          type?: string
+          updated_at?: string
+          url?: string
         }
         Relationships: []
       }

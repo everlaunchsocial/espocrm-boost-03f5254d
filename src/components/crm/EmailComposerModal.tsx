@@ -34,9 +34,11 @@ interface EmailComposerModalProps {
   recipient: EmailRecipient | null;
   open: boolean;
   onClose: () => void;
+  prefillSubject?: string;
+  prefillBody?: string;
 }
 
-export function EmailComposerModal({ recipient, open, onClose }: EmailComposerModalProps) {
+export function EmailComposerModal({ recipient, open, onClose, prefillSubject, prefillBody }: EmailComposerModalProps) {
   const addActivity = useAddActivity();
   const [senderAddresses, setSenderAddresses] = useState<SenderAddress[]>([]);
   const [selectedSender, setSelectedSender] = useState<string>('');
@@ -74,11 +76,11 @@ export function EmailComposerModal({ recipient, open, onClose }: EmailComposerMo
   // Reset form when modal opens
   useEffect(() => {
     if (open) {
-      setSubject('');
-      setBody('');
+      setSubject(prefillSubject || '');
+      setBody(prefillBody || '');
       setShowAIAssistant(false);
     }
-  }, [open, recipient]);
+  }, [open, recipient, prefillSubject, prefillBody]);
 
   const handleSend = async () => {
     if (!recipient || !selectedSender || !subject.trim() || !body.trim()) {

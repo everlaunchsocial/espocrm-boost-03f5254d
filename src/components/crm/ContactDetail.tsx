@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Contact, EmailRecipient } from '@/types/crm';
 import { useAccounts, useDeals, useTasks, useActivities, useNotes, useUpdateContact, useEmails } from '@/hooks/useCRMData';
+import { CallAssistant } from './CallAssistant';
 import {
   Sheet,
   SheetContent,
@@ -31,6 +32,7 @@ import {
   Smartphone,
   Send,
   Inbox,
+  PhoneCall,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
@@ -56,6 +58,7 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
   const [activityType, setActivityType] = useState<'call' | 'email' | 'meeting' | 'note'>('call');
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [callAssistantOpen, setCallAssistantOpen] = useState(false);
 
   if (!contact) return null;
 
@@ -145,7 +148,11 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
           <div className="py-4 border-b border-border">
             <p className="text-sm font-medium text-muted-foreground mb-3">Quick Actions</p>
             <div className="flex flex-wrap gap-2">
-              <Button variant="default" size="sm" onClick={() => setEmailComposerOpen(true)}>
+              <Button variant="default" size="sm" onClick={() => setCallAssistantOpen(true)}>
+                <PhoneCall className="h-4 w-4 mr-2" />
+                Start Call
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setEmailComposerOpen(true)}>
                 <Send className="h-4 w-4 mr-2" />
                 Send Email
               </Button>
@@ -400,6 +407,16 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
         }}
         open={emailComposerOpen}
         onClose={() => setEmailComposerOpen(false)}
+      />
+
+      <CallAssistant
+        open={callAssistantOpen}
+        onClose={() => setCallAssistantOpen(false)}
+        entityType="contact"
+        entityId={contact.id}
+        entityName={`${contact.firstName} ${contact.lastName}`}
+        company={linkedAccount?.name}
+        currentStatus={contact.status}
       />
     </>
   );
