@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Send, Eye, DollarSign, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Plus, Send, Eye, DollarSign, MoreHorizontal, Trash2, Search } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,17 @@ const Invoices = () => {
   const deleteInvoice = useDeleteInvoice();
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [paymentInvoice, setPaymentInvoice] = useState<any>(null);
+  const [search, setSearch] = useState('');
+
+  const filteredInvoices = invoices.filter((invoice) => {
+    if (!search) return true;
+    const searchLower = search.toLowerCase();
+    return (
+      invoice.customerName?.toLowerCase().includes(searchLower) ||
+      invoice.invoiceNumber?.toLowerCase().includes(searchLower) ||
+      invoice.jobTitle?.toLowerCase().includes(searchLower)
+    );
+  });
 
   const handleSendInvoice = async (invoiceId: string) => {
     setSendingId(invoiceId);
@@ -158,6 +170,17 @@ const Invoices = () => {
         </Button>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search invoices..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'paid')}>
         <TabsList>
           <TabsTrigger value="active">Active</TabsTrigger>
@@ -165,32 +188,34 @@ const Invoices = () => {
         </TabsList>
 
         <TabsContent value="active" className="mt-4">
-          {invoices.length === 0 ? (
+          {filteredInvoices.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">No active invoices</h3>
-                <p className="text-muted-foreground mb-4">Create your first invoice to get started</p>
-                <Button onClick={() => navigate('/invoices/new')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Invoice
-                </Button>
+                <h3 className="text-lg font-medium mb-2">{search ? 'No matching invoices' : 'No active invoices'}</h3>
+                <p className="text-muted-foreground mb-4">{search ? 'Try a different search term' : 'Create your first invoice to get started'}</p>
+                {!search && (
+                  <Button onClick={() => navigate('/invoices/new')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Invoice
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
-            <InvoiceList invoices={invoices} />
+            <InvoiceList invoices={filteredInvoices} />
           )}
         </TabsContent>
 
         <TabsContent value="paid" className="mt-4">
-          {invoices.length === 0 ? (
+          {filteredInvoices.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">No paid invoices yet</p>
+                <p className="text-muted-foreground">{search ? 'No matching invoices' : 'No paid invoices yet'}</p>
               </CardContent>
             </Card>
           ) : (
-            <InvoiceList invoices={invoices} />
+            <InvoiceList invoices={filteredInvoices} />
           )}
         </TabsContent>
       </Tabs>
