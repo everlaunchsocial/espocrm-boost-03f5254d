@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Send, Eye, DollarSign, MoreHorizontal, Trash2, Search } from 'lucide-react';
+import { Plus, Send, Eye, DollarSign, MoreHorizontal, Trash2, Search, Download } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
 import { useInvoices, useDeleteInvoice } from '@/hooks/useInvoices';
 import { InvoiceStatusBadge } from '@/components/invoicing/InvoiceStatusBadge';
 import { RecordPaymentModal } from '@/components/invoicing/RecordPaymentModal';
+import { InvoicePDFButton } from '@/components/invoicing/InvoicePDFButton';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -95,6 +96,8 @@ const Invoices = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                <InvoicePDFButton invoiceId={invoice.id} invoiceNumber={invoice.invoiceNumber} />
+                
                 <Button
                   variant="outline"
                   size="sm"

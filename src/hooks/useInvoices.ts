@@ -43,6 +43,8 @@ const toInvoiceItem = (row: any): InvoiceItem => ({
   unitPrice: Number(row.unit_price),
   lineTotal: Number(row.line_total),
   sortOrder: row.sort_order,
+  discountType: row.discount_type || 'fixed',
+  discountAmount: Number(row.discount_amount) || 0,
 });
 
 export const useInvoices = (status?: 'active' | 'paid') => {
@@ -129,14 +131,22 @@ export const useAddInvoice = () => {
 
       if (data.items.length > 0) {
         const { error: itemsError } = await supabase.from('invoice_items').insert(
-          data.items.map((item, index) => ({
-            invoice_id: invoice.id,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            line_total: item.quantity * item.unitPrice,
-            sort_order: index,
-          }))
+          data.items.map((item, index) => {
+            const baseTotal = item.quantity * item.unitPrice;
+            const discount = item.discountType === 'percentage'
+              ? baseTotal * ((item.discountAmount || 0) / 100)
+              : (item.discountAmount || 0);
+            return {
+              invoice_id: invoice.id,
+              description: item.description,
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+              line_total: baseTotal - discount,
+              sort_order: index,
+              discount_type: item.discountType || 'fixed',
+              discount_amount: item.discountAmount || 0,
+            };
+          })
         );
         if (itemsError) throw itemsError;
       }
@@ -189,14 +199,22 @@ export const useUpdateInvoice = () => {
         await supabase.from('invoice_items').delete().eq('invoice_id', data.id);
         if (data.items.length > 0) {
           const { error: itemsError } = await supabase.from('invoice_items').insert(
-            data.items.map((item, index) => ({
-              invoice_id: data.id,
-              description: item.description,
-              quantity: item.quantity,
-              unit_price: item.unitPrice,
-              line_total: item.quantity * item.unitPrice,
-              sort_order: index,
-            }))
+            data.items.map((item, index) => {
+              const baseTotal = item.quantity * item.unitPrice;
+              const discount = item.discountType === 'percentage'
+                ? baseTotal * ((item.discountAmount || 0) / 100)
+                : (item.discountAmount || 0);
+              return {
+                invoice_id: data.id,
+                description: item.description,
+                quantity: item.quantity,
+                unit_price: item.unitPrice,
+                line_total: baseTotal - discount,
+                sort_order: index,
+                discount_type: item.discountType || 'fixed',
+                discount_amount: item.discountAmount || 0,
+              };
+            })
           );
           if (itemsError) throw itemsError;
         }

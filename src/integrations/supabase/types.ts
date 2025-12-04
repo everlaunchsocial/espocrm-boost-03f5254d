@@ -505,6 +505,8 @@ export type Database = {
         Row: {
           created_at: string
           description: string
+          discount_amount: number | null
+          discount_type: string | null
           id: string
           invoice_id: string
           line_total: number
@@ -515,6 +517,8 @@ export type Database = {
         Insert: {
           created_at?: string
           description: string
+          discount_amount?: number | null
+          discount_type?: string | null
           id?: string
           invoice_id: string
           line_total?: number
@@ -525,6 +529,8 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string
+          discount_amount?: number | null
+          discount_type?: string | null
           id?: string
           invoice_id?: string
           line_total?: number

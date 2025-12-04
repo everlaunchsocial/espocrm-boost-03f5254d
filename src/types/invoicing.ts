@@ -91,6 +91,8 @@ export interface InvoiceItem {
   unitPrice: number;
   lineTotal: number;
   sortOrder: number;
+  discountType?: 'percentage' | 'fixed';
+  discountAmount?: number;
 }
 
 export interface LineItemInput {
