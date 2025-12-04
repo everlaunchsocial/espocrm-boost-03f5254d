@@ -45,7 +45,7 @@ const CreateEstimate = () => {
   const [jobDescription, setJobDescription] = useState('');
   
   const [items, setItems] = useState<LineItemInput[]>([
-    { description: '', quantity: 1, unitPrice: 0 },
+    { description: '', quantity: 1, unitPrice: 0, discountType: 'fixed', discountAmount: 0 },
   ]);
   
   const [taxRate, setTaxRate] = useState(0);
@@ -56,9 +56,27 @@ const CreateEstimate = () => {
   const [notes, setNotes] = useState('');
   const [createContactOnSave, setCreateContactOnSave] = useState(false);
 
-  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const taxAmount = subtotal * (taxRate / 100);
-  const total = subtotal + taxAmount;
+  // Calculate line item discount (dollar amount)
+  const calculateLineItemDiscount = (item: LineItemInput) => {
+    const lineSubtotal = (item.quantity || 0) * (item.unitPrice || 0);
+    if (!item.discountAmount || item.discountAmount <= 0) return 0;
+    if (item.discountType === 'percentage') {
+      return lineSubtotal * (item.discountAmount / 100);
+    }
+    return item.discountAmount;
+  };
+
+  // Subtotal = sum of all line_subtotals (before any discounts)
+  const subtotal = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
+  
+  // Total line item discounts (in dollars)
+  const totalDiscount = items.reduce((sum, item) => sum + calculateLineItemDiscount(item), 0);
+  
+  // Taxable amount = subtotal - all discounts
+  const taxableAmount = Math.max(0, subtotal - totalDiscount);
+  
+  const taxAmount = taxableAmount * (taxRate / 100);
+  const total = taxableAmount + taxAmount;
 
   const handleCustomerSelect = (customer: any) => {
     setCustomerType(customer.type);
@@ -404,6 +422,7 @@ const CreateEstimate = () => {
 
               <TotalsSummary
                 subtotal={subtotal}
+                totalDiscount={totalDiscount}
                 taxRate={taxRate}
                 taxAmount={taxAmount}
                 total={total}

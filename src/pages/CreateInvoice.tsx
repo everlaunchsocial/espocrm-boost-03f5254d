@@ -50,36 +50,38 @@ const CreateInvoice = () => {
   const [overallDiscountType, setOverallDiscountType] = useState<'percentage' | 'fixed'>('fixed');
   const [overallDiscountAmount, setOverallDiscountAmount] = useState(0);
 
-  // Calculate line item discounts
+  // Calculate line item discount (dollar amount)
   const calculateLineItemDiscount = (item: LineItemInput) => {
-    const baseTotal = (item.quantity || 0) * (item.unitPrice || 0);
+    const lineSubtotal = (item.quantity || 0) * (item.unitPrice || 0);
     if (!item.discountAmount || item.discountAmount <= 0) return 0;
     if (item.discountType === 'percentage') {
-      return baseTotal * (item.discountAmount / 100);
+      return lineSubtotal * (item.discountAmount / 100);
     }
     return item.discountAmount;
   };
 
-  const lineItemDiscounts = items.reduce((sum, item) => sum + calculateLineItemDiscount(item), 0);
+  // Subtotal = sum of all line_subtotals (before any discounts)
+  const subtotal = items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
   
-  // Subtotal before any discounts
-  const grossSubtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  // Total line item discounts (in dollars)
+  const lineItemDiscountTotal = items.reduce((sum, item) => sum + calculateLineItemDiscount(item), 0);
   
-  // Subtotal after line item discounts
-  const subtotalAfterLineDiscounts = grossSubtotal - lineItemDiscounts;
-  
-  // Calculate overall discount
-  const overallDiscount = overallDiscountAmount > 0
+  // Calculate overall discount (applied after line discounts)
+  const subtotalAfterLineDiscounts = subtotal - lineItemDiscountTotal;
+  const overallDiscountDollars = overallDiscountAmount > 0
     ? overallDiscountType === 'percentage'
       ? subtotalAfterLineDiscounts * (overallDiscountAmount / 100)
       : overallDiscountAmount
     : 0;
   
-  // Final subtotal after all discounts
-  const subtotal = Math.max(0, subtotalAfterLineDiscounts - overallDiscount);
+  // Total discount = line item discounts + overall discount (always in dollars)
+  const totalDiscount = lineItemDiscountTotal + overallDiscountDollars;
   
-  const taxAmount = subtotal * (taxRate / 100);
-  const total = subtotal + taxAmount;
+  // Taxable amount = subtotal - all discounts
+  const taxableAmount = Math.max(0, subtotal - totalDiscount);
+  
+  const taxAmount = taxableAmount * (taxRate / 100);
+  const total = taxableAmount + taxAmount;
 
   const handleCustomerSelect = (customer: any) => {
     setCustomerType(customer.type);
@@ -404,10 +406,8 @@ const CreateInvoice = () => {
               </div>
 
               <TotalsSummary
-                subtotal={grossSubtotal}
-                lineItemDiscounts={lineItemDiscounts}
-                overallDiscountType={overallDiscountType}
-                overallDiscountAmount={overallDiscountAmount}
+                subtotal={subtotal}
+                totalDiscount={totalDiscount}
                 taxRate={taxRate}
                 taxAmount={taxAmount}
                 total={total}
