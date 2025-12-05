@@ -3,15 +3,24 @@ import { useParams } from 'react-router-dom';
 import { useDemos, Demo } from '@/hooks/useDemos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, MessageCircle, Phone, PhoneOff, Sparkles, Volume2, Mic } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ExternalLink, MessageCircle, Phone, PhoneOff, Sparkles, Volume2, Mic, Send, ArrowLeft, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { ElevenLabsChat } from '@/utils/ElevenLabsChat';
 import { supabase } from '@/integrations/supabase/client';
 
+// Chat message type
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
 const PublicDemo = () => {
   const { id } = useParams<{ id: string }>();
-  const { getDemoById, incrementViewCount, incrementVoiceInteraction } = useDemos();
+  const { getDemoById, incrementViewCount, incrementVoiceInteraction, incrementChatInteraction } = useDemos();
   const { toast } = useToast();
   
   const [demo, setDemo] = useState<Demo | null>(null);
@@ -27,6 +36,14 @@ const PublicDemo = () => {
   const openaiChatRef = useRef<RealtimeChat | null>(null);
   const elevenLabsChatRef = useRef<ElevenLabsChat | null>(null);
   const voiceInteractionTracked = useRef(false);
+
+  // Chat state
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const chatInteractionTracked = useRef(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadDemo = async () => {
@@ -64,6 +81,11 @@ const PublicDemo = () => {
       elevenLabsChatRef.current?.disconnect();
     };
   }, []);
+
+  // Scroll to bottom of chat when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   // Build businessInfo object from demo data for the voice agents
   const getBusinessInfoFromDemo = (demo: Demo) => ({
@@ -205,6 +227,91 @@ const PublicDemo = () => {
     });
   };
 
+  // Chat functions
+  const startChatDemo = () => {
+    setIsChatOpen(true);
+    // Add initial greeting message
+    if (chatMessages.length === 0 && demo) {
+      const greeting: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `Hi! I'm the AI assistant for ${demo.business_name}. How can I help you today?`,
+        createdAt: new Date().toISOString(),
+      };
+      setChatMessages([greeting]);
+    }
+  };
+
+  const closeChatDemo = () => {
+    setIsChatOpen(false);
+  };
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || isChatLoading || !demo || !id) return;
+
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: chatInput.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    // Add user message immediately
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setIsChatLoading(true);
+
+    // Track chat interaction only once per session (on first user message)
+    if (!chatInteractionTracked.current) {
+      chatInteractionTracked.current = true;
+      await incrementChatInteraction(id);
+    }
+
+    try {
+      // Call the demo-chat edge function
+      const { data, error } = await supabase.functions.invoke('demo-chat', {
+        body: {
+          demoId: id,
+          messages: [...chatMessages, userMessage].map(m => ({
+            role: m.role,
+            content: m.content,
+          })),
+        },
+      });
+
+      if (error) throw error;
+
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: data.reply || 'I apologize, I was unable to generate a response.',
+        createdAt: new Date().toISOString(),
+      };
+
+      setChatMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error sending chat message:', error);
+      
+      // Add error message from assistant
+      const errorMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Sorry, something went wrong starting the chat demo. Please try again in a moment, or use the voice demo instead.',
+        createdAt: new Date().toISOString(),
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  const handleChatKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  };
+
   const voiceProviderLabel = demo?.voice_provider === 'elevenlabs' ? 'ElevenLabs' : 'OpenAI';
 
   if (loading) {
@@ -333,10 +440,83 @@ const PublicDemo = () => {
                   </div>
                   
                   {/* Phone Screen Content */}
-                  <div className="flex-1 p-4 flex flex-col items-center justify-center text-center">
-                    {isVoiceConnected ? (
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    {isChatOpen ? (
+                      /* Chat Interface */
                       <>
-                        {/* Connected state */}
+                        {/* Chat Header */}
+                        <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4 text-primary" />
+                            <span className="text-xs font-medium">{demo.ai_persona_name || 'AI Assistant'}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={closeChatDemo}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+
+                        {/* Messages Area */}
+                        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                          {chatMessages.map((message) => (
+                            <div
+                              key={message.id}
+                              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                              <div
+                                className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs ${
+                                  message.role === 'user'
+                                    ? 'bg-primary text-primary-foreground rounded-br-md'
+                                    : 'bg-muted text-foreground rounded-bl-md'
+                                }`}
+                              >
+                                {message.content}
+                              </div>
+                            </div>
+                          ))}
+                          {isChatLoading && (
+                            <div className="flex justify-start">
+                              <div className="bg-muted text-foreground px-3 py-2 rounded-2xl rounded-bl-md text-xs">
+                                <span className="flex items-center gap-1">
+                                  <span className="animate-bounce">•</span>
+                                  <span className="animate-bounce" style={{ animationDelay: '0.1s' }}>•</span>
+                                  <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>•</span>
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Input Area */}
+                        <div className="p-2 border-t bg-background">
+                          <div className="flex gap-2">
+                            <Input
+                              value={chatInput}
+                              onChange={(e) => setChatInput(e.target.value)}
+                              onKeyPress={handleChatKeyPress}
+                              placeholder="Type a message..."
+                              className="flex-1 h-8 text-xs"
+                              disabled={isChatLoading}
+                            />
+                            <Button
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={sendChatMessage}
+                              disabled={!chatInput.trim() || isChatLoading}
+                            >
+                              <Send className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    ) : isVoiceConnected ? (
+                      /* Voice Connected State */
+                      <div className="flex-1 p-4 flex flex-col items-center justify-center text-center">
                         <div className={`rounded-full p-4 mb-4 transition-all ${
                           isSpeaking 
                             ? 'bg-primary/20 ring-4 ring-primary/30 animate-pulse' 
@@ -362,21 +542,21 @@ const PublicDemo = () => {
                             <p className="text-xs text-foreground">{transcript}</p>
                           </div>
                         )}
-                      </>
+                      </div>
                     ) : (
-                      <>
-                        {/* Default state */}
+                      /* Default State */
+                      <div className="flex-1 p-4 flex flex-col items-center justify-center text-center">
                         <Sparkles className="h-12 w-12 text-primary mb-4" />
                         <h3 className="font-semibold text-sm mb-2">
                           {demo.chat_title || 'Chat with us'}
                         </h3>
                         <p className="text-xs text-muted-foreground mb-4">
-                          Click "Try Voice Demo" to start
+                          Try our AI chat or voice demo
                         </p>
                         <p className="text-xs text-muted-foreground/60">
                           Powered by {voiceProviderLabel}
                         </p>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -385,23 +565,37 @@ const PublicDemo = () => {
 
             {/* Action Buttons */}
             <div className="grid gap-3">
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="w-full" 
-                disabled
-              >
-                <MessageCircle className="mr-2 h-5 w-5" />
-                Start Chat Demo
-                <span className="ml-2 text-xs text-muted-foreground">(Coming soon)</span>
-              </Button>
+              {!isChatOpen && (
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="w-full" 
+                  onClick={startChatDemo}
+                  disabled={isVoiceConnected}
+                >
+                  <MessageCircle className="mr-2 h-5 w-5" />
+                  Start Chat Demo
+                </Button>
+              )}
+              
+              {isChatOpen && (
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="w-full" 
+                  onClick={closeChatDemo}
+                >
+                  <ArrowLeft className="mr-2 h-5 w-5" />
+                  Back to Overview
+                </Button>
+              )}
               
               {!isVoiceConnected ? (
                 <Button 
                   size="lg" 
                   className="w-full"
                   onClick={startVoiceDemo}
-                  disabled={isVoiceConnecting}
+                  disabled={isVoiceConnecting || isChatOpen}
                 >
                   {isVoiceConnecting ? (
                     <>
