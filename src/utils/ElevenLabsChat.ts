@@ -219,14 +219,45 @@ export class ElevenLabsChat {
   }
 
   private async playAudio(arrayBuffer: ArrayBuffer) {
-    if (!this.playbackContext) return;
+    if (!this.playbackContext) {
+      console.log('No playback context available');
+      return;
+    }
 
     try {
       this.onSpeakingChange(true);
       
-      // Decode audio data
-      const audioBuffer = await this.playbackContext.decodeAudioData(arrayBuffer.slice(0));
+      // ElevenLabs sends raw PCM 16-bit audio at 16kHz
+      // Convert raw PCM to AudioBuffer manually
+      const pcmData = new Int16Array(arrayBuffer);
+      const floatData = new Float32Array(pcmData.length);
+      
+      // Convert Int16 PCM to Float32
+      for (let i = 0; i < pcmData.length; i++) {
+        floatData[i] = pcmData[i] / 32768.0;
+      }
+      
+      // Create AudioBuffer at the playback context's sample rate
+      // ElevenLabs output is 16kHz, so we need to resample
+      const inputSampleRate = 16000;
+      const outputSampleRate = this.playbackContext.sampleRate;
+      const ratio = outputSampleRate / inputSampleRate;
+      const newLength = Math.round(floatData.length * ratio);
+      
+      const audioBuffer = this.playbackContext.createBuffer(1, newLength, outputSampleRate);
+      const channelData = audioBuffer.getChannelData(0);
+      
+      // Simple linear resampling
+      for (let i = 0; i < newLength; i++) {
+        const srcIndex = i / ratio;
+        const srcIndexFloor = Math.floor(srcIndex);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, floatData.length - 1);
+        const t = srcIndex - srcIndexFloor;
+        channelData[i] = floatData[srcIndexFloor] * (1 - t) + floatData[srcIndexCeil] * t;
+      }
+      
       this.audioQueue.push(audioBuffer);
+      console.log('Audio chunk queued, queue length:', this.audioQueue.length);
       
       if (!this.isPlaying) {
         this.playNextInQueue();
@@ -255,6 +286,7 @@ export class ElevenLabsChat {
     };
     
     source.start(0);
+    console.log('Playing audio chunk');
   }
 
   sendTextMessage(text: string) {
