@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 interface CRMLayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 const navigation = [
@@ -173,7 +173,7 @@ export function CRMLayout({ children }: CRMLayoutProps) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {children}
+          {children ?? <Outlet />}
         </main>
       </div>
     </div>
