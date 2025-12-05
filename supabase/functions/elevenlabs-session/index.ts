@@ -78,6 +78,11 @@ Your job is to:
 - Be helpful, friendly, and conversational
 - Keep responses concise and natural for voice conversation
 
+IMPORTANT - You have tools available to help callers:
+- When someone asks for information to be sent via email, use the send_email tool. Ask for their email address first.
+- When someone wants a callback, use the schedule_callback tool. Get their phone number and preferred time.
+- For accurate business info like hours or address, use get_business_info tool.
+
 If you don't know specific details, politely say you'd be happy to have someone call them back with that information.
 `;
 
@@ -88,7 +93,10 @@ If you don't know specific details, politely say you'd be happy to have someone 
     console.log('Creating ElevenLabs agent dynamically...');
     console.log('Business name:', businessInfo?.businessName);
 
-    // Step 1: Create agent via API
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const toolHandlerUrl = `${SUPABASE_URL}/functions/v1/voice-tool-handler`;
+
+    // Step 1: Create agent via API with tools
     const createAgentResponse = await fetch(
       "https://api.elevenlabs.io/v1/convai/agents/create",
       {
@@ -110,6 +118,108 @@ If you don't know specific details, politely say you'd be happy to have someone 
               first_message: firstMessage,
               language: "en",
             },
+            tools: [
+              {
+                type: "webhook",
+                name: "send_email",
+                description: "Send an email to the caller with requested information like business hours, services, pricing, or any other details they asked for. Always ask for the caller's email address before using this tool.",
+                webhook: {
+                  url: toolHandlerUrl,
+                  request_headers: {
+                    "Content-Type": "application/json"
+                  },
+                  request_body: {
+                    tool_name: "send_email",
+                    businessInfo: businessInfo || {}
+                  }
+                },
+                parameters: {
+                  type: "object",
+                  properties: {
+                    recipient_email: {
+                      type: "string",
+                      description: "The email address to send to. Must ask the caller for their email."
+                    },
+                    subject: {
+                      type: "string",
+                      description: "The email subject line"
+                    },
+                    content: {
+                      type: "string",
+                      description: "The email body content with the information the caller requested"
+                    },
+                    caller_name: {
+                      type: "string",
+                      description: "The caller's name if provided"
+                    }
+                  },
+                  required: ["recipient_email", "content"]
+                }
+              },
+              {
+                type: "webhook",
+                name: "schedule_callback",
+                description: "Schedule a callback request when someone wants the business to call them back. Get their phone number and optionally their preferred time and reason for the call.",
+                webhook: {
+                  url: toolHandlerUrl,
+                  request_headers: {
+                    "Content-Type": "application/json"
+                  },
+                  request_body: {
+                    tool_name: "schedule_callback",
+                    businessInfo: businessInfo || {}
+                  }
+                },
+                parameters: {
+                  type: "object",
+                  properties: {
+                    caller_name: {
+                      type: "string",
+                      description: "The caller's name"
+                    },
+                    phone_number: {
+                      type: "string",
+                      description: "The phone number to call back"
+                    },
+                    preferred_time: {
+                      type: "string",
+                      description: "When they'd like to be called back"
+                    },
+                    reason: {
+                      type: "string",
+                      description: "What they want to discuss"
+                    }
+                  },
+                  required: ["phone_number"]
+                }
+              },
+              {
+                type: "webhook",
+                name: "get_business_info",
+                description: "Get accurate business information like hours, address, services, or contact details.",
+                webhook: {
+                  url: toolHandlerUrl,
+                  request_headers: {
+                    "Content-Type": "application/json"
+                  },
+                  request_body: {
+                    tool_name: "get_business_info",
+                    businessInfo: businessInfo || {}
+                  }
+                },
+                parameters: {
+                  type: "object",
+                  properties: {
+                    info_type: {
+                      type: "string",
+                      description: "What type of information to retrieve: hours, address, services, contact, or all",
+                      enum: ["hours", "address", "services", "contact", "all"]
+                    }
+                  },
+                  required: ["info_type"]
+                }
+              }
+            ]
           },
         }),
       }

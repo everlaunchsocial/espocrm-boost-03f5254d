@@ -14,9 +14,17 @@ serve(async (req) => {
   }
 
   try {
-    const { tool_name, arguments: args, businessInfo } = await req.json();
+    const body = await req.json();
+    
+    // Support both formats:
+    // - OpenAI sends: { tool_name, arguments: {...}, businessInfo }
+    // - ElevenLabs sends: { tool_name, businessInfo, ...params directly }
+    const tool_name = body.tool_name;
+    const args = body.arguments || body; // ElevenLabs sends params directly in body
+    const businessInfo = body.businessInfo || {};
 
     console.log(`Executing tool: ${tool_name}`, args);
+    console.log('Business info:', businessInfo);
 
     let result: any;
 
