@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, MicOff, Phone, PhoneOff, Volume2 } from "lucide-react";
+import { Mic, Phone, PhoneOff, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { RealtimeChat } from "@/utils/RealtimeAudio";
+import { ElevenLabsChat } from "@/utils/ElevenLabsChat";
 import { supabase } from "@/integrations/supabase/client";
 
 interface BusinessInfo {
@@ -13,21 +14,25 @@ interface BusinessInfo {
   emails: string[];
 }
 
+export type VoiceProvider = 'openai' | 'elevenlabs';
+
 interface VoiceWidgetProps {
   businessInfo: BusinessInfo | null;
   disabled?: boolean;
+  provider?: VoiceProvider;
 }
 
-export const VoiceWidget = ({ businessInfo, disabled }: VoiceWidgetProps) => {
+export const VoiceWidget = ({ businessInfo, disabled, provider = 'openai' }: VoiceWidgetProps) => {
   const { toast } = useToast();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const chatRef = useRef<RealtimeChat | null>(null);
+  const openaiChatRef = useRef<RealtimeChat | null>(null);
+  const elevenLabsChatRef = useRef<ElevenLabsChat | null>(null);
 
   const handleMessage = (event: any) => {
-    console.log('Voice event:', event.type);
+    console.log('Voice event:', event.type || event);
   };
 
   const handleSpeakingChange = (speaking: boolean) => {
@@ -37,6 +42,67 @@ export const VoiceWidget = ({ businessInfo, disabled }: VoiceWidgetProps) => {
   const handleTranscript = (text: string, isFinal: boolean) => {
     if (isFinal) {
       setTranscript(text);
+    }
+  };
+
+  const startOpenAIConversation = async () => {
+    try {
+      // Get ephemeral token from edge function
+      const { data, error } = await supabase.functions.invoke('realtime-session', {
+        body: { businessInfo }
+      });
+
+      if (error) throw error;
+
+      if (!data?.client_secret?.value) {
+        throw new Error("Failed to get session token");
+      }
+
+      // Initialize WebRTC connection
+      openaiChatRef.current = new RealtimeChat(
+        handleMessage,
+        handleSpeakingChange,
+        handleTranscript
+      );
+
+      await openaiChatRef.current.init(data.client_secret.value);
+      return true;
+    } catch (error) {
+      console.error('Error starting OpenAI conversation:', error);
+      throw error;
+    }
+  };
+
+  const startElevenLabsConversation = async () => {
+    try {
+      // Get signed URL from edge function
+      const { data, error } = await supabase.functions.invoke('elevenlabs-session', {
+        body: { businessInfo }
+      });
+
+      if (error) throw error;
+
+      // Check for signed_url in response (from existing agent)
+      // or conversation_id (from dynamic agent)
+      const signedUrl = data?.signed_url || data?.conversation_id;
+      
+      if (!signedUrl && !data?.signed_url) {
+        // If no signed URL, the API might require an agent ID
+        throw new Error("ElevenLabs requires an agent ID. Create one in the ElevenLabs dashboard or use OpenAI instead.");
+      }
+
+      // Initialize WebSocket connection
+      elevenLabsChatRef.current = new ElevenLabsChat(
+        handleMessage,
+        handleSpeakingChange,
+        handleTranscript
+      );
+
+      await elevenLabsChatRef.current.init(data.signed_url);
+      return true;
+    } catch (error) {
+      console.error('Error starting ElevenLabs conversation:', error);
+      throw error;
     }
   };
 
@@ -53,30 +119,17 @@ export const VoiceWidget = ({ businessInfo, disabled }: VoiceWidgetProps) => {
     setIsConnecting(true);
 
     try {
-      // Get ephemeral token from edge function
-      const { data, error } = await supabase.functions.invoke('realtime-session', {
-        body: { businessInfo }
-      });
-
-      if (error) throw error;
-
-      if (!data?.client_secret?.value) {
-        throw new Error("Failed to get session token");
+      if (provider === 'elevenlabs') {
+        await startElevenLabsConversation();
+      } else {
+        await startOpenAIConversation();
       }
 
-      // Initialize WebRTC connection
-      chatRef.current = new RealtimeChat(
-        handleMessage,
-        handleSpeakingChange,
-        handleTranscript
-      );
-
-      await chatRef.current.init(data.client_secret.value);
       setIsConnected(true);
 
       toast({
         title: "Connected",
-        description: `Now talking to ${businessInfo.businessName}'s AI receptionist`,
+        description: `Now talking to ${businessInfo.businessName}'s AI receptionist (${provider === 'elevenlabs' ? 'ElevenLabs' : 'OpenAI'})`,
       });
     } catch (error) {
       console.error('Error starting conversation:', error);
@@ -91,8 +144,10 @@ export const VoiceWidget = ({ businessInfo, disabled }: VoiceWidgetProps) => {
   };
 
   const endConversation = () => {
-    chatRef.current?.disconnect();
-    chatRef.current = null;
+    openaiChatRef.current?.disconnect();
+    openaiChatRef.current = null;
+    elevenLabsChatRef.current?.disconnect();
+    elevenLabsChatRef.current = null;
     setIsConnected(false);
     setIsSpeaking(false);
     setTranscript("");
@@ -105,9 +160,20 @@ export const VoiceWidget = ({ businessInfo, disabled }: VoiceWidgetProps) => {
 
   useEffect(() => {
     return () => {
-      chatRef.current?.disconnect();
+      openaiChatRef.current?.disconnect();
+      elevenLabsChatRef.current?.disconnect();
     };
   }, []);
+
+  // Disconnect if provider changes while connected
+  useEffect(() => {
+    if (isConnected) {
+      endConversation();
+    }
+  }, [provider]);
+
+  const providerLabel = provider === 'elevenlabs' ? 'ElevenLabs' : 'OpenAI';
+  const providerColor = provider === 'elevenlabs' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-primary hover:bg-primary/90';
 
   return (
     <div className="fixed bottom-6 right-6 flex flex-col items-end gap-3 z-50">
@@ -132,6 +198,7 @@ export const VoiceWidget = ({ businessInfo, disabled }: VoiceWidgetProps) => {
               <span className="text-sm text-foreground">Listening...</span>
             </>
           )}
+          <span className="text-xs text-muted-foreground ml-2">({providerLabel})</span>
         </div>
       )}
 
@@ -139,7 +206,7 @@ export const VoiceWidget = ({ businessInfo, disabled }: VoiceWidgetProps) => {
       {!isConnected ? (
         <Button
           size="lg"
-          className="h-16 w-16 rounded-full shadow-xl hover:shadow-2xl transition-all"
+          className={`h-16 w-16 rounded-full shadow-xl hover:shadow-2xl transition-all ${providerColor}`}
           onClick={startConversation}
           disabled={disabled || isConnecting || !businessInfo}
         >
@@ -165,7 +232,7 @@ export const VoiceWidget = ({ businessInfo, disabled }: VoiceWidgetProps) => {
       {/* Helper text */}
       {!isConnected && !disabled && businessInfo && (
         <p className="text-xs text-muted-foreground text-right">
-          Click to start voice demo
+          Click to start voice demo ({providerLabel})
         </p>
       )}
     </div>

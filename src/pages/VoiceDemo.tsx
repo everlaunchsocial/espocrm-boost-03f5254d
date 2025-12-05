@@ -7,7 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { WebsitePreview } from "@/components/voice-demo/WebsitePreview";
 import { BusinessInfoCard } from "@/components/voice-demo/BusinessInfoCard";
-import { VoiceWidget } from "@/components/voice-demo/VoiceWidget";
+import { VoiceWidget, VoiceProvider } from "@/components/voice-demo/VoiceWidget";
+import { ProviderToggle } from "@/components/voice-demo/ProviderToggle";
 
 interface BusinessInfo {
   businessName: string;
@@ -27,6 +28,7 @@ const VoiceDemo = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [voiceProvider, setVoiceProvider] = useState<VoiceProvider>('openai');
 
   const analyzeWebsite = async () => {
     if (!url) {
@@ -88,14 +90,22 @@ const VoiceDemo = () => {
   return (
     <div className="space-y-6 pb-24">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-primary" />
-          Voice AI Demo
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Experience how AI voice agents could work for any business
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            Voice AI Demo
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Experience how AI voice agents could work for any business
+          </p>
+        </div>
+
+        {/* Provider Toggle */}
+        <ProviderToggle 
+          value={voiceProvider} 
+          onChange={setVoiceProvider} 
+        />
       </div>
 
       {/* URL Input */}
@@ -164,8 +174,17 @@ const VoiceDemo = () => {
                 <h3 className="font-medium text-foreground mb-2">Try the Voice Demo</h3>
                 <p className="text-sm text-muted-foreground">
                   Click the phone button in the bottom right corner to start a voice conversation 
-                  with an AI receptionist trained on this business's information. Ask about their 
-                  services, hours, or how to schedule an appointment!
+                  with an AI receptionist trained on this business's information. 
+                  {voiceProvider === 'elevenlabs' && (
+                    <span className="block mt-2 text-purple-600 dark:text-purple-400">
+                      Using ElevenLabs for premium voice quality.
+                    </span>
+                  )}
+                  {voiceProvider === 'openai' && (
+                    <span className="block mt-2 text-primary">
+                      Using OpenAI Realtime for low-latency conversation.
+                    </span>
+                  )}
                 </p>
               </CardContent>
             </Card>
@@ -177,6 +196,7 @@ const VoiceDemo = () => {
       <VoiceWidget 
         businessInfo={businessInfo}
         disabled={isAnalyzing}
+        provider={voiceProvider}
       />
     </div>
   );
