@@ -3,15 +3,30 @@ import { useParams } from 'react-router-dom';
 import { useDemos, Demo } from '@/hooks/useDemos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, MessageCircle, Phone, Sparkles } from 'lucide-react';
+import { ExternalLink, MessageCircle, Phone, PhoneOff, Sparkles, Volume2, Mic } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { RealtimeChat } from '@/utils/RealtimeAudio';
+import { ElevenLabsChat } from '@/utils/ElevenLabsChat';
+import { supabase } from '@/integrations/supabase/client';
 
 const PublicDemo = () => {
   const { id } = useParams<{ id: string }>();
-  const { getDemoById, incrementViewCount } = useDemos();
+  const { getDemoById, incrementViewCount, incrementVoiceInteraction } = useDemos();
+  const { toast } = useToast();
+  
   const [demo, setDemo] = useState<Demo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const viewTracked = useRef(false);
+  
+  // Voice state
+  const [isVoiceConnected, setIsVoiceConnected] = useState(false);
+  const [isVoiceConnecting, setIsVoiceConnecting] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const openaiChatRef = useRef<RealtimeChat | null>(null);
+  const elevenLabsChatRef = useRef<ElevenLabsChat | null>(null);
+  const voiceInteractionTracked = useRef(false);
 
   useEffect(() => {
     const loadDemo = async () => {
@@ -41,6 +56,156 @@ const PublicDemo = () => {
 
     loadDemo();
   }, [id]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      openaiChatRef.current?.disconnect();
+      elevenLabsChatRef.current?.disconnect();
+    };
+  }, []);
+
+  // Build businessInfo object from demo data for the voice agents
+  const getBusinessInfoFromDemo = (demo: Demo) => ({
+    businessName: demo.business_name,
+    services: [],
+    description: demo.ai_prompt || `AI assistant for ${demo.business_name}`,
+    phones: [],
+    emails: [],
+    url: demo.website_url || '',
+    aiPersonaName: demo.ai_persona_name || 'AI Assistant',
+  });
+
+  const handleVoiceMessage = (event: any) => {
+    console.log('Voice event:', event.type || event);
+  };
+
+  const handleSpeakingChange = (speaking: boolean) => {
+    setIsSpeaking(speaking);
+  };
+
+  const handleTranscript = (text: string, isFinal: boolean) => {
+    if (isFinal) {
+      setTranscript(text);
+    }
+  };
+
+  const startOpenAIConversation = async () => {
+    if (!demo) return false;
+
+    try {
+      const businessInfo = getBusinessInfoFromDemo(demo);
+      
+      const { data, error } = await supabase.functions.invoke('realtime-session', {
+        body: { businessInfo }
+      });
+
+      if (error) throw error;
+
+      if (!data?.client_secret?.value) {
+        throw new Error('Failed to get session token');
+      }
+
+      openaiChatRef.current = new RealtimeChat(
+        handleVoiceMessage,
+        handleSpeakingChange,
+        handleTranscript
+      );
+
+      await openaiChatRef.current.init(data.client_secret.value, data.businessInfo || businessInfo);
+      return true;
+    } catch (error) {
+      console.error('Error starting OpenAI conversation:', error);
+      throw error;
+    }
+  };
+
+  const startElevenLabsConversation = async () => {
+    if (!demo) return false;
+
+    try {
+      const businessInfo = getBusinessInfoFromDemo(demo);
+      
+      const { data, error } = await supabase.functions.invoke('elevenlabs-session', {
+        body: { businessInfo }
+      });
+
+      if (error) throw error;
+
+      const signedUrl = data?.signed_url || data?.conversation_id;
+      
+      if (!signedUrl && !data?.signed_url) {
+        throw new Error('ElevenLabs requires an agent ID. The demo may need to be configured with an ElevenLabs agent.');
+      }
+
+      elevenLabsChatRef.current = new ElevenLabsChat(
+        handleVoiceMessage,
+        handleSpeakingChange,
+        handleTranscript
+      );
+
+      await elevenLabsChatRef.current.init(data.signed_url);
+      return true;
+    } catch (error) {
+      console.error('Error starting ElevenLabs conversation:', error);
+      throw error;
+    }
+  };
+
+  const startVoiceDemo = async () => {
+    if (!demo) return;
+
+    setIsVoiceConnecting(true);
+
+    try {
+      const provider = demo.voice_provider || 'openai';
+      
+      if (provider === 'elevenlabs') {
+        await startElevenLabsConversation();
+      } else {
+        await startOpenAIConversation();
+      }
+
+      setIsVoiceConnected(true);
+
+      // Track voice interaction only once per session
+      if (!voiceInteractionTracked.current && id) {
+        voiceInteractionTracked.current = true;
+        await incrementVoiceInteraction(id);
+      }
+
+      toast({
+        title: 'Connected',
+        description: `Now talking to ${demo.business_name}'s AI assistant`,
+      });
+    } catch (error) {
+      console.error('Error starting voice demo:', error);
+      toast({
+        title: 'Connection failed',
+        description: error instanceof Error ? error.message : 'Failed to start voice demo',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVoiceConnecting(false);
+    }
+  };
+
+  const endVoiceDemo = () => {
+    openaiChatRef.current?.disconnect();
+    openaiChatRef.current = null;
+    elevenLabsChatRef.current?.disconnect();
+    elevenLabsChatRef.current = null;
+    setIsVoiceConnected(false);
+    setIsSpeaking(false);
+    setTranscript('');
+
+    toast({
+      title: 'Disconnected',
+      description: 'Voice demo ended',
+    });
+  };
+
+  const voiceProviderLabel = demo?.voice_provider === 'elevenlabs' ? 'ElevenLabs' : 'OpenAI';
 
   if (loading) {
     return (
@@ -156,7 +321,7 @@ const PublicDemo = () => {
             </div>
           </div>
 
-          {/* Right Column - Demo Placeholder */}
+          {/* Right Column - Demo Area */}
           <div className="space-y-6">
             {/* Phone Mockup Area */}
             <Card className="overflow-hidden">
@@ -169,16 +334,50 @@ const PublicDemo = () => {
                   
                   {/* Phone Screen Content */}
                   <div className="flex-1 p-4 flex flex-col items-center justify-center text-center">
-                    <Sparkles className="h-12 w-12 text-primary mb-4" />
-                    <h3 className="font-semibold text-sm mb-2">
-                      {demo.chat_title || 'Chat with us'}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Interactive AI demo coming up next
-                    </p>
-                    <p className="text-xs text-muted-foreground/60">
-                      (Phase 3H)
-                    </p>
+                    {isVoiceConnected ? (
+                      <>
+                        {/* Connected state */}
+                        <div className={`rounded-full p-4 mb-4 transition-all ${
+                          isSpeaking 
+                            ? 'bg-primary/20 ring-4 ring-primary/30 animate-pulse' 
+                            : 'bg-green-500/20'
+                        }`}>
+                          {isSpeaking ? (
+                            <Volume2 className="h-8 w-8 text-primary animate-pulse" />
+                          ) : (
+                            <Mic className="h-8 w-8 text-green-500" />
+                          )}
+                        </div>
+                        <h3 className="font-semibold text-sm mb-2">
+                          {isSpeaking ? 'AI is speaking...' : 'Listening...'}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          {demo.ai_persona_name || 'AI Assistant'}
+                        </p>
+                        <span className="text-xs text-muted-foreground/60">
+                          via {voiceProviderLabel}
+                        </span>
+                        {transcript && (
+                          <div className="mt-4 p-2 bg-muted rounded-lg max-h-24 overflow-y-auto">
+                            <p className="text-xs text-foreground">{transcript}</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {/* Default state */}
+                        <Sparkles className="h-12 w-12 text-primary mb-4" />
+                        <h3 className="font-semibold text-sm mb-2">
+                          {demo.chat_title || 'Chat with us'}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Click "Try Voice Demo" to start
+                        </p>
+                        <p className="text-xs text-muted-foreground/60">
+                          Powered by {voiceProviderLabel}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -186,20 +385,52 @@ const PublicDemo = () => {
 
             {/* Action Buttons */}
             <div className="grid gap-3">
-              <Button size="lg" className="w-full" disabled>
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="w-full" 
+                disabled
+              >
                 <MessageCircle className="mr-2 h-5 w-5" />
                 Start Chat Demo
+                <span className="ml-2 text-xs text-muted-foreground">(Coming soon)</span>
               </Button>
-              <Button size="lg" variant="outline" className="w-full" disabled>
-                <Phone className="mr-2 h-5 w-5" />
-                Try Voice Demo
-              </Button>
+              
+              {!isVoiceConnected ? (
+                <Button 
+                  size="lg" 
+                  className="w-full"
+                  onClick={startVoiceDemo}
+                  disabled={isVoiceConnecting}
+                >
+                  {isVoiceConnecting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground mr-2" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Phone className="mr-2 h-5 w-5" />
+                      Try Voice Demo
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button 
+                  size="lg" 
+                  variant="destructive"
+                  className="w-full"
+                  onClick={endVoiceDemo}
+                >
+                  <PhoneOff className="mr-2 h-5 w-5" />
+                  End Voice Demo
+                </Button>
+              )}
             </div>
 
             {/* Info Note */}
             <p className="text-xs text-center text-muted-foreground">
-              Powered by {demo.voice_provider === 'elevenlabs' ? 'ElevenLabs' : 'OpenAI'} •{' '}
-              {demo.ai_persona_name || 'AI Assistant'}
+              Powered by {voiceProviderLabel} • {demo.ai_persona_name || 'AI Assistant'}
             </p>
           </div>
         </div>
