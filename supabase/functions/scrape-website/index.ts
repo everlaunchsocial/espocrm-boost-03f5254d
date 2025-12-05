@@ -19,15 +19,35 @@ serve(async (req) => {
 
     console.log('Scraping website:', url);
 
-    // Fetch the website content
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    // Fetch the website content with timeout and better error handling
+    let response;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+    } catch (fetchError) {
+      console.error('Fetch error:', fetchError);
+      const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
+      if (errorMessage.includes('dns') || errorMessage.includes('lookup') || errorMessage.includes('not known')) {
+        throw new Error(`Website not found. Please check the URL is correct: ${url}`);
       }
-    });
+      if (errorMessage.includes('abort') || errorMessage.includes('timeout')) {
+        throw new Error(`Website took too long to respond. Please try again.`);
+      }
+      throw new Error(`Could not reach website: ${errorMessage}`);
+    }
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch website: ${response.status}`);
+      throw new Error(`Website returned error: ${response.status}`);
     }
 
     const html = await response.text();
