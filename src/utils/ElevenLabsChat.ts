@@ -48,21 +48,19 @@ export class ElevenLabsChat {
 
       this.ws.onopen = () => {
         console.log('ElevenLabs WebSocket connected');
+        // CRITICAL: Send initialization message first
+        this.ws?.send(JSON.stringify({ 
+          type: "conversation_initiation_client_data",
+          conversation_config_override: {}
+        }));
         this.startAudioCapture();
       };
 
       this.ws.onmessage = async (event) => {
         try {
-          // Handle both text and binary messages
-          if (event.data instanceof Blob) {
-            // Binary audio data from ElevenLabs
-            const arrayBuffer = await event.data.arrayBuffer();
-            await this.playAudio(arrayBuffer);
-          } else {
-            // JSON event
-            const data = JSON.parse(event.data);
-            this.handleEvent(data);
-          }
+          // ElevenLabs sends JSON messages, not binary
+          const data = JSON.parse(event.data);
+          this.handleEvent(data);
         } catch (error) {
           console.error('Error handling WebSocket message:', error);
         }
@@ -163,37 +161,52 @@ export class ElevenLabsChat {
     return btoa(binary);
   }
 
-  private handleEvent(event: any) {
+  private base64ToArrayBuffer(base64: string): ArrayBuffer {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  private async handleEvent(event: any) {
     console.log('ElevenLabs event:', event.type || event);
     this.onMessage(event);
 
     switch (event.type) {
       case 'conversation_initiation_metadata':
-        console.log('Conversation initialized:', event.conversation_id);
+        console.log('Conversation initialized:', event.conversation_initiation_metadata_event?.conversation_id);
         break;
 
       case 'agent_response':
         // Agent text response
-        if (event.agent_response) {
-          this.onTranscript(event.agent_response, true);
+        if (event.agent_response_event?.agent_response) {
+          this.onTranscript(event.agent_response_event.agent_response, true);
         }
         break;
 
       case 'agent_response_correction':
         // Updated/corrected response
-        if (event.agent_response_correction) {
-          this.onTranscript(event.agent_response_correction, true);
+        if (event.agent_response_correction_event?.agent_response) {
+          this.onTranscript(event.agent_response_correction_event.agent_response, true);
         }
         break;
 
       case 'user_transcript':
         // User's speech transcribed
-        console.log('User said:', event.user_transcript);
+        if (event.user_transcription_event?.user_transcript) {
+          console.log('User said:', event.user_transcription_event.user_transcript);
+        }
         break;
 
       case 'audio':
-        // Audio is being generated
+        // Audio chunk from ElevenLabs - extract base64 audio and play
         this.onSpeakingChange(true);
+        if (event.audio_event?.audio_base_64) {
+          const arrayBuffer = this.base64ToArrayBuffer(event.audio_event.audio_base_64);
+          await this.playAudio(arrayBuffer);
+        }
         break;
 
       case 'audio_end':
@@ -202,18 +215,30 @@ export class ElevenLabsChat {
 
       case 'interruption':
         console.log('User interrupted');
+        this.audioQueue = []; // Clear queued audio on interruption
         this.onSpeakingChange(false);
         break;
 
       case 'ping':
-        // Respond to ping with pong
+        // Respond to ping with pong using the correct event_id from ping_event
         if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ type: 'pong', event_id: event.event_id }));
+          const pingEventId = event.ping_event?.event_id;
+          const pingMs = event.ping_event?.ping_ms || 0;
+          
+          // Respond after the suggested delay
+          setTimeout(() => {
+            if (this.ws?.readyState === WebSocket.OPEN) {
+              this.ws.send(JSON.stringify({ 
+                type: 'pong', 
+                event_id: pingEventId 
+              }));
+            }
+          }, pingMs);
         }
         break;
 
       case 'error':
-        console.error('ElevenLabs error:', event.message || event);
+        console.error('ElevenLabs error:', event.error_event?.message || event);
         break;
     }
   }
