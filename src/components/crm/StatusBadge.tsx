@@ -13,7 +13,9 @@ type StatusType =
   // Task status
   | 'not-started' | 'in-progress' | 'completed' | 'deferred'
   // Priority
-  | 'low' | 'medium' | 'high' | 'urgent';
+  | 'low' | 'medium' | 'high' | 'urgent'
+  // Demo status
+  | 'draft' | 'sent' | 'viewed' | 'engaged';
 
 const statusStyles: Record<StatusType, string> = {
   // Legacy contact status
@@ -60,6 +62,12 @@ const statusStyles: Record<StatusType, string> = {
   medium: 'bg-primary/10 text-primary border-primary/20',
   high: 'bg-warning/10 text-warning border-warning/20',
   urgent: 'bg-destructive/10 text-destructive border-destructive/20',
+  
+  // Demo status
+  draft: 'bg-muted text-muted-foreground border-muted',
+  sent: 'bg-primary/10 text-primary border-primary/20',
+  viewed: 'bg-warning/10 text-warning border-warning/20',
+  engaged: 'bg-success/10 text-success border-success/20',
 };
 
 const statusLabels: Record<StatusType, string> = {
@@ -94,6 +102,10 @@ const statusLabels: Record<StatusType, string> = {
   medium: 'Medium',
   high: 'High',
   urgent: 'Urgent',
+  draft: 'Draft',
+  sent: 'Sent',
+  viewed: 'Viewed',
+  engaged: 'Engaged',
 };
 
 interface StatusBadgeProps {
