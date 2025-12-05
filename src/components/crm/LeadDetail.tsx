@@ -15,6 +15,7 @@ import { QuickTaskForm } from './QuickTaskForm';
 import { NotesSection } from './NotesSection';
 import { EmailComposerModal } from './EmailComposerModal';
 import { CallAssistant } from './CallAssistant';
+import { DemoCreationModal } from '@/components/demos/DemoCreationModal';
 import {
   Phone,
   PhoneCall,
@@ -33,6 +34,7 @@ import {
   Facebook,
   Instagram,
   FileText,
+  Presentation,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -71,6 +73,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   if (!lead) return null;
 
@@ -204,6 +207,10 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   Convert to Contact
                 </Button>
               )}
+              <Button variant="outline" size="sm" onClick={() => setDemoModalOpen(true)}>
+                <Presentation className="h-4 w-4 mr-2" />
+                Create Demo
+              </Button>
             </div>
           </div>
 
@@ -407,6 +414,14 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
         entityName={`${lead.firstName} ${lead.lastName}`}
         company={lead.company}
         currentStatus={lead.status}
+      />
+
+      <DemoCreationModal
+        open={demoModalOpen}
+        onClose={() => setDemoModalOpen(false)}
+        leadId={lead.id}
+        defaultBusinessName={lead.company || `${lead.firstName} ${lead.lastName}`}
+        defaultWebsiteUrl={lead.website || ''}
       />
     </>
   );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Contact, EmailRecipient } from '@/types/crm';
 import { useAccounts, useDeals, useTasks, useActivities, useNotes, useUpdateContact, useEmails } from '@/hooks/useCRMData';
 import { CallAssistant } from './CallAssistant';
+import { DemoCreationModal } from '@/components/demos/DemoCreationModal';
 import {
   Sheet,
   SheetContent,
@@ -33,6 +34,7 @@ import {
   Send,
   Inbox,
   PhoneCall,
+  Presentation,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
@@ -59,6 +61,7 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
 
   if (!contact) return null;
 
@@ -175,6 +178,10 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
               <Button variant="outline" size="sm" onClick={() => setTaskFormOpen(true)}>
                 <CheckSquare className="h-4 w-4 mr-2" />
                 Create Task
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setDemoModalOpen(true)}>
+                <Presentation className="h-4 w-4 mr-2" />
+                Create Demo
               </Button>
             </div>
           </div>
@@ -417,6 +424,14 @@ export function ContactDetail({ contact, open, onClose, onEdit }: ContactDetailP
         entityName={`${contact.firstName} ${contact.lastName}`}
         company={linkedAccount?.name}
         currentStatus={contact.status}
+      />
+
+      <DemoCreationModal
+        open={demoModalOpen}
+        onClose={() => setDemoModalOpen(false)}
+        contactId={contact.id}
+        defaultBusinessName={linkedAccount?.name || `${contact.firstName} ${contact.lastName}`}
+        defaultWebsiteUrl={linkedAccount?.website || ''}
       />
     </>
   );
