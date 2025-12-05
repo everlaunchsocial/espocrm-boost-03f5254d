@@ -4,7 +4,7 @@ import { useDemos, Demo } from '@/hooks/useDemos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ExternalLink, MessageCircle, Phone, PhoneOff, Sparkles, Volume2, Mic, Send, ArrowLeft, X } from 'lucide-react';
+import { ExternalLink, MessageCircle, Phone, PhoneOff, Sparkles, Volume2, Mic, Send, ArrowLeft, X, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { ElevenLabsChat } from '@/utils/ElevenLabsChat';
@@ -621,6 +621,37 @@ const PublicDemo = () => {
                 </Button>
               )}
             </div>
+
+            {/* Book a Call Section */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Book a Call
+                </CardTitle>
+                <CardDescription>
+                  Want to learn more? Schedule a quick call with our team.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {import.meta.env.VITE_DEFAULT_BOOKING_URL ? (
+                  <Button 
+                    className="w-full" 
+                    onClick={() => {
+                      // TODO: Add incrementBookingClick(id) tracking here when implemented
+                      window.open(import.meta.env.VITE_DEFAULT_BOOKING_URL, '_blank');
+                    }}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Book a Call With Us
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    Online scheduling will be added soon. For now, please reply to the email or contact us directly.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Info Note */}
             <p className="text-xs text-center text-muted-foreground">
