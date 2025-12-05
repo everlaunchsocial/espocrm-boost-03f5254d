@@ -18,6 +18,8 @@ import CreateEstimate from "./pages/CreateEstimate";
 import Invoices from "./pages/Invoices";
 import CreateInvoice from "./pages/CreateInvoice";
 import VoiceDemo from "./pages/VoiceDemo";
+import Demos from "./pages/Demos";
+import DemoDetail from "./pages/DemoDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,13 +39,15 @@ const App = () => (
             <Route path="/leads" element={<Leads />} />
             <Route path="/leads/import" element={<LeadImport />} />
             <Route path="/deals" element={<Deals />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/media-library" element={<MediaLibrary />} />
             <Route path="/estimates" element={<Estimates />} />
             <Route path="/estimates/new" element={<CreateEstimate />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/invoices/new" element={<CreateInvoice />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/media-library" element={<MediaLibrary />} />
             <Route path="/voice-demo" element={<VoiceDemo />} />
+            <Route path="/demos" element={<Demos />} />
+            <Route path="/demos/:id" element={<DemoDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </CRMLayout>

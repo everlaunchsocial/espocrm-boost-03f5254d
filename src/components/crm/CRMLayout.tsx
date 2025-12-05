@@ -18,6 +18,7 @@ import {
   FileText,
   Receipt,
   Sparkles,
+  Presentation,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,7 @@ const navigation = [
   { name: 'Contacts', href: '/contacts', icon: Users },
   { name: 'Accounts', href: '/accounts', icon: Building2 },
   { name: 'Leads', href: '/leads', icon: UserPlus },
+  { name: 'AI Demos', href: '/demos', icon: Presentation },
   { name: 'Deals', href: '/deals', icon: Handshake },
   { name: 'Estimates', href: '/estimates', icon: FileText },
   { name: 'Invoices', href: '/invoices', icon: Receipt },
