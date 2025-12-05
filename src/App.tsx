@@ -17,6 +17,7 @@ import Estimates from "./pages/Estimates";
 import CreateEstimate from "./pages/CreateEstimate";
 import Invoices from "./pages/Invoices";
 import CreateInvoice from "./pages/CreateInvoice";
+import VoiceDemo from "./pages/VoiceDemo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/estimates/new" element={<CreateEstimate />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/invoices/new" element={<CreateInvoice />} />
+            <Route path="/voice-demo" element={<VoiceDemo />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </CRMLayout>
