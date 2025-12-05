@@ -20,7 +20,7 @@ serve(async (req) => {
 
     // If user provides their own agent ID, get signed URL for that agent
     if (agentId) {
-      console.log('Getting signed URL for agent:', agentId);
+      console.log('Getting signed URL for existing agent:', agentId);
       
       const response = await fetch(
         `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
@@ -58,7 +58,15 @@ serve(async (req) => {
     }
 
     if (businessInfo?.description) {
-      systemPrompt += `About the business: ${businessInfo.description.substring(0, 200)}. `;
+      systemPrompt += `About the business: ${businessInfo.description.substring(0, 500)}. `;
+    }
+
+    if (businessInfo?.phone) {
+      systemPrompt += `The business phone number is ${businessInfo.phone}. `;
+    }
+
+    if (businessInfo?.address) {
+      systemPrompt += `The business is located at ${businessInfo.address}. `;
     }
 
     systemPrompt += `
@@ -73,12 +81,16 @@ Your job is to:
 If you don't know specific details, politely say you'd be happy to have someone call them back with that information.
 `;
 
-    console.log('Creating ElevenLabs conversation with dynamic agent...');
+    const firstMessage = businessInfo?.businessName 
+      ? `Hello! Thanks for calling ${businessInfo.businessName}. How can I help you today?`
+      : "Hello! How can I help you today?";
 
-    // Create a conversation with overrides (no pre-created agent needed)
-    // Using the Conversational AI endpoint with custom settings
-    const response = await fetch(
-      "https://api.elevenlabs.io/v1/convai/conversation",
+    console.log('Creating ElevenLabs agent dynamically...');
+    console.log('Business name:', businessInfo?.businessName);
+
+    // Step 1: Create agent via API
+    const createAgentResponse = await fetch(
+      "https://api.elevenlabs.io/v1/convai/agents/create",
       {
         method: "POST",
         headers: {
@@ -86,41 +98,61 @@ If you don't know specific details, politely say you'd be happy to have someone 
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          agent_config: {
+          name: `Demo - ${businessInfo?.businessName || 'Generic'} - ${Date.now()}`,
+          conversation_config: {
+            tts: {
+              voice_id: "EXAVITQu4vr4xnSDxMaL", // Sarah - professional female voice
+            },
             agent: {
               prompt: {
                 prompt: systemPrompt,
               },
-              first_message: businessInfo?.businessName 
-                ? `Hello! Thanks for calling ${businessInfo.businessName}. How can I help you today?`
-                : "Hello! How can I help you today?",
+              first_message: firstMessage,
               language: "en",
-            },
-            tts: {
-              voice_id: "EXAVITQu4vr4xnSDxMaL", // Sarah - professional female voice
             },
           },
         }),
       }
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('ElevenLabs API error:', response.status, errorText);
-      
-      // Fallback: If conversation endpoint fails, return error with instructions
-      // User may need to create an agent in ElevenLabs dashboard
-      throw new Error(`ElevenLabs API error: ${response.status}. You may need to create an agent in the ElevenLabs dashboard and provide the agent ID.`);
+    if (!createAgentResponse.ok) {
+      const errorText = await createAgentResponse.text();
+      console.error('Failed to create agent:', createAgentResponse.status, errorText);
+      throw new Error(`Failed to create ElevenLabs agent: ${createAgentResponse.status} - ${errorText}`);
     }
 
-    const data = await response.json();
-    console.log("ElevenLabs conversation created:", data);
+    const agentData = await createAgentResponse.json();
+    console.log('Agent created successfully:', agentData.agent_id);
 
-    return new Response(JSON.stringify(data), {
+    // Step 2: Get signed URL for the newly created agent
+    const signedUrlResponse = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentData.agent_id}`,
+      {
+        method: "GET",
+        headers: {
+          "xi-api-key": ELEVENLABS_API_KEY,
+        },
+      }
+    );
+
+    if (!signedUrlResponse.ok) {
+      const errorText = await signedUrlResponse.text();
+      console.error('Failed to get signed URL:', signedUrlResponse.status, errorText);
+      throw new Error(`Failed to get signed URL: ${signedUrlResponse.status}`);
+    }
+
+    const signedUrlData = await signedUrlResponse.json();
+    console.log('Got signed URL for new agent');
+
+    return new Response(JSON.stringify({ 
+      signed_url: signedUrlData.signed_url,
+      agent_id: agentData.agent_id 
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
-    console.error("Error creating ElevenLabs session:", error);
+    console.error("Error in elevenlabs-session:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
