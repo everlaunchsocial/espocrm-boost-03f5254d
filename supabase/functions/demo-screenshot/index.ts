@@ -30,9 +30,9 @@ serve(async (req) => {
     }
 
     // Use thum.io for screenshot generation (free tier available)
-    // Format: https://image.thum.io/get/width/HEIGHT/URL
-    const encodedUrl = encodeURIComponent(normalizedUrl);
-    const screenshotUrl = `https://image.thum.io/get/width/800/crop/600/${encodedUrl}`;
+    // Format: https://image.thum.io/get/width/WIDTHVALUE/crop/HEIGHTVALUE/URL
+    // Important: thum.io expects the URL WITHOUT encoding - just append it directly
+    const screenshotUrl = `https://image.thum.io/get/width/800/crop/600/${normalizedUrl}`;
 
     console.log('Screenshot URL generated:', screenshotUrl);
 
