@@ -396,9 +396,27 @@ export const useDemos = () => {
         }
       });
 
+      // Handle FunctionsHttpError - parse body for error details
       if (error) {
         console.error('Error invoking send-demo-email:', error);
-        return { data: null, error: `Failed to send demo email: ${error.message}` };
+        
+        // Try to extract error message from the error context
+        let errorMessage = error.message || 'Failed to send demo email';
+        
+        // If the error has context with body, try to parse it
+        if (error.context?.body) {
+          try {
+            const bodyText = await error.context.body.text();
+            const errorData = JSON.parse(bodyText);
+            if (errorData?.error) {
+              errorMessage = errorData.error;
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+        
+        return { data: null, error: errorMessage };
       }
 
       if (!data?.success) {

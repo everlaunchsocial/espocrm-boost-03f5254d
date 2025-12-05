@@ -226,17 +226,29 @@ serve(async (req: Request): Promise<Response> => {
     console.log("From:", `${senderName} <onboarding@resend.dev>`);
     console.log("To:", toEmail);
 
-    const emailResponse = await resend.emails.send({
-      from: `${senderName} <onboarding@resend.dev>`,
-      to: toName ? [`${toName} <${toEmail}>`] : [toEmail],
-      subject: emailSubject,
-      html: emailHtml,
-    });
-
-    console.log("Resend response:", JSON.stringify(emailResponse, null, 2));
+    let emailResponse;
+    try {
+      emailResponse = await resend.emails.send({
+        from: `${senderName} <onboarding@resend.dev>`,
+        to: [toEmail],
+        subject: emailSubject,
+        html: emailHtml,
+      });
+      console.log("Resend response:", JSON.stringify(emailResponse, null, 2));
+    } catch (sendError: unknown) {
+      const errorDetails = sendError instanceof Error ? sendError.message : String(sendError);
+      console.error("Resend send() threw exception:", sendError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Email provider error: ${errorDetails}`,
+        }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     if (emailResponse.error) {
-      console.error("Resend error:", emailResponse.error);
+      console.error("Resend returned error object:", JSON.stringify(emailResponse.error, null, 2));
       const errorMessage = emailResponse.error.message || "Email provider returned an error";
       return new Response(
         JSON.stringify({ 

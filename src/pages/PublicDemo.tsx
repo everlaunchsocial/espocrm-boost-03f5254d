@@ -40,8 +40,8 @@ const PublicDemo = () => {
   const [error, setError] = useState<string | null>(null);
   const viewTracked = useRef(false);
   
-  // Screenshot state
-  const [screenshotLoading, setScreenshotLoading] = useState(true);
+  // Screenshot state - start as not loading since we show skeleton when needed
+  const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState(false);
   
   // Voice state
@@ -84,6 +84,12 @@ const PublicDemo = () => {
 
       setDemo(result.data);
       setLoading(false);
+      
+      // Reset screenshot states when demo loads
+      if (result.data?.screenshot_url) {
+        setScreenshotLoading(true);
+        setScreenshotError(false);
+      }
 
       // Track view only once per page load
       if (!viewTracked.current && result.data) {
@@ -555,13 +561,14 @@ const PublicDemo = () => {
                     rel="noopener noreferrer"
                     className="block relative"
                   >
-                    {screenshotLoading && (
-                      <Skeleton className="w-full h-48 rounded-b-lg" />
+                    {!screenshotError && (
+                      <Skeleton className={`w-full h-48 rounded-b-lg ${screenshotLoading ? 'block' : 'hidden'}`} />
                     )}
                     <img
                       src={demo.screenshot_url}
                       alt={`Homepage preview for ${demo.business_name}`}
-                      className={`w-full h-auto rounded-b-lg hover:opacity-90 transition-opacity ${screenshotLoading ? 'hidden' : 'block'}`}
+                      className={`w-full h-auto rounded-b-lg hover:opacity-90 transition-opacity`}
+                      style={{ display: screenshotLoading ? 'none' : 'block' }}
                       onLoad={() => {
                         console.log('Screenshot loaded successfully:', demo.screenshot_url);
                         setScreenshotLoading(false);
@@ -816,7 +823,7 @@ const PublicDemo = () => {
                   size="lg" 
                   className="w-full"
                   onClick={startVoiceDemo}
-                  disabled={isVoiceConnecting || isChatOpen}
+                  disabled={isVoiceConnecting}
                 >
                   {isVoiceConnecting ? (
                     <>
@@ -848,7 +855,7 @@ const PublicDemo = () => {
                 variant="outline"
                 className="w-full"
                 onClick={handleVapiCall}
-                disabled={!hasVapiConfig || isVoiceConnected || isChatOpen}
+                disabled={!hasVapiConfig || isVoiceConnected}
               >
                 <PhoneCall className="mr-2 h-5 w-5" />
                 {hasVapiConfig ? 'Call This AI Assistant' : 'Phone Demo Coming Soon'}
