@@ -1,13 +1,15 @@
 // ElevenLabs Conversational AI WebSocket Client
-// Mirrors the interface of RealtimeChat for OpenAI
+// Uses raw PCM 16-bit audio at 16kHz as required by ElevenLabs
 
 export class ElevenLabsChat {
   private ws: WebSocket | null = null;
   private audioContext: AudioContext | null = null;
+  private playbackContext: AudioContext | null = null;
   private audioQueue: AudioBuffer[] = [];
   private isPlaying = false;
   private mediaStream: MediaStream | null = null;
-  private mediaRecorder: MediaRecorder | null = null;
+  private scriptProcessor: ScriptProcessorNode | null = null;
+  private source: MediaStreamAudioSourceNode | null = null;
   private onMessage: (message: any) => void;
   private onSpeakingChange: (speaking: boolean) => void;
   private onTranscript: (text: string, isFinal: boolean) => void;
@@ -26,8 +28,9 @@ export class ElevenLabsChat {
     try {
       console.log('Initializing ElevenLabs WebSocket connection...');
 
-      // Initialize audio context
+      // Initialize audio contexts - 16kHz for capture, 44.1kHz for playback
       this.audioContext = new AudioContext({ sampleRate: 16000 });
+      this.playbackContext = new AudioContext();
 
       // Get microphone access
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -52,7 +55,7 @@ export class ElevenLabsChat {
         try {
           // Handle both text and binary messages
           if (event.data instanceof Blob) {
-            // Binary audio data
+            // Binary audio data from ElevenLabs
             const arrayBuffer = await event.data.arrayBuffer();
             await this.playAudio(arrayBuffer);
           } else {
@@ -102,37 +105,62 @@ export class ElevenLabsChat {
   }
 
   private startAudioCapture() {
-    if (!this.mediaStream || !this.ws) return;
+    if (!this.mediaStream || !this.ws || !this.audioContext) return;
 
-    // Use MediaRecorder to capture audio and send to WebSocket
-    const options = { mimeType: 'audio/webm;codecs=opus' };
-    
     try {
-      this.mediaRecorder = new MediaRecorder(this.mediaStream, options);
-    } catch (e) {
-      // Fallback for browsers that don't support opus
-      this.mediaRecorder = new MediaRecorder(this.mediaStream);
+      // Create audio processing pipeline for PCM capture
+      this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
+      
+      // Use ScriptProcessor to get raw PCM audio data
+      // Buffer size of 4096 gives ~256ms chunks at 16kHz
+      this.scriptProcessor = this.audioContext.createScriptProcessor(4096, 1, 1);
+      
+      this.scriptProcessor.onaudioprocess = (e) => {
+        if (this.ws?.readyState !== WebSocket.OPEN) return;
+        
+        const inputData = e.inputBuffer.getChannelData(0);
+        
+        // Convert Float32 to Int16 PCM
+        const pcmData = this.float32ToPCM16(inputData);
+        
+        // Convert to base64
+        const base64Audio = this.arrayBufferToBase64(new Uint8Array(pcmData.buffer));
+        
+        // Send to ElevenLabs in the correct format
+        this.ws.send(JSON.stringify({
+          user_audio_chunk: base64Audio,
+        }));
+      };
+      
+      this.source.connect(this.scriptProcessor);
+      this.scriptProcessor.connect(this.audioContext.destination);
+      
+      console.log('Audio capture started (PCM 16-bit @ 16kHz)');
+    } catch (error) {
+      console.error('Error starting audio capture:', error);
     }
+  }
 
-    this.mediaRecorder.ondataavailable = async (event) => {
-      if (event.data.size > 0 && this.ws?.readyState === WebSocket.OPEN) {
-        // Convert blob to base64 and send as user audio input
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (reader.result && this.ws?.readyState === WebSocket.OPEN) {
-            const base64 = (reader.result as string).split(',')[1];
-            this.ws.send(JSON.stringify({
-              user_audio_chunk: base64,
-            }));
-          }
-        };
-        reader.readAsDataURL(event.data);
-      }
-    };
+  private float32ToPCM16(float32Array: Float32Array): Int16Array {
+    const int16Array = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+      // Clamp and convert
+      const s = Math.max(-1, Math.min(1, float32Array[i]));
+      int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return int16Array;
+  }
 
-    // Send audio in small chunks for real-time processing
-    this.mediaRecorder.start(100); // 100ms chunks
-    console.log('Audio capture started');
+  private arrayBufferToBase64(bytes: Uint8Array): string {
+    let binary = '';
+    const chunkSize = 0x8000; // 32KB chunks to avoid call stack issues
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+      binary += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    
+    return btoa(binary);
   }
 
   private handleEvent(event: any) {
@@ -191,13 +219,13 @@ export class ElevenLabsChat {
   }
 
   private async playAudio(arrayBuffer: ArrayBuffer) {
-    if (!this.audioContext) return;
+    if (!this.playbackContext) return;
 
     try {
       this.onSpeakingChange(true);
       
       // Decode audio data
-      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer.slice(0));
+      const audioBuffer = await this.playbackContext.decodeAudioData(arrayBuffer.slice(0));
       this.audioQueue.push(audioBuffer);
       
       if (!this.isPlaying) {
@@ -209,7 +237,7 @@ export class ElevenLabsChat {
   }
 
   private playNextInQueue() {
-    if (!this.audioContext || this.audioQueue.length === 0) {
+    if (!this.playbackContext || this.audioQueue.length === 0) {
       this.isPlaying = false;
       this.onSpeakingChange(false);
       return;
@@ -218,9 +246,9 @@ export class ElevenLabsChat {
     this.isPlaying = true;
     const audioBuffer = this.audioQueue.shift()!;
     
-    const source = this.audioContext.createBufferSource();
+    const source = this.playbackContext.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(this.audioContext.destination);
+    source.connect(this.playbackContext.destination);
     
     source.onended = () => {
       this.playNextInQueue();
@@ -246,9 +274,14 @@ export class ElevenLabsChat {
   }
 
   private cleanup() {
-    if (this.mediaRecorder) {
-      this.mediaRecorder.stop();
-      this.mediaRecorder = null;
+    if (this.scriptProcessor) {
+      this.scriptProcessor.disconnect();
+      this.scriptProcessor = null;
+    }
+
+    if (this.source) {
+      this.source.disconnect();
+      this.source = null;
     }
 
     if (this.mediaStream) {
@@ -264,6 +297,11 @@ export class ElevenLabsChat {
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
+    }
+
+    if (this.playbackContext) {
+      this.playbackContext.close();
+      this.playbackContext = null;
     }
 
     this.audioQueue = [];
