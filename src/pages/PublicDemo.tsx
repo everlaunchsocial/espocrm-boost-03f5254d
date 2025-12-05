@@ -4,7 +4,7 @@ import { useDemos, Demo } from '@/hooks/useDemos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ExternalLink, MessageCircle, Phone, PhoneOff, Sparkles, Volume2, Mic, Send, ArrowLeft, X, Calendar } from 'lucide-react';
+import { ExternalLink, MessageCircle, Phone, PhoneOff, PhoneCall, Sparkles, Volume2, Mic, Send, ArrowLeft, X, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { ElevenLabsChat } from '@/utils/ElevenLabsChat';
@@ -314,6 +314,21 @@ const PublicDemo = () => {
 
   const voiceProviderLabel = demo?.voice_provider === 'elevenlabs' ? 'ElevenLabs' : 'OpenAI';
 
+  // Vapi config check
+  const vapiPublicKey = import.meta.env.VITE_VAPI_PUBLIC_KEY;
+  const vapiAssistantId = import.meta.env.VITE_VAPI_ASSISTANT_ID;
+  const hasVapiConfig = Boolean(vapiPublicKey && vapiAssistantId);
+
+  const handleVapiCall = () => {
+    if (!hasVapiConfig || !id) return;
+    
+    // TODO: Track phone interaction here when implemented
+    // For now, open Vapi's web widget URL or placeholder
+    // Once Vapi SDK is integrated, this can trigger an in-browser call
+    const vapiWidgetUrl = `https://vapi.ai/call/${vapiAssistantId}`;
+    window.open(vapiWidgetUrl, '_blank');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center">
@@ -619,6 +634,23 @@ const PublicDemo = () => {
                   <PhoneOff className="mr-2 h-5 w-5" />
                   End Voice Demo
                 </Button>
+              )}
+
+              {/* Vapi Phone Call Option */}
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full"
+                onClick={handleVapiCall}
+                disabled={!hasVapiConfig || isVoiceConnected || isChatOpen}
+              >
+                <PhoneCall className="mr-2 h-5 w-5" />
+                {hasVapiConfig ? 'Call This AI Assistant' : 'Phone Demo Coming Soon'}
+              </Button>
+              {!hasVapiConfig && (
+                <p className="text-xs text-muted-foreground text-center -mt-1">
+                  We'll enable phone demos once your Vapi account is connected.
+                </p>
               )}
             </div>
 
