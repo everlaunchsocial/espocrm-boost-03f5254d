@@ -21,6 +21,7 @@ import VoiceDemo from "./pages/VoiceDemo";
 import Demos from "./pages/Demos";
 import DemoDetail from "./pages/DemoDetail";
 import PublicDemo from "./pages/PublicDemo";
+import Calendar from "./pages/Calendar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
           {/* CRM routes - inside CRM layout */}
           <Route element={<CRMLayout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/calendar" element={<Calendar />} />
             <Route path="/email" element={<Email />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/accounts" element={<Accounts />} />

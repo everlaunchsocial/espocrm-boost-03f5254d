@@ -19,6 +19,7 @@ import {
   Receipt,
   Sparkles,
   Presentation,
+  CalendarDays,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,7 @@ interface CRMLayoutProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Calendar', href: '/calendar', icon: CalendarDays },
   { name: 'Email', href: '/email', icon: Mail },
   { name: 'Contacts', href: '/contacts', icon: Users },
   { name: 'Accounts', href: '/accounts', icon: Building2 },
