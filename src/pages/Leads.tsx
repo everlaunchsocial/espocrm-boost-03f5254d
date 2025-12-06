@@ -19,7 +19,8 @@ const leadFields = [
   { name: 'firstName', label: 'First Name', type: 'text' as const, required: true },
   { name: 'lastName', label: 'Last Name', type: 'text' as const, required: true },
   { name: 'email', label: 'Email', type: 'email' as const, required: true },
-  { name: 'phone', label: 'Phone', type: 'tel' as const },
+  { name: 'website', label: 'Website', type: 'text' as const, required: true },
+  { name: 'phone', label: 'Phone', type: 'tel' as const, required: true },
   { name: 'company', label: 'Company', type: 'text' as const },
   { name: 'title', label: 'Title', type: 'text' as const },
   { name: 'industry', label: 'Industry', type: 'text' as const },
@@ -28,10 +29,9 @@ const leadFields = [
   { name: 'city', label: 'City', type: 'text' as const },
   { name: 'state', label: 'State', type: 'text' as const },
   { name: 'zipCode', label: 'Zip Code', type: 'text' as const },
-  { name: 'website', label: 'Website', type: 'text' as const },
   { name: 'facebookUrl', label: 'Facebook URL', type: 'text' as const },
   { name: 'instagramHandle', label: 'Instagram Handle', type: 'text' as const },
-  { name: 'source', label: 'Source', type: 'select' as const, required: true, options: [
+  { name: 'source', label: 'Source', type: 'select' as const, options: [
     { value: 'web', label: 'Website' },
     { value: 'referral', label: 'Referral' },
     { value: 'campaign', label: 'Campaign' },
@@ -39,7 +39,7 @@ const leadFields = [
     { value: 'google-leads', label: 'Google Leads' },
     { value: 'other', label: 'Other' },
   ]},
-  { name: 'status', label: 'Status', type: 'select' as const, required: true, options: [
+  { name: 'status', label: 'Status', type: 'select' as const, options: [
     { value: 'new', label: 'New' },
     { value: 'contacted', label: 'Contacted' },
     { value: 'qualified', label: 'Qualified' },
