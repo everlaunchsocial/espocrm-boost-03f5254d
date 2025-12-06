@@ -3,34 +3,67 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Phone, MessageSquare, Clock, Star, ArrowRight, Zap, Shield, Users, Play } from 'lucide-react';
+import { Check, Phone, MessageSquare, Clock, Star, ArrowRight, Zap, Shield, Users, Play, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PagePreview } from '@/components/demos/PagePreview';
+import { VoiceEmployeeCard } from '@/components/demos/VoiceEmployeeCard';
+import { VapiPhoneCard } from '@/components/demos/VapiPhoneCard';
 
 const Sales = () => {
   const navigate = useNavigate();
-  const [demoData, setDemoData] = useState<{ id: string; screenshot: string; businessName: string; aiPersonaName: string } | null>(null);
+  const [demoData, setDemoData] = useState<{ id: string; websiteUrl: string; businessName: string; aiPersonaName: string; avatarUrl?: string } | null>(null);
+  const [mobileScreenshot, setMobileScreenshot] = useState<string | null>(null);
+  const [screenshotLoading, setScreenshotLoading] = useState(true);
 
   useEffect(() => {
     // Fetch the Re-envision Medspa demo by ID
     const fetchDemo = async () => {
       const { data } = await supabase
         .from('demos')
-        .select('id, screenshot_url, business_name, ai_persona_name')
+        .select('id, website_url, business_name, ai_persona_name, avatar_url')
         .eq('id', '4544cc64-4a61-48ec-9f42-71b773ed0c84')
         .single();
       
-      if (data && data.screenshot_url) {
+      if (data && data.website_url) {
         setDemoData({
           id: data.id,
-          screenshot: data.screenshot_url,
+          websiteUrl: data.website_url,
           businessName: data.business_name,
-          aiPersonaName: data.ai_persona_name || 'Jenna'
+          aiPersonaName: data.ai_persona_name || 'Jenna',
+          avatarUrl: data.avatar_url || undefined
         });
+        
+        // Fetch mobile screenshot via Firecrawl
+        fetchMobileScreenshot(data.website_url);
+      } else {
+        setScreenshotLoading(false);
       }
     };
     fetchDemo();
   }, []);
+
+  const fetchMobileScreenshot = async (websiteUrl: string) => {
+    setScreenshotLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-mobile', {
+        body: { url: websiteUrl }
+      });
+
+      if (error) {
+        console.error('Firecrawl screenshot error:', error);
+        setScreenshotLoading(false);
+        return;
+      }
+
+      if (data?.success && data?.screenshot) {
+        setMobileScreenshot(data.screenshot);
+      }
+    } catch (err) {
+      console.error('Error fetching mobile screenshot:', err);
+    } finally {
+      setScreenshotLoading(false);
+    }
+  };
 
   const features = [
     { icon: Phone, title: '24/7 Phone Coverage', description: 'Never miss a call, even at 2am' },
@@ -159,49 +192,124 @@ const Sales = () => {
             </p>
           </div>
           
-          <div className="flex flex-col lg:flex-row items-center justify-center gap-12">
-            {/* Demo Phone */}
-            <div className="relative">
-              <div className="absolute -inset-8 bg-gradient-to-r from-blue-500/20 via-cyan-500/20 to-blue-500/20 rounded-[60px] blur-2xl" />
-              {demoData ? (
-                <div className="relative transform hover:scale-[1.02] transition-transform duration-300">
-                  <PagePreview
-                    screenshot={demoData.screenshot}
-                    demoId={demoData.id}
-                    businessName={demoData.businessName}
-                    aiPersonaName={demoData.aiPersonaName}
-                  />
-                </div>
-              ) : (
-                <Card className="w-80 h-[600px] flex items-center justify-center bg-white/5 border-white/10 rounded-[40px]">
-                  <div className="text-center">
-                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-400">Loading demo...</p>
+          <div className="grid lg:grid-cols-5 gap-8 items-start">
+            {/* Left Column - Demo Info Card (like screenshot reference) */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="shadow-xl border-white/10 bg-white/5 overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 px-6 py-4 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-500/30 rounded">
+                      <Sparkles className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <span className="font-semibold text-blue-300">EverLaunch AI</span>
                   </div>
-                </Card>
-              )}
+                </div>
+                
+                <div className="p-6 space-y-5">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">Welcome to Your Personal Demo!</h2>
+                  </div>
+
+                  <p className="text-gray-300 leading-relaxed">
+                    Hi there! We've put together a personalized AI demo just for <span className="font-semibold text-white">{demoData?.businessName || 'ReEnvision Aesthetics and Medspa'}</span>.
+                  </p>
+
+                  <div className="space-y-3">
+                    <p className="font-medium text-white">Here's how to explore:</p>
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold shrink-0">1</div>
+                        <p className="text-sm text-gray-300">
+                          <span className="font-medium text-white">Try the AI Chat</span> — Click the chat bubble on the phone preview to see how AI engages your website visitors
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold shrink-0">2</div>
+                        <p className="text-sm text-gray-300">
+                          <span className="font-medium text-white">Try Voice Chat</span> — Use the voice card to talk directly with the AI assistant
+                        </p>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold shrink-0">3</div>
+                        <p className="text-sm text-gray-300">
+                          <span className="font-medium text-white">Book a Call</span> — When you're ready, schedule a time to discuss how this can work for you
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-white/10">
+                    <p className="text-sm text-gray-400">
+                      This AI is trained specifically for your business. It knows your services, can answer questions, and handles inquiries 24/7.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Voice Employee Card */}
+              <VoiceEmployeeCard
+                aiPersonaName={demoData?.aiPersonaName || 'Jenna'}
+                avatarUrl={demoData?.avatarUrl}
+                isConnected={false}
+                isConnecting={false}
+                isSpeaking={false}
+                onStartCall={() => {
+                  if (demoData) {
+                    window.open(`/demo/${demoData.id}`, '_blank');
+                  }
+                }}
+                onEndCall={() => {}}
+              />
             </div>
 
-            {/* Demo Instructions */}
-            <div className="max-w-md">
-              <h3 className="text-2xl font-bold mb-6">How to Experience the Demo</h3>
-              <div className="space-y-4">
-                {[
-                  { step: 1, text: "Click the blue chat bubble on the phone" },
-                  { step: 2, text: "Type a question like \"What services do you offer?\"" },
-                  { step: 3, text: "Watch the AI respond naturally and intelligently" },
-                ].map((item) => (
-                  <div key={item.step} className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 font-bold shadow-lg shadow-blue-500/30">
-                      {item.step}
-                    </div>
-                    <p className="text-lg text-gray-300 pt-1">{item.text}</p>
+            {/* Right Column - Phone Preview */}
+            <div className="lg:col-span-3 space-y-6">
+              <Card className="shadow-xl border-white/10 bg-white/5">
+                <div className="border-b border-white/10 bg-white/5 px-6 py-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2 text-white">
+                    <MessageSquare className="h-5 w-5 text-blue-400" />
+                    Try the AI Chat Demo
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    Click the chat bubble to start talking to the AI
+                  </p>
+                </div>
+                <div className="p-6">
+                  <div className="flex flex-col items-center">
+                    {screenshotLoading ? (
+                      <div className="flex items-center justify-center py-16">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-3" />
+                          <p className="text-sm text-gray-400">Loading website preview...</p>
+                        </div>
+                      </div>
+                    ) : mobileScreenshot && demoData ? (
+                      <div className="relative">
+                        <div className="absolute -inset-8 bg-gradient-to-r from-blue-500/20 via-cyan-500/20 to-blue-500/20 rounded-[60px] blur-2xl" />
+                        <div className="relative transform hover:scale-[1.02] transition-transform duration-300">
+                          <PagePreview
+                            screenshot={mobileScreenshot}
+                            demoId={demoData.id}
+                            businessName={demoData.businessName}
+                            aiPersonaName={demoData.aiPersonaName}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-16 text-gray-400">
+                        <p>Unable to load demo preview</p>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-              <p className="mt-8 text-gray-400 text-sm">
-                💡 <strong className="text-gray-300">Pro tip:</strong> Ask about pricing, hours, or try to book an appointment!
-              </p>
+                </div>
+              </Card>
+
+              {/* Phone Card */}
+              <VapiPhoneCard
+                aiPersonaName={demoData?.aiPersonaName || 'Jenna'}
+                avatarUrl={demoData?.avatarUrl}
+                phoneNumber="+15087799437"
+              />
             </div>
           </div>
         </div>
