@@ -506,7 +506,7 @@ const PublicDemo = () => {
             <VapiPhoneCard
               aiPersonaName={demo.ai_persona_name || 'Jenna'}
               avatarUrl={demo.avatar_url || undefined}
-              phoneNumber="+1 813-701-7174"
+              phoneNumber="+1 (508) 779-9437"
             />
 
             {/* Calendar Section - AFTER the demo */}
