@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.vapi-phone-webhook]
 verify_jwt = false
+
+[functions.vapi-call-ended]
+verify_jwt = false
