@@ -222,10 +222,9 @@ TOOLS AVAILABLE:
         },
         turn_detection: {
           type: "server_vad",
-          threshold: 0.6,
-          prefix_padding_ms: 400,
-          silence_duration_ms: 1000,
-          create_response: true
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 800
         },
         tools: tools,
         tool_choice: "auto"
