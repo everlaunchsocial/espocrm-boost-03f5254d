@@ -94,8 +94,8 @@ interface BusinessInfo {
 
 export interface ContactInfoRequest {
   prospect_name: string;
-  appointment_day?: string;
-  appointment_time?: string;
+  phone_number?: string;
+  email?: string;
   reason?: string;
   callId: string;
 }
@@ -273,8 +273,8 @@ export class RealtimeChat {
         if (this.onContactInfoRequest) {
           this.onContactInfoRequest({
             prospect_name: args.prospect_name || '',
-            appointment_day: args.appointment_day,
-            appointment_time: args.appointment_time,
+            phone_number: args.phone_number,
+            email: args.email,
             reason: args.reason,
             callId: callId
           });

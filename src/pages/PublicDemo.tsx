@@ -505,8 +505,8 @@ const PublicDemo = () => {
         }}
         onSubmit={handleContactInfoSubmit}
         prospectName={contactInfoRequest?.prospect_name}
-        appointmentDay={contactInfoRequest?.appointment_day}
-        appointmentTime={contactInfoRequest?.appointment_time}
+        phoneNumber={contactInfoRequest?.phone_number}
+        emailAddress={contactInfoRequest?.email}
         reason={contactInfoRequest?.reason}
       />
     </div>

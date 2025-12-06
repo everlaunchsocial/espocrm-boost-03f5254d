@@ -10,8 +10,8 @@ interface ContactInfoModalProps {
   onClose: () => void;
   onSubmit: (email: string, phone: string) => void;
   prospectName?: string;
-  appointmentDay?: string;
-  appointmentTime?: string;
+  phoneNumber?: string;
+  emailAddress?: string;
   reason?: string;
 }
 
@@ -20,13 +20,19 @@ export const ContactInfoModal = ({
   onClose,
   onSubmit,
   prospectName,
-  appointmentDay,
-  appointmentTime,
+  phoneNumber,
+  emailAddress,
   reason,
 }: ContactInfoModalProps) => {
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState(emailAddress || '');
+  const [phone, setPhone] = useState(phoneNumber || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Update form when props change (AI collected info verbally)
+  useState(() => {
+    if (emailAddress) setEmail(emailAddress);
+    if (phoneNumber) setPhone(phoneNumber);
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,10 +59,7 @@ export const ContactInfoModal = ({
           </DialogTitle>
           <DialogDescription>
             {prospectName && `Thanks ${prospectName}! `}
-            {appointmentDay && appointmentTime && (
-              <>We've noted your appointment for <strong>{appointmentDay} at {appointmentTime}</strong>. </>
-            )}
-            Please enter your contact details so we can follow up.
+            Please confirm your contact details below.
           </DialogDescription>
         </DialogHeader>
 
