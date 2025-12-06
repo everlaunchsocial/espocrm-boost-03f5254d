@@ -50,6 +50,11 @@ const PublicDemo = () => {
   const [contactInfoRequest, setContactInfoRequest] = useState<ContactInfoRequest | null>(null);
   const pendingContactRequest = useRef<ContactInfoRequest | null>(null);
 
+  // Scroll to top on page load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     const loadDemo = async () => {
       if (!id) {
