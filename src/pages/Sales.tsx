@@ -177,9 +177,9 @@ const Sales = () => {
       {/* Video Section */}
       <section className="py-16 md:py-24 relative">
         <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto">
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/20 border border-white/10">
-              <div className="aspect-[9/16] max-h-[600px]">
+          <div className="flex justify-center">
+            <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/20 border border-white/10 bg-black">
+              <div className="aspect-[9/16]">
                 <iframe
                   src="https://www.youtube.com/embed/qRwk_1eBhIs"
                   title="EverLaunch AI Demo Video"
