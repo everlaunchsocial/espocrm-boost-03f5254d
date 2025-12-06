@@ -90,9 +90,8 @@ serve(async (req) => {
       ? `${phoneDigits.slice(0,3)}-${phoneDigits.slice(3,6)}-${phoneDigits.slice(6)}`
       : callerPhone;
 
-    // Return a simple speakable string with instructions for the AI
-    // Includes caller ID confirmation at the end
-    const speakableResult = `Demo found for ${demo.business_name}. Caller phone number is ${formattedPhone}. Say: "Perfect! I found your demo for ${demo.business_name}. Let me show you how I would work as your AI receptionist." Then say: "Hi! Thank you for calling ${demo.business_name}. How can I help you today?" Continue the conversation as their AI receptionist named ${personaName}. Ask discovery questions about their needs. Be warm, helpful, and professional. After a few exchanges, break character and ask: "So what did you think? Would you like to learn more about getting EverLaunch AI for your business?" At the end of the call, confirm: "The best number to reach you back at is ${formattedPhone}, is that correct?" Then thank them and end the call warmly.`;
+    // Return direct speech text - what the AI should say immediately
+    const speakableResult = `Perfect! I found your demo for ${demo.business_name}. Let me show you how I would work as your AI receptionist. Hi! Thank you for calling ${demo.business_name}. My name is ${personaName}. How can I help you today?`;
 
     return new Response(
       JSON.stringify({
