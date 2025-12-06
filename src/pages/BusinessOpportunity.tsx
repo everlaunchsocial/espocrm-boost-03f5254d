@@ -104,15 +104,14 @@ const BusinessOpportunity = () => {
           </div>
           <div className="flex justify-center">
             <div className="w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl shadow-green-500/20 border border-white/10 bg-black/50">
-              <div className="aspect-video flex items-center justify-center bg-gradient-to-br from-green-900/30 to-emerald-900/30">
-                {/* Video placeholder - replace with actual video embed */}
-                <div className="text-center p-8">
-                  <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4 border border-green-500/30">
-                    <Play className="w-10 h-10 text-green-400" />
-                  </div>
-                  <p className="text-xl font-semibold text-white mb-2">Partner Opportunity Video</p>
-                  <p className="text-gray-400">Coming Soon</p>
-                </div>
+              <div className="aspect-video">
+                <iframe
+                  src="https://www.youtube.com/embed/RJxGTL8YQBI"
+                  title="EverLaunch AI Partner Opportunity"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
               </div>
             </div>
           </div>
