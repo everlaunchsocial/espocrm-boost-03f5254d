@@ -34,11 +34,7 @@ serve(async (req) => {
         JSON.stringify({
           results: [{
             toolCallId: toolCall?.id,
-            result: JSON.stringify({
-              found: false,
-              message: "I didn't catch your passcode. Could you please say or enter your 4-digit code again?",
-              systemPrompt: null
-            })
+            result: "No passcode was provided. Say: \"I didn't catch your passcode. Could you please say or enter your 4-digit code again?\""
           }]
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -70,11 +66,7 @@ serve(async (req) => {
         JSON.stringify({
           results: [{
             toolCallId: toolCall?.id,
-            result: JSON.stringify({
-              found: false,
-              message: `I couldn't find a demo with that passcode. Please double-check your 4-digit code and try again.`,
-              systemPrompt: getGenericDemoPrompt()
-            })
+            result: "Demo not found. Say: \"I couldn't find a demo with that passcode. Could you double-check your 4-digit code and try again?\" If they can't find it, offer to show them a general demo of EverLaunch AI instead."
           }]
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -82,22 +74,17 @@ serve(async (req) => {
     }
 
     const demo = demos[0];
+    const personaName = demo.ai_persona_name || 'Jenna';
     console.log('Found demo:', demo.id, demo.business_name);
 
-    // Build the personalized system prompt
-    const systemPrompt = demo.ai_prompt || buildDemoPrompt(demo);
+    // Return a simple speakable string with instructions for the AI
+    const speakableResult = `Demo found for ${demo.business_name}. Say: "Perfect! I found your demo for ${demo.business_name}. Let me show you how I would work as your AI receptionist." Then say: "Hi! Thank you for calling ${demo.business_name}. How can I help you today?" Continue the conversation as their AI receptionist named ${personaName}. Ask discovery questions about their needs. Be warm, helpful, and professional. After a few exchanges, break character and ask: "So what did you think? Would you like to learn more about getting EverLaunch AI for your business?"`;
 
     return new Response(
       JSON.stringify({
         results: [{
           toolCallId: toolCall?.id,
-          result: JSON.stringify({
-            found: true,
-            businessName: demo.business_name,
-            personaName: demo.ai_persona_name || 'Jenna',
-            message: `Great! I found your demo for ${demo.business_name}. Let me connect you now.`,
-            systemPrompt: systemPrompt
-          })
+          result: speakableResult
         }]
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -105,61 +92,16 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Webhook error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ 
-        error: errorMessage,
         results: [{
-          result: JSON.stringify({
-            found: false,
-            message: "I'm having trouble looking that up. Let me show you a general demo.",
-            systemPrompt: getGenericDemoPrompt()
-          })
+          result: "There was an error looking up the demo. Say: \"I'm having trouble looking that up right now. Let me show you a general demo of EverLaunch AI instead.\" Then proceed with a general demo, introducing yourself as Jenna from EverLaunch AI and asking about their business."
         }]
       }),
       { 
-        status: 200, // Return 200 to Vapi even on errors so it can continue
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }
 });
-
-function buildDemoPrompt(demo: any): string {
-  const personaName = demo.ai_persona_name || 'Jenna';
-  const businessName = demo.business_name;
-  
-  return `You are ${personaName}, a friendly AI assistant demonstrating EverLaunch AI's voice technology for ${businessName}.
-
-MISSION: Show the caller how you would act as ${businessName}'s AI receptionist, handling customer calls professionally.
-
-CONVERSATION FLOW:
-1. INTRODUCTION: "Hi! I'm ${personaName}, the friendly AI assistant at EverLaunch AI. I'm here to show you how I can work as a custom voice AI agent for ${businessName}. Ready for a quick demo?"
-
-2. GATHER INFO: Ask for their first and last name, and the city and state where their business is located. Then ask about their business and typical customers.
-
-3. ROLEPLAY: "Now I'll role-play as your AI assistant for ${businessName} to show how I interact with your customers. Sound good?"
-   - After they agree: "Great! Just pretend you're one of your customers calling in. Let's have a conversation."
-   - Act as ${businessName}'s receptionist - answer questions, ask discovery questions, demonstrate helpfulness
-
-4. WRAP UP: After the roleplay, ask "What did you think? Would you like to learn more about getting EverLaunch AI for your business?"
-
-STYLE: Warm, professional, conversational. Ask discovery questions during roleplay to demonstrate conversational ability.`;
-}
-
-function getGenericDemoPrompt(): string {
-  return `You are Jenna, a friendly AI assistant demonstrating EverLaunch AI's voice technology.
-
-MISSION: Show the caller how EverLaunch AI can work for their business.
-
-CONVERSATION FLOW:
-1. INTRODUCTION: "Hi! I'm Jenna from EverLaunch AI. I'd love to show you how our voice AI can help your business. What's your name and what kind of business do you have?"
-
-2. GATHER INFO: Learn about their business, services, and typical customers.
-
-3. ROLEPLAY: "Now I'll role-play as your AI assistant to show how I'd interact with your customers. Just pretend you're one of your customers calling in!"
-
-4. WRAP UP: "What did you think? Would you like to learn more about getting EverLaunch AI for your business?"
-
-STYLE: Warm, professional, conversational.`;
-}
