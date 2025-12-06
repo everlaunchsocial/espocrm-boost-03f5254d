@@ -155,6 +155,14 @@ export class RealtimeChat {
       
       this.dc.addEventListener("open", () => {
         console.log('Data channel opened');
+        
+        // Wait 2 seconds then trigger the AI to start speaking its greeting
+        setTimeout(() => {
+          if (this.dc && this.dc.readyState === 'open') {
+            console.log('Triggering AI greeting...');
+            this.dc.send(JSON.stringify({ type: 'response.create' }));
+          }
+        }, 2000);
       });
 
       this.dc.addEventListener("message", (e) => {

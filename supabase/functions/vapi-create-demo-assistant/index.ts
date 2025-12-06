@@ -103,8 +103,8 @@ This demo was created for ${businessName}, which offers ${services}. But the cal
         },
         voice: {
           provider: '11labs',
-          voiceId: 'XB0fDUnXU5powFXDhCwa', // Charlotte - confident, clear female voice
-          speed: 0.85, // Slightly slower for clearer speech
+          voiceId: 'cgSgspJ2msm6clMCkdW9', // Jessica - American, confident female salesperson voice
+          speed: 0.9,
         },
         firstMessage: firstMessage,
         transcriber: {
