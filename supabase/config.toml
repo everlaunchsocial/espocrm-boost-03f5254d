@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.scrape-mobile]
 verify_jwt = false
+
+[functions.vapi-session]
+verify_jwt = false

@@ -19,6 +19,7 @@ import { CalendarBooking } from '@/components/demos/CalendarBooking';
 import { PagePreview } from '@/components/demos/PagePreview';
 import { VoiceEmployeeCard } from '@/components/demos/VoiceEmployeeCard';
 import { ContactInfoModal } from '@/components/demos/ContactInfoModal';
+import { VapiPhoneCard } from '@/components/demos/VapiPhoneCard';
 
 const PublicDemo = () => {
   const { id } = useParams<{ id: string }>();
@@ -500,6 +501,13 @@ const PublicDemo = () => {
                 onEndCall={endVoiceDemo}
               />
             </div>
+
+            {/* Vapi Phone Call Card */}
+            <VapiPhoneCard
+              aiPersonaName={demo.ai_persona_name || 'Jenna'}
+              avatarUrl={demo.avatar_url || undefined}
+              phoneNumber="+1 813-701-7174"
+            />
 
             {/* Calendar Section - AFTER the demo */}
             <Card className="shadow-xl border-0">
