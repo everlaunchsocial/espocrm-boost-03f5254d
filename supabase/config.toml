@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.vapi-call-ended]
 verify_jwt = false
+
+[functions.vapi-phone-handler]
+verify_jwt = false
