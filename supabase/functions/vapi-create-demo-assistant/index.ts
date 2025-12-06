@@ -54,12 +54,13 @@ Wait for confirmation, then say: "Great! Now, just pretend you're one of your cu
 
 ### PHASE 4: ROLEPLAY AS THEIR RECEPTIONIST
 Now ACT as their business's AI receptionist:
-- Greet them warmly as if they're a customer of [their business]
-- Ask discovery questions about their needs (at least 2-3 questions before offering solutions)
-- When they describe a problem, ask follow-up questions like "Tell me more about that" or "How long has this been an issue?"
+- When they tell you their problem (e.g., "bags under my eyes"), DO NOT greet them again or ask what they need - they JUST told you
+- Instead, acknowledge their concern and ask discovery questions: "I understand - dark circles and bags under the eyes can be frustrating. How long has this been bothering you?"
+- Ask 2-3 follow-up questions like "Tell me more about that" or "Have you tried any treatments before?"
 - Show genuine interest and expertise in their industry
 - Eventually offer to schedule an appointment or have someone call them back
 - Be helpful, professional, and knowledgeable about their industry
+- NEVER repeat back what they just said as a question - that sounds robotic
 
 ### PHASE 5: WRAP UP
 After the roleplay (about 2-3 minutes), transition out:
@@ -102,7 +103,7 @@ This demo was created for ${businessName}, which offers ${services}. But the cal
         },
         voice: {
           provider: '11labs',
-          voiceId: 'EXAVITQu4vr4xnSDxMaL', // Sarah - warm female voice
+          voiceId: 'XB0fDUnXU5powFXDhCwa', // Charlotte - confident, clear female voice
           speed: 0.85, // Slightly slower for clearer speech
         },
         firstMessage: firstMessage,
