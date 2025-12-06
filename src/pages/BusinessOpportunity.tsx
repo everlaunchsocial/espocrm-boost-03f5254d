@@ -8,9 +8,9 @@ const BusinessOpportunity = () => {
   const navigate = useNavigate();
 
   const commissionTiers = [
-    { sales: '1-5', commission: '30%', earnings: '$299/sale' },
-    { sales: '6-15', commission: '40%', earnings: '$399/sale' },
-    { sales: '16+', commission: '50%', earnings: '$499/sale' },
+    { tier: 'Tier 1', commission: '30%', description: 'Direct Sales' },
+    { tier: 'Tier 2', commission: '15%', description: 'Second Level' },
+    { tier: 'Tier 3', commission: '5%', description: 'Third Level' },
   ];
 
   const benefits = [
@@ -141,31 +141,30 @@ const BusinessOpportunity = () => {
               <Card 
                 key={i} 
                 className={`p-8 text-center border-white/10 backdrop-blur-sm transition-all ${
-                  i === 2 
+                  i === 0 
                     ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30 shadow-xl shadow-green-500/20 scale-105' 
                     : 'bg-white/5 hover:bg-white/10'
                 }`}
               >
-                {i === 2 && (
+                {i === 0 && (
                   <Badge className="mb-4 bg-green-500 text-white border-0">
-                    <Star className="w-3 h-3 mr-1" /> Top Tier
+                    <Star className="w-3 h-3 mr-1" /> Highest Tier
                   </Badge>
                 )}
-                <p className="text-sm text-gray-400 mb-2">{tier.sales} Sales</p>
+                <p className="text-sm text-gray-400 mb-2">{tier.tier}</p>
                 <p className="text-5xl font-bold text-green-400 mb-2">{tier.commission}</p>
                 <p className="text-gray-300">Commission</p>
                 <div className="mt-4 pt-4 border-t border-white/10">
-                  <p className="text-2xl font-semibold text-white">{tier.earnings}</p>
-                  <p className="text-sm text-gray-400">per setup fee</p>
+                  <p className="text-lg font-semibold text-white">{tier.description}</p>
                 </div>
               </Card>
             ))}
           </div>
 
           <div className="mt-12 text-center">
-            <Card className="inline-block p-6 bg-green-500/10 border-green-500/30">
+            <Card className="inline-block p-6 bg-[hsl(222,47%,11%)] border-green-500/30">
               <p className="text-lg text-white">
-                <strong className="text-green-400">PLUS:</strong> Earn 50% on all recurring monthly fees ($139.50/month per customer)
+                <strong className="text-green-400">30% + 15% + 5% = 50% Total Commission</strong> across three tiers
               </p>
             </Card>
           </div>
@@ -226,28 +225,28 @@ const BusinessOpportunity = () => {
             </div>
 
             <div>
-              <Card className="p-8 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30">
-                <h3 className="text-2xl font-bold mb-6 text-center">The Math Is Simple</h3>
+              <Card className="p-8 bg-[hsl(222,47%,11%)] border-green-500/30">
+                <h3 className="text-2xl font-bold mb-6 text-center text-white">The Math Is Simple</h3>
                 <div className="space-y-4 text-lg">
                   <div className="flex justify-between items-center py-3 border-b border-white/10">
                     <span className="text-gray-300">EverLaunch AI Setup</span>
                     <span className="font-semibold text-white">$997</span>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-white/10">
-                    <span className="text-gray-300">Your Commission (50%)</span>
-                    <span className="font-semibold text-green-400">$499</span>
+                    <span className="text-gray-300">Tier 1 Commission (30%)</span>
+                    <span className="font-semibold text-green-400">$299</span>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-white/10">
                     <span className="text-gray-300">Monthly Fee</span>
                     <span className="font-semibold text-white">$279/mo</span>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-white/10">
-                    <span className="text-gray-300">Your Monthly Cut (50%)</span>
-                    <span className="font-semibold text-green-400">$139.50/mo</span>
+                    <span className="text-gray-300">Your Monthly Cut (30%)</span>
+                    <span className="font-semibold text-green-400">$83.70/mo</span>
                   </div>
                   <div className="pt-4">
-                    <p className="text-center text-gray-400 text-sm mb-2">Just 2 sales at top tier =</p>
-                    <p className="text-center text-3xl font-bold text-green-400">Your System Paid Off</p>
+                    <p className="text-center text-gray-400 text-sm mb-2">Build your network across 3 tiers =</p>
+                    <p className="text-center text-3xl font-bold text-green-400">Up to 50% Total</p>
                   </div>
                 </div>
               </Card>
@@ -259,8 +258,8 @@ const BusinessOpportunity = () => {
       {/* CTA Section */}
       <section className="py-20 md:py-32">
         <div className="container mx-auto px-4">
-          <Card className="p-12 md:p-16 bg-gradient-to-br from-green-500/20 to-emerald-600/20 border-green-500/30 text-center">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          <Card className="p-12 md:p-16 bg-[hsl(222,47%,11%)] border-green-500/30 text-center">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
               Ready to Start Earning?
             </h2>
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
