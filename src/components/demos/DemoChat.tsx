@@ -27,7 +27,7 @@ export const DemoChat = ({
   onFirstMessage 
 }: DemoChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: `Hi there! 👋 I'm ${aiPersonaName || 'your AI assistant'} from ${businessName || 'our team'}. How can I help you today?` }
+    { role: 'assistant', content: `Hi! I'm ${aiPersonaName || 'Jenna'}, the friendly AI assistant at EverLaunch AI. Today I want to show you how I can act as a custom voice AI agent for your business. Can I show you a quick demo?` }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
