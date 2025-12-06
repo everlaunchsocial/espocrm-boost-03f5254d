@@ -10,7 +10,7 @@ import { useDemos, Demo } from '@/hooks/useDemos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, MessageCircle, Phone, Sparkles, Calendar, Clock, CheckCircle, Zap, Users } from 'lucide-react';
+import { ExternalLink, MessageCircle, Phone, Sparkles, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RealtimeChat, ContactInfoRequest } from '@/utils/RealtimeAudio';
 import { ElevenLabsChat } from '@/utils/ElevenLabsChat';
@@ -380,69 +380,41 @@ const PublicDemo = () => {
               
               <CardContent className="p-6 space-y-5">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground">Personalized Demo</h2>
-                  <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4" />
-                      30 Mins
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4" />
-                      Live Demo
-                    </span>
-                  </div>
+                  <h2 className="text-2xl font-bold text-foreground">Welcome to Your Personal Demo!</h2>
                 </div>
 
                 <p className="text-muted-foreground leading-relaxed">
-                  Book a quick demo to see exactly how AI Chat and Voice Agents engage your website 
-                  visitors and callers instantly, answer questions, collect lead info, book appointments, 
-                  and follow up — even after hours.
+                  Hi there! We've put together a personalized AI demo just for <span className="font-semibold text-foreground">{demo.business_name}</span>.
                 </p>
 
-                <p className="text-muted-foreground leading-relaxed">
-                  We'll even help you get more reviews that your AI Agents will respond to automatically.
-                </p>
-
-                <p className="text-muted-foreground leading-relaxed">
-                  Whether you're missing leads now or just want to convert more of them — this is the shortcut.
-                  <span className="font-medium text-foreground"> Let's show you what's possible.</span>
-                </p>
-
-                {/* Feature highlights */}
-                <div className="grid gap-3 pt-2">
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
-                    <div className="p-2 rounded-full bg-primary/10">
-                      <MessageCircle className="h-4 w-4 text-primary" />
+                <div className="space-y-3">
+                  <p className="font-medium text-foreground">Here's how to explore:</p>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">1</div>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">Try the AI Chat</span> — Click the chat bubble on the phone preview to see how AI engages your website visitors
+                      </p>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">AI Chat Widget</p>
-                      <p className="text-xs text-muted-foreground">
-                        Engage visitors instantly with intelligent chat
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">2</div>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">Try Voice Chat</span> — Use the voice card to talk directly with the AI assistant
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">3</div>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">Book a Call</span> — When you're ready, schedule a time to discuss how this can work for you
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
-                    <div className="p-2 rounded-full bg-primary/10">
-                      <Phone className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">AI Voice Agent</p>
-                      <p className="text-xs text-muted-foreground">
-                        Answer calls and handle inquiries 24/7
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
-                    <div className="p-2 rounded-full bg-primary/10">
-                      <Zap className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Lead Capture</p>
-                      <p className="text-xs text-muted-foreground">
-                        Automatically collect and qualify leads
-                      </p>
-                    </div>
-                  </div>
+                </div>
+
+                <div className="pt-2 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    This AI is trained specifically for your business. It knows your services, can answer questions, and handles inquiries 24/7.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -461,29 +433,9 @@ const PublicDemo = () => {
             </div>
           </div>
 
-          {/* Right Column - Calendar & Phone Preview */}
+          {/* Right Column - Phone Preview FIRST, then Calendar */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Calendar Section - Prominent like reference */}
-            <Card className="shadow-xl border-0">
-              <CardHeader className="border-b bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      Select Date & Time
-                    </CardTitle>
-                    <CardDescription>
-                      Pick a time that works best for your personalized demo
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                <CalendarBooking demoId={id!} businessName={demo.business_name} />
-              </CardContent>
-            </Card>
-
-            {/* Phone Preview Section */}
+            {/* Phone Preview Section - FIRST */}
             <Card className="shadow-xl border-0">
               <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -548,6 +500,26 @@ const PublicDemo = () => {
                 onEndCall={endVoiceDemo}
               />
             </div>
+
+            {/* Calendar Section - AFTER the demo */}
+            <Card className="shadow-xl border-0">
+              <CardHeader className="border-b bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      Ready to Get Started?
+                    </CardTitle>
+                    <CardDescription>
+                      Book a time to discuss how AI can work for your business
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <CalendarBooking demoId={id!} businessName={demo.business_name} />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
