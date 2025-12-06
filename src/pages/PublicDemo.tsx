@@ -517,7 +517,50 @@ const PublicDemo = () => {
                 </div>
               </CardHeader>
               <CardContent className="p-6">
-                <CalendarBooking demoId={id!} businessName={demo.business_name} />
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Left - Booking Info */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground">Schedule a One-on-One</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Ready to see how AI can transform your business? Book a personalized call with our team.
+                    </p>
+                    
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-full bg-primary/10 shrink-0">
+                          <Calendar className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Pick a Day</p>
+                          <p className="text-xs text-muted-foreground">Choose a date that works for you</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-full bg-primary/10 shrink-0">
+                          <Phone className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Select a Time</p>
+                          <p className="text-xs text-muted-foreground">We'll call you at your chosen time</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-full bg-primary/10 shrink-0">
+                          <MessageCircle className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">30-Minute Demo</p>
+                          <p className="text-xs text-muted-foreground">See exactly how AI works for your business</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right - Calendar */}
+                  <div>
+                    <CalendarBooking demoId={id!} businessName={demo.business_name} />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
