@@ -45,6 +45,7 @@ const PublicDemo = () => {
   // Contact info modal state
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactInfoRequest, setContactInfoRequest] = useState<ContactInfoRequest | null>(null);
+  const pendingContactRequest = useRef<ContactInfoRequest | null>(null);
 
   useEffect(() => {
     const loadDemo = async () => {
@@ -137,11 +138,21 @@ const PublicDemo = () => {
   };
 
   // Handle contact info request from AI tool call
+  // Don't show modal immediately - wait for AI to finish speaking
   const handleContactInfoRequest = (request: ContactInfoRequest) => {
-    console.log('Contact info requested:', request);
+    console.log('Contact info requested, waiting for AI to finish speaking...');
     setContactInfoRequest(request);
-    setShowContactModal(true);
+    pendingContactRequest.current = request;
   };
+
+  // Show modal only after AI finishes speaking about the form
+  useEffect(() => {
+    if (!isSpeaking && pendingContactRequest.current) {
+      console.log('AI finished speaking, showing contact modal now');
+      setShowContactModal(true);
+      pendingContactRequest.current = null;
+    }
+  }, [isSpeaking]);
 
   // Handle contact info submission
   const handleContactInfoSubmit = (email: string, phone: string) => {
