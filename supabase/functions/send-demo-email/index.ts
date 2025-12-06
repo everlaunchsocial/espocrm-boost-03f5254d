@@ -229,7 +229,7 @@ serve(async (req: Request): Promise<Response> => {
 
     // Send email via Resend
     // Use a verified domain email address (same as the working send-email function)
-    const fromAddress = "info@everlaunch.ai";
+    const fromAddress = "info@send.everlaunch.ai";
     console.log("Sending email via Resend...");
     console.log("From:", `${senderName} <${fromAddress}>`);
     console.log("To:", toEmail);
