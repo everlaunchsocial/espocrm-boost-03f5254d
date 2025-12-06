@@ -92,6 +92,14 @@ interface BusinessInfo {
   address?: string;
 }
 
+export interface ContactInfoRequest {
+  prospect_name: string;
+  appointment_day?: string;
+  appointment_time?: string;
+  reason?: string;
+  callId: string;
+}
+
 export class RealtimeChat {
   private pc: RTCPeerConnection | null = null;
   private dc: RTCDataChannel | null = null;
@@ -99,17 +107,20 @@ export class RealtimeChat {
   private onMessage: (message: any) => void;
   private onSpeakingChange: (speaking: boolean) => void;
   private onTranscript: (text: string, isFinal: boolean) => void;
+  private onContactInfoRequest: ((request: ContactInfoRequest) => void) | null = null;
   private businessInfo: BusinessInfo | null = null;
   private pendingToolCalls: Map<string, any> = new Map();
 
   constructor(
     onMessage: (message: any) => void,
     onSpeakingChange: (speaking: boolean) => void,
-    onTranscript: (text: string, isFinal: boolean) => void
+    onTranscript: (text: string, isFinal: boolean) => void,
+    onContactInfoRequest?: (request: ContactInfoRequest) => void
   ) {
     this.onMessage = onMessage;
     this.onSpeakingChange = onSpeakingChange;
     this.onTranscript = onTranscript;
+    this.onContactInfoRequest = onContactInfoRequest || null;
     this.audioEl = document.createElement("audio");
     this.audioEl.autoplay = true;
   }
@@ -256,7 +267,23 @@ export class RealtimeChat {
         args = {};
       }
 
-      // Call the edge function to execute the tool
+      // Handle collect_contact_info locally - trigger UI form
+      if (toolName === 'collect_contact_info') {
+        console.log('Triggering contact info collection form');
+        if (this.onContactInfoRequest) {
+          this.onContactInfoRequest({
+            prospect_name: args.prospect_name || '',
+            appointment_day: args.appointment_day,
+            appointment_time: args.appointment_time,
+            reason: args.reason,
+            callId: callId
+          });
+        }
+        // Don't send tool result yet - wait for form submission
+        return;
+      }
+
+      // Call the edge function to execute other tools
       const { data, error } = await supabase.functions.invoke('voice-tool-handler', {
         body: {
           tool_name: toolName,
@@ -278,6 +305,17 @@ export class RealtimeChat {
       console.error('Error executing tool:', error);
       this.sendToolResult(callId, { error: 'Failed to execute tool' });
     }
+  }
+
+  // Public method to send tool result from outside (for contact form submission)
+  public submitContactInfo(callId: string, contactInfo: { email: string; phone: string }) {
+    console.log('Submitting contact info:', contactInfo);
+    this.sendToolResult(callId, {
+      success: true,
+      message: 'Contact info collected successfully',
+      email: contactInfo.email,
+      phone: contactInfo.phone
+    });
   }
 
   private sendToolResult(callId: string, result: any) {

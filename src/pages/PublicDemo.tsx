@@ -11,12 +11,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { ExternalLink, MessageCircle, Phone, PhoneCall, Sparkles, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { RealtimeChat } from '@/utils/RealtimeAudio';
+import { RealtimeChat, ContactInfoRequest } from '@/utils/RealtimeAudio';
 import { ElevenLabsChat } from '@/utils/ElevenLabsChat';
 import { supabase } from '@/integrations/supabase/client';
 import { CalendarBooking } from '@/components/demos/CalendarBooking';
 import { PagePreview } from '@/components/demos/PagePreview';
 import { VoiceEmployeeCard } from '@/components/demos/VoiceEmployeeCard';
+import { ContactInfoModal } from '@/components/demos/ContactInfoModal';
 const PublicDemo = () => {
   const { id } = useParams<{ id: string }>();
   const { getDemoById, incrementViewCount, incrementVoiceInteraction, incrementChatInteraction } = useDemos();
@@ -40,6 +41,10 @@ const PublicDemo = () => {
   const elevenLabsChatRef = useRef<ElevenLabsChat | null>(null);
   const voiceInteractionTracked = useRef(false);
   const chatInteractionTracked = useRef(false);
+
+  // Contact info modal state
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactInfoRequest, setContactInfoRequest] = useState<ContactInfoRequest | null>(null);
 
   useEffect(() => {
     const loadDemo = async () => {
@@ -131,6 +136,29 @@ const PublicDemo = () => {
     }
   };
 
+  // Handle contact info request from AI tool call
+  const handleContactInfoRequest = (request: ContactInfoRequest) => {
+    console.log('Contact info requested:', request);
+    setContactInfoRequest(request);
+    setShowContactModal(true);
+  };
+
+  // Handle contact info submission
+  const handleContactInfoSubmit = (email: string, phone: string) => {
+    if (contactInfoRequest && openaiChatRef.current) {
+      openaiChatRef.current.submitContactInfo(contactInfoRequest.callId, { email, phone });
+      console.log('Contact info submitted:', { email, phone });
+      
+      // TODO: Store this in database if needed
+      toast({
+        title: 'Info Received',
+        description: 'Thanks! Someone will be in touch soon.',
+      });
+    }
+    setShowContactModal(false);
+    setContactInfoRequest(null);
+  };
+
   const startOpenAIConversation = async () => {
     if (!demo) return false;
 
@@ -150,7 +178,8 @@ const PublicDemo = () => {
       openaiChatRef.current = new RealtimeChat(
         handleVoiceMessage,
         handleSpeakingChange,
-        handleTranscript
+        handleTranscript,
+        handleContactInfoRequest
       );
 
       await openaiChatRef.current.init(data.client_secret.value, data.businessInfo || businessInfo);
@@ -466,6 +495,20 @@ const PublicDemo = () => {
           </div>
         </div>
       </footer>
+
+      {/* Contact Info Modal - triggered by AI tool call */}
+      <ContactInfoModal
+        isOpen={showContactModal}
+        onClose={() => {
+          setShowContactModal(false);
+          setContactInfoRequest(null);
+        }}
+        onSubmit={handleContactInfoSubmit}
+        prospectName={contactInfoRequest?.prospect_name}
+        appointmentDay={contactInfoRequest?.appointment_day}
+        appointmentTime={contactInfoRequest?.appointment_time}
+        reason={contactInfoRequest?.reason}
+      />
     </div>
   );
 };
