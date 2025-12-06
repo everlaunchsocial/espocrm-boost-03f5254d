@@ -393,22 +393,50 @@ const PublicDemo = () => {
               <CardContent className="space-y-3">
                 {isVoiceConnected ? (
                   <div className="text-center py-4">
-                    <div className={`rounded-full p-4 mx-auto w-fit mb-4 transition-all ${
-                      isSpeaking 
-                        ? 'bg-primary/20 ring-4 ring-primary/30 animate-pulse' 
-                        : 'bg-green-500/20'
-                    }`}>
-                      {isSpeaking ? (
-                        <Volume2 className="h-8 w-8 text-primary animate-pulse" />
+                    {/* Avatar display during voice call */}
+                    <div className="relative inline-block mb-4">
+                      {demo.avatar_url ? (
+                        <img 
+                          src={demo.avatar_url}
+                          alt={demo.ai_persona_name || 'AI Assistant'}
+                          className={`w-24 h-24 rounded-full object-cover transition-all ${
+                            isSpeaking 
+                              ? 'ring-4 ring-primary/50 ring-offset-2 ring-offset-background animate-pulse' 
+                              : 'ring-2 ring-green-500/50'
+                          }`}
+                        />
                       ) : (
-                        <Mic className="h-8 w-8 text-green-500" />
+                        <div className={`rounded-full p-6 mx-auto w-fit transition-all ${
+                          isSpeaking 
+                            ? 'bg-primary/20 ring-4 ring-primary/30 animate-pulse' 
+                            : 'bg-green-500/20'
+                        }`}>
+                          {isSpeaking ? (
+                            <Volume2 className="h-10 w-10 text-primary animate-pulse" />
+                          ) : (
+                            <Mic className="h-10 w-10 text-green-500" />
+                          )}
+                        </div>
                       )}
+                      {/* Status indicator overlay */}
+                      <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center ${
+                        isSpeaking ? 'bg-primary' : 'bg-green-500'
+                      }`}>
+                        {isSpeaking ? (
+                          <Volume2 className="h-3 w-3 text-primary-foreground" />
+                        ) : (
+                          <Mic className="h-3 w-3 text-primary-foreground" />
+                        )}
+                      </div>
                     </div>
-                    <p className="font-medium text-sm mb-1">
-                      {isSpeaking ? 'AI is speaking...' : 'Listening...'}
+                    <p className="font-medium text-lg mb-1">
+                      {demo.ai_persona_name || 'AI Assistant'}
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {isSpeaking ? 'Speaking...' : 'Listening to you...'}
                     </p>
                     {transcript && (
-                      <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded">
+                      <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded max-w-xs mx-auto">
                         {transcript}
                       </p>
                     )}
@@ -418,27 +446,41 @@ const PublicDemo = () => {
                       onClick={endVoiceDemo}
                     >
                       <PhoneOff className="mr-2 h-4 w-4" />
-                      End Voice Demo
+                      End Call
                     </Button>
                   </div>
                 ) : (
-                  <Button 
-                    className="w-full"
-                    onClick={startVoiceDemo}
-                    disabled={isVoiceConnecting}
-                  >
-                    {isVoiceConnecting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2" />
-                        Connecting...
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="mr-2 h-4 w-4" />
-                        Try Voice Demo
-                      </>
+                  <div className="text-center py-2">
+                    {/* Show avatar preview when not connected */}
+                    {demo.avatar_url && (
+                      <div className="mb-4">
+                        <img 
+                          src={demo.avatar_url}
+                          alt={demo.ai_persona_name || 'AI Assistant'}
+                          className="w-16 h-16 rounded-full object-cover mx-auto ring-2 ring-border"
+                        />
+                        <p className="text-sm font-medium mt-2">{demo.ai_persona_name || 'AI Assistant'}</p>
+                        <p className="text-xs text-muted-foreground">Ready to help</p>
+                      </div>
                     )}
-                  </Button>
+                    <Button 
+                      className="w-full"
+                      onClick={startVoiceDemo}
+                      disabled={isVoiceConnecting}
+                    >
+                      {isVoiceConnecting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="mr-2 h-4 w-4" />
+                          Start Voice Call
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 )}
 
                 {/* Vapi Phone Call Option */}

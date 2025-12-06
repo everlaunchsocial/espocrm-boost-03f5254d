@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, User, Building2 } from 'lucide-react';
 import { useDemos } from '@/hooks/useDemos';
 import { toast } from 'sonner';
+import { AvatarSelector, AvatarOption, AVATAR_OPTIONS } from './AvatarSelector';
 
 interface DemoCreationModalProps {
   open: boolean;
@@ -40,6 +41,7 @@ export function DemoCreationModal({
   const [websiteUrl, setWebsiteUrl] = useState(defaultWebsiteUrl);
   const [aiPersonaName, setAiPersonaName] = useState('');
   const [chatTitle, setChatTitle] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState<AvatarOption | null>(AVATAR_OPTIONS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +53,7 @@ export function DemoCreationModal({
       setWebsiteUrl(defaultWebsiteUrl);
       setAiPersonaName('');
       setChatTitle('');
+      setSelectedAvatar(AVATAR_OPTIONS[0]);
       setError(null);
     }
   }, [open, leadId, contactId, defaultBusinessName, defaultWebsiteUrl]);
@@ -89,7 +92,8 @@ export function DemoCreationModal({
         contact_id: contactId || null,
         business_name: businessName.trim(),
         website_url: websiteUrl.trim(),
-        ai_persona_name: aiPersonaName.trim() || undefined,
+        ai_persona_name: aiPersonaName.trim() || selectedAvatar?.name || undefined,
+        avatar_url: selectedAvatar?.imageUrl || undefined,
         chat_title: chatTitle.trim() || undefined,
       });
 
@@ -179,6 +183,23 @@ export function DemoCreationModal({
             />
           </div>
 
+          {/* AI Avatar Selection */}
+          <div className="space-y-2">
+            <Label>
+              AI Avatar <span className="text-muted-foreground text-xs">(select one)</span>
+            </Label>
+            <AvatarSelector 
+              selectedAvatarId={selectedAvatar?.id || null}
+              onSelect={(avatar) => {
+                setSelectedAvatar(avatar);
+                // Auto-fill persona name if empty
+                if (!aiPersonaName) {
+                  setAiPersonaName(avatar.name);
+                }
+              }}
+            />
+          </div>
+
           {/* AI Persona Name (Optional) */}
           <div className="space-y-2">
             <Label htmlFor="aiPersonaName">
@@ -188,7 +209,7 @@ export function DemoCreationModal({
               id="aiPersonaName"
               value={aiPersonaName}
               onChange={(e) => setAiPersonaName(e.target.value)}
-              placeholder="e.g., Jenna, Emma (default: AI Assistant)"
+              placeholder={selectedAvatar ? selectedAvatar.name : "e.g., Jenna, Emma"}
             />
           </div>
 
