@@ -22,6 +22,8 @@ import Demos from "./pages/Demos";
 import DemoDetail from "./pages/DemoDetail";
 import PublicDemo from "./pages/PublicDemo";
 import Calendar from "./pages/Calendar";
+import Sales from "./pages/Sales";
+import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,8 +35,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Public demo page - outside CRM layout */}
+          {/* Public pages - outside CRM layout */}
           <Route path="/demo/:id" element={<PublicDemo />} />
+          <Route path="/sales" element={<Sales />} />
+          <Route path="/checkout" element={<Checkout />} />
           
           {/* CRM routes - inside CRM layout */}
           <Route element={<CRMLayout />}>
