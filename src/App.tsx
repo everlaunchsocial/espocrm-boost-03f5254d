@@ -24,6 +24,7 @@ import PublicDemo from "./pages/PublicDemo";
 import Calendar from "./pages/Calendar";
 import Sales from "./pages/Sales";
 import Checkout from "./pages/Checkout";
+import BusinessOpportunity from "./pages/BusinessOpportunity";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/demo/:id" element={<PublicDemo />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route path="/biz" element={<BusinessOpportunity />} />
           
           {/* CRM routes - inside CRM layout */}
           <Route element={<CRMLayout />}>
