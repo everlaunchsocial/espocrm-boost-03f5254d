@@ -9,7 +9,7 @@ const corsHeaders = {
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 // Email address to receive call transcripts
-const TRANSCRIPT_EMAIL = "john@localsearch365.com";
+const TRANSCRIPT_EMAIL = "info@everlaunch.ai";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
