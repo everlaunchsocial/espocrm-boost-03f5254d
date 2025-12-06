@@ -16,6 +16,13 @@ serve(async (req) => {
     const body = await req.json();
     console.log('Vapi webhook received:', JSON.stringify(body, null, 2));
 
+    // Extract caller ID from Vapi payload
+    const callerPhone = body.message?.call?.customer?.number || 
+                        body.call?.customer?.number || 
+                        body.customer?.number ||
+                        'unknown';
+    console.log('Caller phone (caller ID):', callerPhone);
+
     // Vapi sends tool calls in this format
     const toolCall = body.message?.toolCalls?.[0] || body.toolCall;
     const toolName = toolCall?.function?.name || toolCall?.name;
@@ -75,10 +82,17 @@ serve(async (req) => {
 
     const demo = demos[0];
     const personaName = demo.ai_persona_name || 'Jenna';
-    console.log('Found demo:', demo.id, demo.business_name);
+    console.log('Found demo:', demo.id, demo.business_name, 'Caller:', callerPhone);
+
+    // Format caller phone for speaking (e.g., "508-123-4567" -> "5 0 8, 1 2 3, 4 5 6 7")
+    const phoneDigits = callerPhone.replace(/\D/g, '');
+    const formattedPhone = phoneDigits.length === 10 
+      ? `${phoneDigits.slice(0,3)}-${phoneDigits.slice(3,6)}-${phoneDigits.slice(6)}`
+      : callerPhone;
 
     // Return a simple speakable string with instructions for the AI
-    const speakableResult = `Demo found for ${demo.business_name}. Say: "Perfect! I found your demo for ${demo.business_name}. Let me show you how I would work as your AI receptionist." Then say: "Hi! Thank you for calling ${demo.business_name}. How can I help you today?" Continue the conversation as their AI receptionist named ${personaName}. Ask discovery questions about their needs. Be warm, helpful, and professional. After a few exchanges, break character and ask: "So what did you think? Would you like to learn more about getting EverLaunch AI for your business?"`;
+    // Includes caller ID confirmation at the end
+    const speakableResult = `Demo found for ${demo.business_name}. Caller phone number is ${formattedPhone}. Say: "Perfect! I found your demo for ${demo.business_name}. Let me show you how I would work as your AI receptionist." Then say: "Hi! Thank you for calling ${demo.business_name}. How can I help you today?" Continue the conversation as their AI receptionist named ${personaName}. Ask discovery questions about their needs. Be warm, helpful, and professional. After a few exchanges, break character and ask: "So what did you think? Would you like to learn more about getting EverLaunch AI for your business?" At the end of the call, confirm: "The best number to reach you back at is ${formattedPhone}, is that correct?" Then thank them and end the call warmly.`;
 
     return new Response(
       JSON.stringify({
