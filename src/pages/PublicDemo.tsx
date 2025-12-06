@@ -9,14 +9,14 @@ import { useParams } from 'react-router-dom';
 import { useDemos, Demo } from '@/hooks/useDemos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, MessageCircle, Phone, PhoneOff, PhoneCall, Sparkles, Volume2, Mic, Calendar } from 'lucide-react';
+import { ExternalLink, MessageCircle, Phone, PhoneCall, Sparkles, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { ElevenLabsChat } from '@/utils/ElevenLabsChat';
 import { supabase } from '@/integrations/supabase/client';
 import { CalendarBooking } from '@/components/demos/CalendarBooking';
 import { PagePreview } from '@/components/demos/PagePreview';
-
+import { VoiceEmployeeCard } from '@/components/demos/VoiceEmployeeCard';
 const PublicDemo = () => {
   const { id } = useParams<{ id: string }>();
   const { getDemoById, incrementViewCount, incrementVoiceInteraction, incrementChatInteraction } = useDemos();
@@ -378,163 +378,65 @@ const PublicDemo = () => {
                 </div>
               </div>
             </div>
-
-            {/* Voice Demo Controls */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Phone className="h-5 w-5 text-primary" />
-                  Voice Demo
-                </CardTitle>
-                <CardDescription>
-                  Try the voice AI powered by {voiceProviderLabel}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {isVoiceConnected ? (
-                  <div className="text-center py-4">
-                    {/* Avatar display during voice call */}
-                    <div className="relative inline-block mb-4">
-                      {demo.avatar_url ? (
-                        <img 
-                          src={demo.avatar_url}
-                          alt={demo.ai_persona_name || 'AI Assistant'}
-                          className={`w-24 h-24 rounded-full object-cover transition-all ${
-                            isSpeaking 
-                              ? 'ring-4 ring-primary/50 ring-offset-2 ring-offset-background animate-pulse' 
-                              : 'ring-2 ring-green-500/50'
-                          }`}
-                        />
-                      ) : (
-                        <div className={`rounded-full p-6 mx-auto w-fit transition-all ${
-                          isSpeaking 
-                            ? 'bg-primary/20 ring-4 ring-primary/30 animate-pulse' 
-                            : 'bg-green-500/20'
-                        }`}>
-                          {isSpeaking ? (
-                            <Volume2 className="h-10 w-10 text-primary animate-pulse" />
-                          ) : (
-                            <Mic className="h-10 w-10 text-green-500" />
-                          )}
-                        </div>
-                      )}
-                      {/* Status indicator overlay */}
-                      <div className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center ${
-                        isSpeaking ? 'bg-primary' : 'bg-green-500'
-                      }`}>
-                        {isSpeaking ? (
-                          <Volume2 className="h-3 w-3 text-primary-foreground" />
-                        ) : (
-                          <Mic className="h-3 w-3 text-primary-foreground" />
-                        )}
-                      </div>
-                    </div>
-                    <p className="font-medium text-lg mb-1">
-                      {demo.ai_persona_name || 'AI Assistant'}
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {isSpeaking ? 'Speaking...' : 'Listening to you...'}
-                    </p>
-                    {transcript && (
-                      <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded max-w-xs mx-auto">
-                        {transcript}
-                      </p>
-                    )}
-                    <Button 
-                      variant="destructive"
-                      className="mt-4"
-                      onClick={endVoiceDemo}
-                    >
-                      <PhoneOff className="mr-2 h-4 w-4" />
-                      End Call
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-2">
-                    {/* Show avatar preview when not connected */}
-                    {demo.avatar_url && (
-                      <div className="mb-4">
-                        <img 
-                          src={demo.avatar_url}
-                          alt={demo.ai_persona_name || 'AI Assistant'}
-                          className="w-16 h-16 rounded-full object-cover mx-auto ring-2 ring-border"
-                        />
-                        <p className="text-sm font-medium mt-2">{demo.ai_persona_name || 'AI Assistant'}</p>
-                        <p className="text-xs text-muted-foreground">Ready to help</p>
-                      </div>
-                    )}
-                    <Button 
-                      className="w-full"
-                      onClick={startVoiceDemo}
-                      disabled={isVoiceConnecting}
-                    >
-                      {isVoiceConnecting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <Phone className="mr-2 h-4 w-4" />
-                          Start Voice Call
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-
-                {/* Vapi Phone Call Option */}
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleVapiCall}
-                  disabled={!hasVapiConfig || isVoiceConnected}
-                >
-                  <PhoneCall className="mr-2 h-4 w-4" />
-                  {hasVapiConfig ? 'Call This AI Assistant' : 'Phone Demo Coming Soon'}
-                </Button>
-              </CardContent>
-            </Card>
           </div>
 
-          {/* Right Column - Phone Mockup with Firecrawl Screenshot */}
+          {/* Right Column - Phone Mockup + Voice Card side by side */}
           <div className="space-y-6">
-            {screenshotLoading ? (
-              <div className="flex items-center justify-center py-16">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-3"></div>
-                  <p className="text-sm text-muted-foreground">Loading website preview...</p>
-                </div>
+            {/* Phone Mockup and Voice Card Row */}
+            <div className="flex flex-col lg:flex-row gap-4 items-start">
+              {/* Phone Mockup */}
+              <div className="flex-1">
+                {screenshotLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-3"></div>
+                      <p className="text-sm text-muted-foreground">Loading website preview...</p>
+                    </div>
+                  </div>
+                ) : mobileScreenshot ? (
+                  <PagePreview
+                    screenshot={mobileScreenshot}
+                    demoId={id!}
+                    businessName={demo.business_name}
+                    aiPersonaName={demo.ai_persona_name || undefined}
+                    onChatInteraction={handleChatInteraction}
+                  />
+                ) : (
+                  <Card className="overflow-hidden">
+                    <CardContent className="py-16 text-center">
+                      <Sparkles className="h-12 w-12 text-primary mx-auto mb-4" />
+                      <p className="text-muted-foreground mb-2">
+                        Website preview not available
+                      </p>
+                      {demo.website_url && (
+                        <a
+                          href={demo.website_url.startsWith('http') ? demo.website_url : `https://${demo.website_url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Visit website
+                        </a>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
-            ) : mobileScreenshot ? (
-              <PagePreview
-                screenshot={mobileScreenshot}
-                demoId={id!}
-                businessName={demo.business_name}
-                aiPersonaName={demo.ai_persona_name || undefined}
-                onChatInteraction={handleChatInteraction}
-              />
-            ) : (
-              <Card className="overflow-hidden">
-                <CardContent className="py-16 text-center">
-                  <Sparkles className="h-12 w-12 text-primary mx-auto mb-4" />
-                  <p className="text-muted-foreground mb-2">
-                    Website preview not available
-                  </p>
-                  {demo.website_url && (
-                    <a
-                      href={demo.website_url.startsWith('http') ? demo.website_url : `https://${demo.website_url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      Visit website
-                    </a>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+
+              {/* Voice Employee Card */}
+              <div className="w-full lg:w-72 flex-shrink-0">
+                <VoiceEmployeeCard
+                  aiPersonaName={demo.ai_persona_name || 'Jenna'}
+                  avatarUrl={demo.avatar_url || undefined}
+                  isConnected={isVoiceConnected}
+                  isConnecting={isVoiceConnecting}
+                  isSpeaking={isSpeaking}
+                  onStartCall={startVoiceDemo}
+                  onEndCall={endVoiceDemo}
+                />
+              </div>
+            </div>
 
             {/* Book a Call Section */}
             <Card>
