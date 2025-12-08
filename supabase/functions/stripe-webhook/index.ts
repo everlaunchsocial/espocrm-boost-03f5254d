@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
         const customerId = session.metadata?.customer_id;
         const planId = session.metadata?.plan_id;
         const affiliateId = session.metadata?.affiliate_id;
+        const customerName = session.metadata?.customer_name;
         const stripeCustomerId = session.customer as string;
         const stripeSubscriptionId = session.subscription as string;
 
@@ -129,29 +130,112 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Update lead pipeline_status to 'customer_won' if we can find the lead
-        // Try to find lead by customer email
+        // Find or create a lead for this purchase, then set pipeline_status = 'customer_won'
         const customerEmail = session.customer_email || session.customer_details?.email;
         if (customerEmail) {
-          const { data: leadData } = await supabase
-            .from("leads")
-            .select("id, pipeline_status")
-            .eq("email", customerEmail)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single();
-
-          if (leadData && leadData.pipeline_status !== 'lost_closed') {
-            const { error: pipelineError } = await supabase
+          try {
+            // First, try to find an existing lead by email (and optionally affiliate)
+            let leadQuery = supabase
               .from("leads")
-              .update({ pipeline_status: 'customer_won' })
-              .eq("id", leadData.id);
+              .select("id, pipeline_status")
+              .ilike("email", customerEmail)
+              .order("created_at", { ascending: false })
+              .limit(1);
 
-            if (pipelineError) {
-              console.error("Error updating lead pipeline_status:", pipelineError);
+            // If we have an affiliate, prefer leads for that affiliate
+            if (affiliateId) {
+              const { data: affiliateLead } = await supabase
+                .from("leads")
+                .select("id, pipeline_status")
+                .eq("affiliate_id", affiliateId)
+                .ilike("email", customerEmail)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+
+              if (affiliateLead) {
+                // Found a lead for this affiliate + email
+                if (affiliateLead.pipeline_status !== 'lost_closed') {
+                  await supabase
+                    .from("leads")
+                    .update({ pipeline_status: 'customer_won' })
+                    .eq("id", affiliateLead.id);
+                  console.log("Updated existing affiliate lead to customer_won:", affiliateLead.id);
+                }
+              } else {
+                // No lead found for this affiliate, check for any lead with this email
+                const { data: anyLead } = await leadQuery.single();
+
+                if (anyLead && anyLead.pipeline_status !== 'lost_closed') {
+                  await supabase
+                    .from("leads")
+                    .update({ pipeline_status: 'customer_won' })
+                    .eq("id", anyLead.id);
+                  console.log("Updated existing lead to customer_won:", anyLead.id);
+                } else if (!anyLead) {
+                  // No lead exists at all - create one
+                  const nameParts = (customerName || "").split(" ");
+                  const firstName = nameParts[0] || "Customer";
+                  const lastName = nameParts.slice(1).join(" ") || "";
+
+                  const { data: newLead, error: createError } = await supabase
+                    .from("leads")
+                    .insert({
+                      first_name: firstName,
+                      last_name: lastName,
+                      email: customerEmail,
+                      source: "checkout",
+                      affiliate_id: affiliateId || null,
+                      pipeline_status: "customer_won",
+                    })
+                    .select("id")
+                    .single();
+
+                  if (createError) {
+                    console.error("Error creating lead for checkout:", createError);
+                  } else {
+                    console.log("Created new lead from checkout with customer_won status:", newLead?.id);
+                  }
+                }
+              }
             } else {
-              console.log("Updated lead pipeline_status to customer_won for lead:", leadData.id);
+              // No affiliate - check for any lead with this email
+              const { data: anyLead } = await leadQuery.single();
+
+              if (anyLead && anyLead.pipeline_status !== 'lost_closed') {
+                await supabase
+                  .from("leads")
+                  .update({ pipeline_status: 'customer_won' })
+                  .eq("id", anyLead.id);
+                console.log("Updated existing lead to customer_won:", anyLead.id);
+              } else if (!anyLead) {
+                // No lead exists - create one (corporate sale with no affiliate)
+                const nameParts = (customerName || "").split(" ");
+                const firstName = nameParts[0] || "Customer";
+                const lastName = nameParts.slice(1).join(" ") || "";
+
+                const { data: newLead, error: createError } = await supabase
+                  .from("leads")
+                  .insert({
+                    first_name: firstName,
+                    last_name: lastName,
+                    email: customerEmail,
+                    source: "checkout",
+                    pipeline_status: "customer_won",
+                  })
+                  .select("id")
+                  .single();
+
+                if (createError) {
+                  console.error("Error creating lead for checkout:", createError);
+                } else {
+                  console.log("Created new lead from corporate checkout with customer_won status:", newLead?.id);
+                }
+              }
             }
+          } catch (leadError) {
+            // Log but don't break the main flow
+            console.error("Error handling lead for checkout:", leadError);
           }
         }
 
