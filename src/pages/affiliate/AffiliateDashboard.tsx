@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Users, Presentation, TrendingUp, Calendar } from 'lucide-react';
+import { DollarSign, Users, Presentation, Calendar } from 'lucide-react';
 import { useAffiliateLeadCount } from '@/hooks/useAffiliateLeads';
 import { useAffiliateDemoCount, useAffiliateDemosThisWeek } from '@/hooks/useAffiliateDemos';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DemoCreditsCard } from '@/components/affiliate/DemoCreditsCard';
 
 export default function AffiliateDashboard() {
   const { data: leadCount, isLoading: leadsLoading } = useAffiliateLeadCount();
@@ -16,7 +17,9 @@ export default function AffiliateDashboard() {
         <p className="text-muted-foreground">Welcome to your affiliate back office</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <DemoCreditsCard compact />
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Commissions</CardTitle>

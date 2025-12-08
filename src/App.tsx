@@ -29,6 +29,8 @@ import BusinessOpportunity from "./pages/BusinessOpportunity";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import AffiliatePublicPage from "./pages/AffiliatePublicPage";
+import AffiliateSignup from "./pages/AffiliateSignup";
+import AffiliateSignupSuccess from "./pages/AffiliateSignupSuccess";
 
 // Affiliate pages
 import AffiliateDashboard from "./pages/affiliate/AffiliateDashboard";
@@ -57,6 +59,10 @@ const App = () => (
           
           {/* Affiliate replicated URL - public facing */}
           <Route path="/rep/:username" element={<AffiliatePublicPage />} />
+          
+          {/* Affiliate signup - public */}
+          <Route path="/affiliate-signup" element={<AffiliateSignup />} />
+          <Route path="/affiliate-signup/success" element={<AffiliateSignupSuccess />} />
           
           {/* Affiliate routes - inside AffiliateLayout */}
           <Route element={<AffiliateLayout />}>

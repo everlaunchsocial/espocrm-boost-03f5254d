@@ -80,10 +80,18 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get affiliate's user_id for rep_id
+    // Get affiliate's user_id for rep_id and check demo credits
     const { data: affiliate, error: affiliateError } = await supabase
       .from("affiliates")
-      .select("id, user_id, username")
+      .select(`
+        id, 
+        user_id, 
+        username,
+        demo_credits_balance,
+        affiliate_plans (
+          demo_credits_per_month
+        )
+      `)
       .eq("id", affiliateId)
       .single();
 
@@ -93,6 +101,27 @@ serve(async (req: Request): Promise<Response> => {
         JSON.stringify({ success: false, error: "Invalid affiliate" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
+    }
+
+    // Check demo credits
+    const planData = affiliate.affiliate_plans as unknown;
+    const plan = Array.isArray(planData) ? planData[0] : planData;
+    const creditsPerMonth = (plan as { demo_credits_per_month: number | null } | null)?.demo_credits_per_month ?? null;
+    const isUnlimited = creditsPerMonth === null || creditsPerMonth === -1;
+
+    if (!isUnlimited) {
+      const currentBalance = affiliate.demo_credits_balance ?? 0;
+      if (currentBalance <= 0) {
+        console.log("Affiliate has no demo credits remaining:", affiliateId);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: "You've used all your demo credits for this period. Please upgrade your plan or wait until your credits reset.",
+            credits_exhausted: true
+          }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
     }
 
     // Step 1: Check if lead already exists for this affiliate + email
@@ -342,6 +371,23 @@ serve(async (req: Request): Promise<Response> => {
       related_to_name: leadName,
       is_system_generated: true,
     });
+
+    // Decrement demo credits if not unlimited
+    if (!isUnlimited) {
+      const { error: decrementError } = await supabase
+        .from("affiliates")
+        .update({
+          demo_credits_balance: Math.max(0, (affiliate.demo_credits_balance ?? 0) - 1),
+        })
+        .eq("id", affiliateId);
+
+      if (decrementError) {
+        console.error("Error decrementing demo credits:", decrementError);
+        // Don't fail the request - demo was created
+      } else {
+        console.log("Demo credits decremented for affiliate:", affiliateId);
+      }
+    }
 
     console.log("Request demo completed successfully");
 
