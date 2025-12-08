@@ -23,7 +23,7 @@ const settingsLinks: SettingsLink[] = [
     description: 'Manage website knowledge and uploaded documents',
     href: '/customer/settings/knowledge',
     icon: BookOpen,
-    available: false,
+    available: true,
   },
   {
     title: 'Lead Capture & Routing',
