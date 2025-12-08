@@ -228,13 +228,22 @@ export default function AffiliateSignup() {
 
       if (error) throw error;
 
-      // Create profile if not exists
-      await supabase
+      // Update profile to affiliate role (trigger creates it as 'customer')
+      const { error: profileError } = await supabase
         .from('profiles')
-        .upsert({
-          user_id: user.id,
-          global_role: 'affiliate',
-        }, { onConflict: 'user_id' });
+        .update({ global_role: 'affiliate' })
+        .eq('user_id', user.id);
+
+      if (profileError) {
+        console.error('Failed to update profile role:', profileError);
+        // Try upsert as fallback
+        await supabase
+          .from('profiles')
+          .upsert({
+            user_id: user.id,
+            global_role: 'affiliate',
+          }, { onConflict: 'user_id' });
+      }
 
       // Populate genealogy
       if (newAffiliate) {
