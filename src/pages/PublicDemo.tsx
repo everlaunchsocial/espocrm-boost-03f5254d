@@ -83,6 +83,11 @@ const PublicDemo = () => {
       if (!viewTracked.current && result.data) {
         viewTracked.current = true;
         await incrementViewCount(id);
+        
+        // Update lead pipeline_status to 'demo_engaged' if applicable
+        if (result.data.lead_id) {
+          updateLeadPipelineOnEngagement(result.data.lead_id);
+        }
       }
     };
 
@@ -255,6 +260,11 @@ const PublicDemo = () => {
       if (!voiceInteractionTracked.current && id) {
         voiceInteractionTracked.current = true;
         await incrementVoiceInteraction(id);
+        
+        // Also update lead pipeline status on voice engagement
+        if (demo?.lead_id) {
+          updateLeadPipelineOnEngagement(demo.lead_id);
+        }
       }
 
       toast({
@@ -288,10 +298,40 @@ const PublicDemo = () => {
     });
   };
 
+  // Helper to update lead pipeline status on engagement
+  const updateLeadPipelineOnEngagement = async (leadId: string) => {
+    try {
+      const { data: leadData } = await supabase
+        .from('leads')
+        .select('pipeline_status')
+        .eq('id', leadId)
+        .single();
+
+      if (leadData) {
+        const currentStatus = leadData.pipeline_status;
+        // Only advance if currently in early stages
+        if (['new_lead', 'contact_attempted', 'demo_created', 'demo_sent'].includes(currentStatus)) {
+          await supabase
+            .from('leads')
+            .update({ pipeline_status: 'demo_engaged' })
+            .eq('id', leadId);
+          console.log('Updated lead pipeline_status to demo_engaged');
+        }
+      }
+    } catch (err) {
+      console.error('Error updating lead pipeline status:', err);
+    }
+  };
+
   const handleChatInteraction = async () => {
     if (!chatInteractionTracked.current && id) {
       chatInteractionTracked.current = true;
       await incrementChatInteraction(id);
+      
+      // Also update lead pipeline status on chat engagement
+      if (demo?.lead_id) {
+        updateLeadPipelineOnEngagement(demo.lead_id);
+      }
     }
   };
 

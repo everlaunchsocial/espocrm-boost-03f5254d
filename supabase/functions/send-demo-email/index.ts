@@ -352,6 +352,32 @@ serve(async (req: Request): Promise<Response> => {
       // Email was sent successfully, so we don't fail the request but log the error
     }
 
+    // Update lead pipeline_status to 'demo_sent' if applicable
+    if (demo.lead_id) {
+      const { data: leadData } = await supabase
+        .from("leads")
+        .select("pipeline_status")
+        .eq("id", demo.lead_id)
+        .single();
+
+      if (leadData) {
+        const currentStatus = leadData.pipeline_status;
+        // Only advance if currently in early stages
+        if (['new_lead', 'contact_attempted', 'demo_created'].includes(currentStatus)) {
+          const { error: pipelineError } = await supabase
+            .from("leads")
+            .update({ pipeline_status: 'demo_sent' })
+            .eq("id", demo.lead_id);
+
+          if (pipelineError) {
+            console.error("Error updating lead pipeline_status:", pipelineError);
+          } else {
+            console.log("Updated lead pipeline_status to demo_sent");
+          }
+        }
+      }
+    }
+
     // Log activity for the linked lead or contact
     const entityId = demo.lead_id || demo.contact_id;
     const entityType = demo.lead_id ? 'lead' : 'contact';

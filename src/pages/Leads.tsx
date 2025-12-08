@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLeads, useAddLead, useUpdateLead, useDeleteLead, useConvertLeadToContact } from '@/hooks/useCRMData';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
+import { PipelineStatusBadge } from '@/components/crm/PipelineStatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
 import { LeadDetail } from '@/components/crm/LeadDetail';
 import { Button } from '@/components/ui/button';
@@ -134,6 +135,11 @@ export default function Leads() {
       ) : (
         <span className="text-sm text-muted-foreground">-</span>
       ),
+    },
+    {
+      key: 'pipelineStatus',
+      label: 'Pipeline',
+      render: (lead: Lead) => <PipelineStatusBadge status={lead.pipelineStatus} />,
     },
     {
       key: 'status',

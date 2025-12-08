@@ -50,6 +50,7 @@ const toLead = (row: any): Lead => ({
   title: row.title,
   source: row.source as Lead['source'],
   status: row.status as Lead['status'],
+  pipelineStatus: (row.pipeline_status || 'new_lead') as Lead['pipelineStatus'],
   // Address fields
   address: row.address,
   city: row.city,
@@ -397,6 +398,7 @@ export function useUpdateLead() {
       if (lead.title !== undefined) updateData.title = lead.title;
       if (lead.source !== undefined) updateData.source = lead.source;
       if (lead.status !== undefined) updateData.status = lead.status;
+      if (lead.pipelineStatus !== undefined) updateData.pipeline_status = lead.pipelineStatus;
       if (lead.address !== undefined) updateData.address = lead.address;
       if (lead.city !== undefined) updateData.city = lead.city;
       if (lead.state !== undefined) updateData.state = lead.state;

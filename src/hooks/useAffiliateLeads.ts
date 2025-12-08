@@ -16,6 +16,7 @@ const toLead = (row: any): Lead => ({
   title: row.title,
   source: row.source as Lead['source'],
   status: row.status as Lead['status'],
+  pipelineStatus: (row.pipeline_status || 'new_lead') as Lead['pipelineStatus'],
   address: row.address,
   city: row.city,
   state: row.state,

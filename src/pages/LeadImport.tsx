@@ -118,6 +118,7 @@ export default function LeadImport() {
           title: undefined,
           source: parseSource(parsed.source),
           status: 'new',
+          pipelineStatus: 'new_lead',
           address: parsed.address || undefined,
           city: parsed.city || undefined,
           state: parsed.state || undefined,

@@ -16,6 +16,8 @@ import { NotesSection } from './NotesSection';
 import { EmailComposerModal } from './EmailComposerModal';
 import { CallAssistant } from './CallAssistant';
 import { DemoCreationModal } from '@/components/demos/DemoCreationModal';
+import { PipelineStatusBadge } from './PipelineStatusBadge';
+import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
   PhoneCall,
@@ -59,6 +61,17 @@ const LEAD_STATUSES = [
   { value: 'qualified', label: 'Qualified' },
   { value: 'unqualified', label: 'Unqualified' },
   { value: 'converted', label: 'Converted' },
+];
+
+const PIPELINE_STATUSES = [
+  { value: 'new_lead', label: 'New' },
+  { value: 'contact_attempted', label: 'Contact attempted' },
+  { value: 'demo_created', label: 'Demo created' },
+  { value: 'demo_sent', label: 'Demo sent' },
+  { value: 'demo_engaged', label: 'Demo engaged' },
+  { value: 'ready_to_buy', label: 'Ready to buy' },
+  { value: 'customer_won', label: 'Customer' },
+  { value: 'lost_closed', label: 'Closed – Lost' },
 ];
 
 export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
@@ -156,17 +169,40 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
 
           {/* Status Section */}
           <div className="py-4 border-b border-border">
-            <p className="text-sm font-medium text-muted-foreground mb-3">Status</p>
-            <Select value={lead.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LEAD_STATUSES.map((status) => (
-                  <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-3">Status</p>
+                <Select value={lead.status} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_STATUSES.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-3">Pipeline Status</p>
+                <Select 
+                  value={lead.pipelineStatus || 'new_lead'} 
+                  onValueChange={async (value) => {
+                    await updateLead.mutateAsync({ id: lead.id, lead: { pipelineStatus: value as Lead['pipelineStatus'] } });
+                    toast.success(`Pipeline status updated to ${PIPELINE_STATUSES.find(s => s.value === value)?.label || value}`);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PIPELINE_STATUSES.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
 
           {/* Quick Actions */}

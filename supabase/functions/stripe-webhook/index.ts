@@ -129,6 +129,32 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Update lead pipeline_status to 'customer_won' if we can find the lead
+        // Try to find lead by customer email
+        const customerEmail = session.customer_email || session.customer_details?.email;
+        if (customerEmail) {
+          const { data: leadData } = await supabase
+            .from("leads")
+            .select("id, pipeline_status")
+            .eq("email", customerEmail)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single();
+
+          if (leadData && leadData.pipeline_status !== 'lost_closed') {
+            const { error: pipelineError } = await supabase
+              .from("leads")
+              .update({ pipeline_status: 'customer_won' })
+              .eq("id", leadData.id);
+
+            if (pipelineError) {
+              console.error("Error updating lead pipeline_status:", pipelineError);
+            } else {
+              console.log("Updated lead pipeline_status to customer_won for lead:", leadData.id);
+            }
+          }
+        }
+
         console.log("Customer activation complete for:", customerId);
         break;
       }

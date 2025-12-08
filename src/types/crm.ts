@@ -59,6 +59,16 @@ export interface Account {
   updatedAt: Date;
 }
 
+export type LeadPipelineStatus = 
+  | 'new_lead'
+  | 'contact_attempted'
+  | 'demo_created'
+  | 'demo_sent'
+  | 'demo_engaged'
+  | 'ready_to_buy'
+  | 'customer_won'
+  | 'lost_closed';
+
 export interface Lead {
   id: string;
   firstName: string;
@@ -69,6 +79,7 @@ export interface Lead {
   title?: string;
   source: 'web' | 'referral' | 'campaign' | 'social' | 'google-leads' | 'other';
   status: 'new' | 'contacted' | 'qualified' | 'unqualified' | 'converted';
+  pipelineStatus: LeadPipelineStatus;
   // Address fields
   address?: string;
   city?: string;

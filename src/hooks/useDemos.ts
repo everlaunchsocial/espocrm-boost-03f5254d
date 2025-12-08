@@ -145,6 +145,27 @@ export const useDemos = () => {
         return { data: null, error: `Failed to create demo: ${error.message}` };
       }
 
+      // Update lead pipeline_status to 'demo_created' if applicable
+      if (input.lead_id) {
+        const { data: leadData } = await supabase
+          .from('leads')
+          .select('pipeline_status')
+          .eq('id', input.lead_id)
+          .single();
+
+        if (leadData) {
+          const currentStatus = leadData.pipeline_status;
+          // Only advance if currently in early stages
+          if (['new_lead', 'contact_attempted'].includes(currentStatus)) {
+            await supabase
+              .from('leads')
+              .update({ pipeline_status: 'demo_created' })
+              .eq('id', input.lead_id);
+            console.log('Updated lead pipeline_status to demo_created');
+          }
+        }
+      }
+
       return { data: data as Demo, error: null };
     } catch (err) {
       console.error('Unexpected error creating demo:', err);
