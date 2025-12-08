@@ -439,6 +439,7 @@ export type Database = {
       contacts: {
         Row: {
           account_id: string | null
+          affiliate_id: string | null
           cell_phone: string | null
           created_at: string
           email: string
@@ -455,6 +456,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          affiliate_id?: string | null
           cell_phone?: string | null
           created_at?: string
           email: string
@@ -471,6 +473,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          affiliate_id?: string | null
           cell_phone?: string | null
           created_at?: string
           email?: string
@@ -491,6 +494,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
             referencedColumns: ["id"]
           },
         ]
@@ -592,6 +602,7 @@ export type Database = {
       }
       demos: {
         Row: {
+          affiliate_id: string | null
           ai_persona_name: string | null
           ai_prompt: string | null
           avatar_url: string | null
@@ -620,6 +631,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          affiliate_id?: string | null
           ai_persona_name?: string | null
           ai_prompt?: string | null
           avatar_url?: string | null
@@ -648,6 +660,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          affiliate_id?: string | null
           ai_persona_name?: string | null
           ai_prompt?: string | null
           avatar_url?: string | null
@@ -676,6 +689,13 @@ export type Database = {
           website_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "demos_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "demos_contact_id_fkey"
             columns: ["contact_id"]

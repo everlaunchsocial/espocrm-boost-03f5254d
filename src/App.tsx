@@ -32,6 +32,8 @@ import AffiliatePublicPage from "./pages/AffiliatePublicPage";
 
 // Affiliate pages
 import AffiliateDashboard from "./pages/affiliate/AffiliateDashboard";
+import AffiliateLeads from "./pages/affiliate/AffiliateLeads";
+import AffiliateDemos from "./pages/affiliate/AffiliateDemos";
 import AffiliateCommissions from "./pages/affiliate/AffiliateCommissions";
 import AffiliateTeam from "./pages/affiliate/AffiliateTeam";
 import AffiliateTraining from "./pages/affiliate/AffiliateTraining";
@@ -59,8 +61,8 @@ const App = () => (
           {/* Affiliate routes - inside AffiliateLayout */}
           <Route element={<AffiliateLayout />}>
             <Route path="/affiliate" element={<AffiliateDashboard />} />
-            <Route path="/affiliate/leads" element={<Leads />} />
-            <Route path="/affiliate/demos" element={<Demos />} />
+            <Route path="/affiliate/leads" element={<AffiliateLeads />} />
+            <Route path="/affiliate/demos" element={<AffiliateDemos />} />
             <Route path="/affiliate/demos/:id" element={<DemoDetail />} />
             <Route path="/affiliate/commissions" element={<AffiliateCommissions />} />
             <Route path="/affiliate/team" element={<AffiliateTeam />} />

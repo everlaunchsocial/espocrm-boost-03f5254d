@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, User, Building2 } from 'lucide-react';
 import { useDemos } from '@/hooks/useDemos';
+import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AvatarSelector, AvatarOption, AVATAR_OPTIONS } from './AvatarSelector';
 
@@ -35,7 +37,13 @@ export function DemoCreationModal({
   defaultWebsiteUrl = '',
 }: DemoCreationModalProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { createDemo, captureScreenshot } = useDemos();
+  const { affiliateId } = useCurrentAffiliate();
+
+  // Determine navigation base path (affiliate or admin)
+  const isAffiliatePath = location.pathname.startsWith('/affiliate');
+  const demosBasePath = isAffiliatePath ? '/affiliate/demos' : '/demos';
 
   const [businessName, setBusinessName] = useState(defaultBusinessName);
   const [websiteUrl, setWebsiteUrl] = useState(defaultWebsiteUrl);
@@ -87,6 +95,9 @@ export function DemoCreationModal({
     setIsSubmitting(true);
 
     try {
+      // Get current user for rep_id
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const result = await createDemo({
         lead_id: leadId || null,
         contact_id: contactId || null,
@@ -95,6 +106,8 @@ export function DemoCreationModal({
         ai_persona_name: aiPersonaName.trim() || selectedAvatar?.name || undefined,
         avatar_url: selectedAvatar?.imageUrl || undefined,
         chat_title: chatTitle.trim() || undefined,
+        rep_id: user?.id || null,
+        affiliate_id: affiliateId || null,
       });
 
       if (result.error) {
@@ -105,7 +118,7 @@ export function DemoCreationModal({
       if (result.data) {
         toast.success('Demo created successfully');
         onClose();
-        navigate(`/demos/${result.data.id}`);
+        navigate(`${demosBasePath}/${result.data.id}`);
         
         // Asynchronously capture screenshot after navigation (non-blocking)
         if (websiteUrl.trim()) {
