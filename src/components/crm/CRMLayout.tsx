@@ -21,6 +21,8 @@ import {
   Presentation,
   CalendarDays,
   DollarSign,
+  BarChart3,
+  Phone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +52,8 @@ const navigation = [
   { name: 'Media Library', href: '/media-library', icon: FolderOpen },
   { name: 'Voice Demo', href: '/voice-demo', icon: Sparkles },
   { name: 'Admin Payouts', href: '/admin/payouts', icon: DollarSign },
+  { name: 'Customer Usage', href: '/admin/customer-usage', icon: BarChart3 },
+  { name: 'My Usage', href: '/customer/usage', icon: Phone },
 ];
 
 export function CRMLayout({ children }: CRMLayoutProps) {

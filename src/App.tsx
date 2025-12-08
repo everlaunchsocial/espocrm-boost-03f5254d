@@ -41,6 +41,8 @@ import AffiliateTeam from "./pages/affiliate/AffiliateTeam";
 import AffiliateTraining from "./pages/affiliate/AffiliateTraining";
 import AffiliateSettings from "./pages/affiliate/AffiliateSettings";
 import AdminPayouts from "./pages/AdminPayouts";
+import AdminCustomerUsage from "./pages/AdminCustomerUsage";
+import CustomerUsage from "./pages/CustomerUsage";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +83,8 @@ const App = () => (
           <Route element={<CRMLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/admin/payouts" element={<AdminPayouts />} />
+            <Route path="/admin/customer-usage" element={<AdminCustomerUsage />} />
+            <Route path="/customer/usage" element={<CustomerUsage />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/email" element={<Email />} />
             <Route path="/contacts" element={<Contacts />} />

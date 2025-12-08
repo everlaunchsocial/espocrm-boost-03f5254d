@@ -1757,6 +1757,25 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_customer_cycle_charges: {
+        Args: { p_customer_id: string }
+        Returns: {
+          base_cost: number
+          billing_cycle_end: string
+          billing_cycle_start: string
+          customer_id: string
+          customer_plan_id: string
+          minutes_included: number
+          monthly_price: number
+          overage_cost: number
+          overage_minutes: number
+          overage_rate: number
+          plan_code: string
+          plan_name: string
+          total_estimated_cost: number
+          total_minutes_used: number
+        }[]
+      }
       distribute_commissions: {
         Args: {
           p_customer_id: string
