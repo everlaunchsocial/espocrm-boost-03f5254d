@@ -333,14 +333,13 @@ export default function AffiliateSignup() {
                       onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
                       required
                     />
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <p>Your public URL: <span className="font-medium text-foreground">{username || 'yourname'}.tryeverlaunch.com</span></p>
-                      <p>Your new email: <span className="font-medium text-foreground">{username || 'yourname'}@tryeverlaunch.com</span></p>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Your public URL: <span className="font-medium text-foreground">{username || 'yourname'}.tryeverlaunch.com</span>
+                    </p>
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email (personal or other)</Label>
                   <Input
                     id="email"
                     type="email"
