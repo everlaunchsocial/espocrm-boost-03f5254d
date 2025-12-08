@@ -2,9 +2,18 @@ import { useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAffiliateContext } from '@/hooks/useAffiliateContext';
 import { storeAffiliateAttribution } from '@/utils/affiliateAttribution';
-import { Button } from '@/components/ui/button';
+import { RequestDemoForm } from '@/components/affiliate/RequestDemoForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Presentation, Phone, Mail, UserCheck } from 'lucide-react';
+import { 
+  UserCheck, 
+  Phone, 
+  MessageSquare, 
+  Calendar, 
+  Clock, 
+  Shield,
+  Zap,
+  Users
+} from 'lucide-react';
 
 export default function AffiliatePublicPage() {
   const { username } = useParams<{ username: string }>();
@@ -43,11 +52,7 @@ export default function AffiliatePublicPage() {
           <CardContent className="text-center">
             <p className="text-muted-foreground mb-6">
               We couldn't find a representative with the username "{username}".
-              Please check the URL and try again.
             </p>
-            <Button variant="outline" onClick={() => window.location.href = '/sales'}>
-              Visit Main Site
-            </Button>
           </CardContent>
         </Card>
       </div>
@@ -63,21 +68,40 @@ export default function AffiliatePublicPage() {
             <CardTitle className="text-2xl text-destructive">Something Went Wrong</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-muted-foreground mb-6">{error}</p>
-            <Button variant="outline" onClick={() => window.location.reload()}>
-              Try Again
-            </Button>
+            <p className="text-muted-foreground">{error}</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // Affiliate found - show placeholder page
+  const benefits = [
+    {
+      icon: Phone,
+      title: 'AI Phone Answering',
+      description: 'Never miss a call. AI handles inbound calls 24/7 with natural conversation.',
+    },
+    {
+      icon: MessageSquare,
+      title: 'Website Chat & Voice',
+      description: 'Engage visitors instantly with AI chat and voice widgets on your site.',
+    },
+    {
+      icon: Calendar,
+      title: 'Appointment Booking',
+      description: 'Automatically capture leads and book appointments while you focus on work.',
+    },
+    {
+      icon: Clock,
+      title: 'Always Available',
+      description: 'Your AI assistant works around the clock - nights, weekends, holidays.',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
       {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
@@ -91,85 +115,105 @@ export default function AffiliatePublicPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
-            Welcome to EverLaunch AI
-          </h1>
-          <p className="text-xl text-muted-foreground mb-8">
-            Your AI-powered business assistant is just a demo away.
-            <br />
-            Representative: <span className="font-semibold text-primary">{affiliate.username}</span>
-          </p>
-
-          {/* Placeholder Cards */}
-          <div className="grid gap-6 md:grid-cols-3 mt-12">
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Presentation className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-lg">Request Demo</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  See AI in action on your business website
-                </p>
-                <Button className="w-full" disabled>Coming Soon</Button>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Phone className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-lg">Schedule Call</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Book a call with your representative
-                </p>
-                <Button variant="outline" className="w-full" disabled>Coming Soon</Button>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Mail className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-lg">Contact Rep</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Get in touch with questions
-                </p>
-                <Button variant="outline" className="w-full" disabled>Coming Soon</Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Development Notice */}
-          <Card className="mt-12 bg-muted/50">
-            <CardContent className="py-8">
-              <p className="text-muted-foreground">
-                <strong>This is a replicated affiliate page.</strong>
-                <br />
-                Product sales page, demo request form, and contact features coming in Phase B3-B4.
-                <br />
-                <span className="text-xs">Affiliate ID: {affiliate.id}</span>
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 py-16 md:py-24">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
+            {/* Left - Content */}
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
+                24/7 AI Phone, Web & Chat Assistant for Your Business
+              </h1>
+              <p className="text-xl text-muted-foreground mb-8">
+                Transform how you engage customers with AI that answers calls, chats with website visitors, 
+                and books appointments — all while you sleep.
               </p>
-            </CardContent>
-          </Card>
+              
+              {/* Trust indicators */}
+              <div className="flex flex-wrap gap-4 mb-8">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <span>Enterprise-grade AI</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Zap className="h-4 w-4 text-primary" />
+                  <span>Setup in minutes</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4 text-primary" />
+                  <span>Trusted by 500+ businesses</span>
+                </div>
+              </div>
+
+              {/* Benefits Grid */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                {benefits.map((benefit) => (
+                  <div 
+                    key={benefit.title}
+                    className="p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <benefit.icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">{benefit.title}</h3>
+                        <p className="text-sm text-muted-foreground">{benefit.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right - Form */}
+            <div className="lg:sticky lg:top-24">
+              <RequestDemoForm 
+                affiliateId={affiliate.id} 
+                affiliateUsername={affiliate.username} 
+              />
+            </div>
+          </div>
         </div>
-      </main>
+      </section>
+
+      {/* Social Proof Section */}
+      <section className="border-t border-border bg-card/50">
+        <div className="container mx-auto px-4 py-16">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-4">
+              Stop Losing Leads to Missed Calls
+            </h2>
+            <p className="text-muted-foreground mb-8">
+              Every missed call is a missed opportunity. With EverLaunch AI, your business 
+              is always ready to engage customers, capture leads, and book appointments — 
+              even when you're busy or off the clock.
+            </p>
+            <div className="grid sm:grid-cols-3 gap-8">
+              <div>
+                <div className="text-4xl font-bold text-primary mb-2">24/7</div>
+                <div className="text-sm text-muted-foreground">Always Available</div>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-primary mb-2">&lt;2s</div>
+                <div className="text-sm text-muted-foreground">Response Time</div>
+              </div>
+              <div>
+                <div className="text-4xl font-bold text-primary mb-2">95%</div>
+                <div className="text-sm text-muted-foreground">Customer Satisfaction</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer className="border-t border-border mt-auto py-6">
+      <footer className="border-t border-border py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} EverLaunch AI. All rights reserved.
+          <p>© {new Date().getFullYear()} EverLaunch AI. All rights reserved.</p>
+          <p className="mt-2">
+            Your representative: <span className="font-medium">{affiliate.username}</span>
+          </p>
         </div>
       </footer>
     </div>
