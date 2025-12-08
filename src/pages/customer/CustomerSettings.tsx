@@ -40,11 +40,11 @@ const settingsLinks: SettingsLink[] = [
     available: true,
   },
   {
-    title: 'Deploy & Embed',
+    title: 'Deploy & Install',
     description: 'Get your embed code and phone number',
     href: '/customer/settings/deploy',
     icon: Code,
-    available: false,
+    available: true,
   },
 ];
 
