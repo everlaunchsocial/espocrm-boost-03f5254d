@@ -37,7 +37,7 @@ const settingsLinks: SettingsLink[] = [
     description: 'Connect calendar and configure booking availability',
     href: '/customer/settings/calendar',
     icon: Calendar,
-    available: false,
+    available: true,
   },
   {
     title: 'Deploy & Embed',
