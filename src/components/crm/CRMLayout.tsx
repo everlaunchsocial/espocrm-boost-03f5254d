@@ -1,5 +1,5 @@
-import { ReactNode, useState } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import { ReactNode, useState, useEffect } from 'react';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -23,6 +23,11 @@ import {
   DollarSign,
   BarChart3,
   Phone,
+  Network,
+  Percent,
+  Settings,
+  User,
+  LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,14 +35,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useUserRole } from '@/hooks/useUserRole';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CRMLayoutProps {
   children?: ReactNode;
 }
 
-const navigation = [
+const crmNavigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Calendar', href: '/calendar', icon: CalendarDays },
   { name: 'Email', href: '/email', icon: Mail },
@@ -51,14 +59,68 @@ const navigation = [
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Media Library', href: '/media-library', icon: FolderOpen },
   { name: 'Voice Demo', href: '/voice-demo', icon: Sparkles },
-  { name: 'Admin Payouts', href: '/admin/payouts', icon: DollarSign },
+];
+
+const adminNavigation = [
+  { name: 'Payouts', href: '/admin/payouts', icon: DollarSign },
   { name: 'Customer Usage', href: '/admin/customer-usage', icon: BarChart3 },
+  { name: 'Comp Plans', href: '/admin/comp-plans', icon: Percent },
+  { name: 'Genealogy', href: '/admin/genealogy', icon: Network, superAdminOnly: true },
+];
+
+const customerNavigation = [
   { name: 'My Usage', href: '/customer/usage', icon: Phone },
 ];
 
 export function CRMLayout({ children }: CRMLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { role, isLoading, isAdmin } = useUserRole();
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
+
+  useEffect(() => {
+    async function fetchUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email || '');
+        setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || 'User');
+      }
+    }
+    fetchUser();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/affiliate-signup');
+  };
+
+  const getRoleLabel = () => {
+    switch (role) {
+      case 'super_admin': return 'Super Admin';
+      case 'admin': return 'Admin';
+      case 'affiliate': return 'Affiliate';
+      default: return 'Customer';
+    }
+  };
+
+  const getInitials = () => {
+    if (userName) {
+      const parts = userName.split(' ');
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
+      return userName.substring(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
+
+  // Filter admin navigation based on role
+  const filteredAdminNav = adminNavigation.filter(item => {
+    if (item.superAdminOnly && role !== 'super_admin') return false;
+    return true;
+  });
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -82,9 +144,9 @@ export function CRMLayout({ children }: CRMLayoutProps) {
           <div className="flex h-16 items-center justify-between px-6 border-b border-sidebar-border">
             <Link to="/" className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">C</span>
+                <span className="text-primary-foreground font-bold text-lg">E</span>
               </div>
-              <span className="text-xl font-semibold text-sidebar-foreground">CRM Pro</span>
+              <span className="text-xl font-semibold text-sidebar-foreground">EverLaunch</span>
             </Link>
             <Button
               variant="ghost"
@@ -98,8 +160,9 @@ export function CRMLayout({ children }: CRMLayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-4 px-3">
+            {/* CRM Navigation */}
             <ul className="space-y-1">
-              {navigation.map((item) => {
+              {crmNavigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
                   <li key={item.name}>
@@ -120,6 +183,72 @@ export function CRMLayout({ children }: CRMLayoutProps) {
                 );
               })}
             </ul>
+
+            {/* Admin Section */}
+            {isAdmin && (
+              <>
+                <div className="mt-6 mb-2 px-3">
+                  <span className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
+                    Admin
+                  </span>
+                </div>
+                <ul className="space-y-1">
+                  {filteredAdminNav.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          to={item.href}
+                          onClick={() => setSidebarOpen(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                            isActive
+                              ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                          )}
+                        >
+                          <item.icon className="h-5 w-5" />
+                          {item.name}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
+
+            {/* Customer Section */}
+            {role === 'customer' && (
+              <>
+                <div className="mt-6 mb-2 px-3">
+                  <span className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
+                    My Account
+                  </span>
+                </div>
+                <ul className="space-y-1">
+                  {customerNavigation.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          to={item.href}
+                          onClick={() => setSidebarOpen(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                            isActive
+                              ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                              : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                          )}
+                        >
+                          <item.icon className="h-5 w-5" />
+                          {item.name}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
           </nav>
 
           {/* User section */}
@@ -128,19 +257,31 @@ export function CRMLayout({ children }: CRMLayoutProps) {
               <DropdownMenuTrigger asChild>
                 <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 hover:bg-sidebar-accent transition-colors">
                   <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground text-sm font-medium">JD</span>
+                    <span className="text-primary-foreground text-sm font-medium">{getInitials()}</span>
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-medium text-sidebar-foreground">John Doe</p>
-                    <p className="text-xs text-sidebar-foreground/60">Admin</p>
+                    <p className="text-sm font-medium text-sidebar-foreground">{userName}</p>
+                    <p className="text-xs text-sidebar-foreground/60">{getRoleLabel()}</p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-sidebar-foreground/60" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Sign out</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/admin/profile')}>
+                  <User className="h-4 w-4 mr-2" />
+                  Profile
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate('/admin/settings')}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

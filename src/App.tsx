@@ -48,6 +48,12 @@ import AdminPayouts from "./pages/AdminPayouts";
 import AdminCustomerUsage from "./pages/AdminCustomerUsage";
 import CustomerUsage from "./pages/CustomerUsage";
 
+// Admin pages
+import AdminProfile from "./pages/admin/AdminProfile";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminCompPlans from "./pages/admin/AdminCompPlans";
+import AdminGenealogy from "./pages/admin/AdminGenealogy";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -92,6 +98,10 @@ const App = () => (
           {/* CRM routes - inside CRM layout (for admins/super_admins) */}
           <Route element={<CRMLayout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/admin/profile" element={<AdminProfile />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/comp-plans" element={<AdminCompPlans />} />
+            <Route path="/admin/genealogy" element={<AdminGenealogy />} />
             <Route path="/admin/payouts" element={<AdminPayouts />} />
             <Route path="/admin/customer-usage" element={<AdminCustomerUsage />} />
             <Route path="/customer/usage" element={<CustomerUsage />} />
