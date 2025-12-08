@@ -350,7 +350,35 @@ export default function AffiliateSignup() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    {authMode === 'login' && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!email) {
+                            toast.error('Please enter your email first');
+                            return;
+                          }
+                          setIsProcessing(true);
+                          try {
+                            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                              redirectTo: `${window.location.origin}/reset-password`,
+                            });
+                            if (error) throw error;
+                            toast.success('Password reset email sent! Check your inbox.');
+                          } catch (error: any) {
+                            toast.error(error.message || 'Failed to send reset email');
+                          } finally {
+                            setIsProcessing(false);
+                          }
+                        }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
                   <Input
                     id="password"
                     type="password"

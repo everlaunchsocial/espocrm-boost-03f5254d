@@ -31,6 +31,7 @@ import Unauthorized from "./pages/Unauthorized";
 import AffiliatePublicPage from "./pages/AffiliatePublicPage";
 import AffiliateSignup from "./pages/AffiliateSignup";
 import AffiliateSignupSuccess from "./pages/AffiliateSignupSuccess";
+import ResetPassword from "./pages/ResetPassword";
 import Product from "./pages/Product";
 import CustomerBuy from "./pages/CustomerBuy";
 import CustomerBuySuccess from "./pages/CustomerBuySuccess";
@@ -74,6 +75,7 @@ const App = () => (
           {/* Affiliate signup - public */}
           <Route path="/affiliate-signup" element={<AffiliateSignup />} />
           <Route path="/affiliate-signup/success" element={<AffiliateSignupSuccess />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Affiliate routes - inside AffiliateLayout */}
           <Route element={<AffiliateLayout />}>
