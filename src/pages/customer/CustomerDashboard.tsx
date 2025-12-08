@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { PipelineStatusBadge } from '@/components/crm/PipelineStatusBadge';
+import { SetupChecklist } from '@/components/customer/SetupChecklist';
 import { 
   Phone, 
   MessageSquare, 
@@ -20,7 +21,15 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
 export default function CustomerDashboard() {
-  const { isLoading: onboardingLoading, customerProfile, twilioNumber } = useCustomerOnboarding();
+  const { 
+    isLoading: onboardingLoading, 
+    customerProfile, 
+    twilioNumber,
+    voiceSettings,
+    chatSettings,
+    calendarIntegration,
+    knowledgeSources
+  } = useCustomerOnboarding();
   const { 
     billing, 
     billingLoading, 
@@ -62,6 +71,20 @@ export default function CustomerDashboard() {
     ? format(new Date(billing.billing_cycle_end), 'MMM d, yyyy')
     : 'Not set';
 
+  // Calculate checklist completion status
+  const voiceComplete = !!(voiceSettings?.greeting_text && voiceSettings.greeting_text.length >= 20);
+  
+  const hasWebsiteKnowledge = !!(customerProfile?.website_url && chatSettings?.use_website_knowledge);
+  const hasDocumentKnowledge = knowledgeSources.some(s => s.source_type === 'document' && s.status === 'processed');
+  const knowledgeComplete = hasWebsiteKnowledge || hasDocumentKnowledge;
+  
+  const leadsComplete = !!(customerProfile?.lead_capture_enabled && (customerProfile?.lead_email || customerProfile?.lead_sms_number));
+  
+  const calendarOptional = !calendarIntegration?.appointments_enabled;
+  const calendarComplete = !!(calendarIntegration?.appointments_enabled && calendarIntegration?.provider);
+  
+  const deployComplete = !!(customerProfile?.embed_installed_at && customerProfile?.phone_tested_at);
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -74,6 +97,16 @@ export default function CustomerDashboard() {
             {customerProfile?.business_name} Dashboard
           </p>
         </div>
+
+        {/* Setup Checklist */}
+        <SetupChecklist
+          voiceComplete={voiceComplete}
+          knowledgeComplete={knowledgeComplete}
+          leadsComplete={leadsComplete}
+          calendarComplete={calendarComplete}
+          calendarOptional={calendarOptional}
+          deployComplete={deployComplete}
+        />
 
         {/* Top Row: Plan & Usage + Activity Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

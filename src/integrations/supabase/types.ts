@@ -764,6 +764,7 @@ export type Database = {
           contact_name: string | null
           created_at: string
           customer_plan_id: string | null
+          embed_installed_at: string | null
           id: string
           lead_capture_enabled: boolean | null
           lead_email: string | null
@@ -775,6 +776,7 @@ export type Database = {
           onboarding_stage: string | null
           overage_rate: number
           phone: string | null
+          phone_tested_at: string | null
           plan_name: string | null
           user_id: string
           website_url: string | null
@@ -788,6 +790,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           customer_plan_id?: string | null
+          embed_installed_at?: string | null
           id?: string
           lead_capture_enabled?: boolean | null
           lead_email?: string | null
@@ -799,6 +802,7 @@ export type Database = {
           onboarding_stage?: string | null
           overage_rate?: number
           phone?: string | null
+          phone_tested_at?: string | null
           plan_name?: string | null
           user_id: string
           website_url?: string | null
@@ -812,6 +816,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           customer_plan_id?: string | null
+          embed_installed_at?: string | null
           id?: string
           lead_capture_enabled?: boolean | null
           lead_email?: string | null
@@ -823,6 +828,7 @@ export type Database = {
           onboarding_stage?: string | null
           overage_rate?: number
           phone?: string | null
+          phone_tested_at?: string | null
           plan_name?: string | null
           user_id?: string
           website_url?: string | null

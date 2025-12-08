@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Code, Phone, Copy, Mail, PhoneCall, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { format } from 'date-fns';
 
 export default function DeploySettings() {
   const navigate = useNavigate();
@@ -14,7 +16,11 @@ export default function DeploySettings() {
     chatSettings,
     twilioNumber,
     isLoading,
+    updateProfile,
   } = useCustomerOnboarding();
+
+  const [savingEmbed, setSavingEmbed] = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
 
   // Redirect if onboarding not complete
   useEffect(() => {
@@ -162,6 +168,35 @@ Thanks!`);
             <p className="text-sm text-muted-foreground">
               Once installed, your AI chat widget will appear in the bottom-right corner of your website.
             </p>
+
+            {/* Embed confirmation checkbox */}
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-muted/30">
+              <Checkbox
+                id="embed-installed"
+                checked={!!customerProfile?.embed_installed_at}
+                disabled={savingEmbed}
+                onCheckedChange={async (checked) => {
+                  setSavingEmbed(true);
+                  const success = await updateProfile({
+                    embed_installed_at: checked ? new Date().toISOString() : null
+                  } as any);
+                  setSavingEmbed(false);
+                  if (success && checked) {
+                    toast.success('Marked embed as installed');
+                  }
+                }}
+              />
+              <div className="flex-1">
+                <label htmlFor="embed-installed" className="text-sm font-medium cursor-pointer">
+                  I've installed this code on my website
+                </label>
+                {customerProfile?.embed_installed_at && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Marked as installed on {format(new Date(customerProfile.embed_installed_at), 'MMM d, yyyy')}
+                  </p>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -214,6 +249,35 @@ Thanks!`);
                 <p className="text-sm text-muted-foreground">
                   Call this number from your phone to hear your AI assistant in action. Share this number on your website, business cards, and marketing materials.
                 </p>
+
+                {/* Phone test confirmation checkbox */}
+                <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-muted/30">
+                  <Checkbox
+                    id="phone-tested"
+                    checked={!!customerProfile?.phone_tested_at}
+                    disabled={savingPhone}
+                    onCheckedChange={async (checked) => {
+                      setSavingPhone(true);
+                      const success = await updateProfile({
+                        phone_tested_at: checked ? new Date().toISOString() : null
+                      } as any);
+                      setSavingPhone(false);
+                      if (success && checked) {
+                        toast.success('Marked phone as tested');
+                      }
+                    }}
+                  />
+                  <div className="flex-1">
+                    <label htmlFor="phone-tested" className="text-sm font-medium cursor-pointer">
+                      I've test-called my AI phone number
+                    </label>
+                    {customerProfile?.phone_tested_at && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Marked as tested on {format(new Date(customerProfile.phone_tested_at), 'MMM d, yyyy')}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </>
             ) : (
               <Alert>

@@ -30,6 +30,8 @@ export interface CustomerProfile {
   lead_email: string | null;
   lead_sms_number: string | null;
   minutes_included: number;
+  embed_installed_at: string | null;
+  phone_tested_at: string | null;
 }
 
 export interface VoiceSettings {
