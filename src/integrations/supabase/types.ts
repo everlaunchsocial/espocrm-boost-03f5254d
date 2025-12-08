@@ -147,6 +147,13 @@ export type Database = {
             foreignKeyName: "affiliate_commissions_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customer_profiles"
             referencedColumns: ["id"]
           },
@@ -289,6 +296,13 @@ export type Database = {
             foreignKeyName: "billing_subscriptions_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "billing_subscriptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customer_profiles"
             referencedColumns: ["id"]
           },
@@ -317,6 +331,13 @@ export type Database = {
           usage_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "billing_usage_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
           {
             foreignKeyName: "billing_usage_customer_id_fkey"
             columns: ["customer_id"]
@@ -463,6 +484,13 @@ export type Database = {
             foreignKeyName: "chat_settings_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: true
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "chat_settings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
             referencedRelation: "customer_profiles"
             referencedColumns: ["id"]
           },
@@ -567,10 +595,55 @@ export type Database = {
           },
         ]
       }
+      customer_plans: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_active: boolean
+          minutes_included: number
+          monthly_price: number
+          name: string
+          overage_rate: number
+          setup_fee: number
+          stripe_price_id: string | null
+          stripe_setup_price_id: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          minutes_included: number
+          monthly_price: number
+          name: string
+          overage_rate: number
+          setup_fee: number
+          stripe_price_id?: string | null
+          stripe_setup_price_id?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          minutes_included?: number
+          monthly_price?: number
+          name?: string
+          overage_rate?: number
+          setup_fee?: number
+          stripe_price_id?: string | null
+          stripe_setup_price_id?: string | null
+        }
+        Relationships: []
+      }
       customer_profiles: {
         Row: {
           affiliate_id: string | null
+          billing_cycle_end: string | null
+          billing_cycle_start: string | null
           created_at: string
+          customer_plan_id: string | null
           id: string
           minutes_included: number
           minutes_used: number
@@ -580,7 +653,10 @@ export type Database = {
         }
         Insert: {
           affiliate_id?: string | null
+          billing_cycle_end?: string | null
+          billing_cycle_start?: string | null
           created_at?: string
+          customer_plan_id?: string | null
           id?: string
           minutes_included?: number
           minutes_used?: number
@@ -590,7 +666,10 @@ export type Database = {
         }
         Update: {
           affiliate_id?: string | null
+          billing_cycle_end?: string | null
+          billing_cycle_start?: string | null
           created_at?: string
+          customer_plan_id?: string | null
           id?: string
           minutes_included?: number
           minutes_used?: number
@@ -604,6 +683,13 @@ export type Database = {
             columns: ["affiliate_id"]
             isOneToOne: false
             referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_profiles_customer_plan_id_fkey"
+            columns: ["customer_plan_id"]
+            isOneToOne: false
+            referencedRelation: "customer_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -1544,6 +1630,13 @@ export type Database = {
             foreignKeyName: "twilio_numbers_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "twilio_numbers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "customer_profiles"
             referencedColumns: ["id"]
           },
@@ -1572,6 +1665,13 @@ export type Database = {
           metadata?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "usage_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
           {
             foreignKeyName: "usage_logs_customer_id_fkey"
             columns: ["customer_id"]
@@ -1611,6 +1711,13 @@ export type Database = {
             foreignKeyName: "voice_settings_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: true
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "voice_settings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
             referencedRelation: "customer_profiles"
             referencedColumns: ["id"]
           },
@@ -1618,7 +1725,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      customer_minutes_summary: {
+        Row: {
+          affiliate_id: string | null
+          billing_cycle_end: string | null
+          billing_cycle_start: string | null
+          customer_id: string | null
+          customer_plan_id: string | null
+          minutes_included: number | null
+          overage_rate: number | null
+          plan_name: string | null
+          total_minutes_used: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_profiles_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_profiles_customer_plan_id_fkey"
+            columns: ["customer_plan_id"]
+            isOneToOne: false
+            referencedRelation: "customer_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       distribute_commissions: {
@@ -1637,9 +1773,24 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
+      log_minutes_usage_for_customer: {
+        Args: {
+          p_customer_id: string
+          p_minutes: number
+          p_occurred_at: string
+        }
+        Returns: undefined
+      }
       populate_genealogy_for_affiliate: {
         Args: { p_affiliate_id: string }
         Returns: undefined
+      }
+      test_add_minutes_for_customer: {
+        Args: { p_customer_id: string; p_minutes: number }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
       }
       test_distribute_commissions: {
         Args: { p_customer_id: string; p_gross_amount: number }
