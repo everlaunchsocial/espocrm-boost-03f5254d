@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CRMLayout } from "./components/crm/CRMLayout";
 import { AffiliateLayout } from "./components/affiliate/AffiliateLayout";
+import { CustomerPortalLayout } from "./components/customer/CustomerPortalLayout";
+import { CustomerOnboardingLayout } from "./components/customer/CustomerOnboardingLayout";
 import Dashboard from "./pages/Dashboard";
 import Email from "./pages/Email";
 import Contacts from "./pages/Contacts";
@@ -54,6 +56,21 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminCompPlans from "./pages/admin/AdminCompPlans";
 import AdminGenealogy from "./pages/admin/AdminGenealogy";
 
+// Customer Portal pages
+import CustomerDashboard from "./pages/customer/CustomerDashboard";
+import CustomerSettings from "./pages/customer/CustomerSettings";
+import CustomerLeads from "./pages/customer/CustomerLeads";
+import CustomerBilling from "./pages/customer/CustomerBilling";
+import CustomerSupport from "./pages/customer/CustomerSupport";
+
+// Customer Onboarding pages
+import OnboardingStep1 from "./pages/customer/OnboardingStep1";
+import OnboardingStep2 from "./pages/customer/OnboardingStep2";
+import OnboardingStep3 from "./pages/customer/OnboardingStep3";
+import OnboardingStep4 from "./pages/customer/OnboardingStep4";
+import OnboardingStep5 from "./pages/customer/OnboardingStep5";
+import OnboardingStep6 from "./pages/customer/OnboardingStep6";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -82,6 +99,48 @@ const App = () => (
           <Route path="/affiliate-signup" element={<AffiliateSignup />} />
           <Route path="/affiliate-signup/success" element={<AffiliateSignupSuccess />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          
+          {/* Customer Onboarding Wizard - separate layout */}
+          <Route path="/customer/onboarding/wizard/1" element={
+            <CustomerOnboardingLayout currentStep={1}>
+              <OnboardingStep1 />
+            </CustomerOnboardingLayout>
+          } />
+          <Route path="/customer/onboarding/wizard/2" element={
+            <CustomerOnboardingLayout currentStep={2}>
+              <OnboardingStep2 />
+            </CustomerOnboardingLayout>
+          } />
+          <Route path="/customer/onboarding/wizard/3" element={
+            <CustomerOnboardingLayout currentStep={3}>
+              <OnboardingStep3 />
+            </CustomerOnboardingLayout>
+          } />
+          <Route path="/customer/onboarding/wizard/4" element={
+            <CustomerOnboardingLayout currentStep={4}>
+              <OnboardingStep4 />
+            </CustomerOnboardingLayout>
+          } />
+          <Route path="/customer/onboarding/wizard/5" element={
+            <CustomerOnboardingLayout currentStep={5}>
+              <OnboardingStep5 />
+            </CustomerOnboardingLayout>
+          } />
+          <Route path="/customer/onboarding/wizard/6" element={
+            <CustomerOnboardingLayout currentStep={6}>
+              <OnboardingStep6 />
+            </CustomerOnboardingLayout>
+          } />
+          
+          {/* Customer Portal routes - inside CustomerPortalLayout */}
+          <Route element={<CustomerPortalLayout />}>
+            <Route path="/customer" element={<CustomerDashboard />} />
+            <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+            <Route path="/customer/settings" element={<CustomerSettings />} />
+            <Route path="/customer/leads" element={<CustomerLeads />} />
+            <Route path="/customer/billing" element={<CustomerBilling />} />
+            <Route path="/customer/support" element={<CustomerSupport />} />
+          </Route>
           
           {/* Affiliate routes - inside AffiliateLayout */}
           <Route element={<AffiliateLayout />}>

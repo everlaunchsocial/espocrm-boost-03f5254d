@@ -1,8 +1,5 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Phone, 
@@ -11,24 +8,15 @@ import {
   Users, 
   TrendingUp, 
   Clock,
-  Settings,
   BarChart3
 } from 'lucide-react';
 
 export default function CustomerDashboard() {
-  const navigate = useNavigate();
-  const { isLoading, customerProfile, isOnboardingComplete, twilioNumber } = useCustomerOnboarding();
-
-  useEffect(() => {
-    if (!isLoading && customerProfile && !isOnboardingComplete) {
-      const step = customerProfile.onboarding_current_step || 1;
-      navigate(`/customer/onboarding/wizard/${step}`);
-    }
-  }, [isLoading, customerProfile, isOnboardingComplete, navigate]);
+  const { isLoading, customerProfile, twilioNumber } = useCustomerOnboarding();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-8">
+      <div className="p-6 md:p-8">
         <div className="max-w-6xl mx-auto space-y-8">
           <Skeleton className="h-12 w-64" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -43,26 +31,18 @@ export default function CustomerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Welcome, {customerProfile?.contact_name || 'there'}!
-            </h1>
-            <p className="text-muted-foreground">
-              {customerProfile?.business_name} Dashboard
-            </p>
-          </div>
-          <Button variant="outline" className="gap-2">
-            <Settings className="h-4 w-4" />
-            Settings
-          </Button>
+    <div className="p-6 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            Welcome, {customerProfile?.contact_name || 'there'}!
+          </h1>
+          <p className="text-muted-foreground">
+            {customerProfile?.business_name} Dashboard
+          </p>
         </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
@@ -191,7 +171,7 @@ export default function CustomerDashboard() {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }
