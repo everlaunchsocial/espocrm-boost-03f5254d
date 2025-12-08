@@ -30,7 +30,7 @@ const settingsLinks: SettingsLink[] = [
     description: 'Set up how leads are captured and where they go',
     href: '/customer/settings/leads',
     icon: Users,
-    available: false,
+    available: true,
   },
   {
     title: 'Calendar & Appointments',

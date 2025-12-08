@@ -61,6 +61,7 @@ import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import CustomerSettings from "./pages/customer/CustomerSettings";
 import VoiceSettings from "./pages/customer/VoiceSettings";
 import KnowledgeSettings from "./pages/customer/KnowledgeSettings";
+import LeadCaptureSettings from "./pages/customer/LeadCaptureSettings";
 import CustomerLeads from "./pages/customer/CustomerLeads";
 import CustomerBilling from "./pages/customer/CustomerBilling";
 import CustomerSupport from "./pages/customer/CustomerSupport";
@@ -141,6 +142,7 @@ const App = () => (
             <Route path="/customer/settings" element={<CustomerSettings />} />
             <Route path="/customer/settings/voice" element={<VoiceSettings />} />
             <Route path="/customer/settings/knowledge" element={<KnowledgeSettings />} />
+            <Route path="/customer/settings/leads" element={<LeadCaptureSettings />} />
             <Route path="/customer/leads" element={<CustomerLeads />} />
             <Route path="/customer/billing" element={<CustomerBilling />} />
             <Route path="/customer/support" element={<CustomerSupport />} />
