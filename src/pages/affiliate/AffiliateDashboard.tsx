@@ -1,7 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Users, Presentation, TrendingUp } from 'lucide-react';
+import { DollarSign, Users, Presentation, TrendingUp, Calendar } from 'lucide-react';
+import { useAffiliateLeadCount } from '@/hooks/useAffiliateLeads';
+import { useAffiliateDemoCount, useAffiliateDemosThisWeek } from '@/hooks/useAffiliateDemos';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AffiliateDashboard() {
+  const { data: leadCount, isLoading: leadsLoading } = useAffiliateLeadCount();
+  const { data: demoCount, isLoading: demosLoading } = useAffiliateDemoCount();
+  const { data: demosThisWeek, isLoading: weekLoading } = useAffiliateDemosThisWeek();
+
   return (
     <div className="space-y-6">
       <div>
@@ -23,34 +30,46 @@ export default function AffiliateDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Leads</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            {leadsLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{leadCount}</div>
+            )}
             <p className="text-xs text-muted-foreground">In your pipeline</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Demos Sent</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Demos</CardTitle>
             <Presentation className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            {demosLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{demoCount}</div>
+            )}
+            <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team Size</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Demos This Week</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Sub-affiliates</p>
+            {weekLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{demosThisWeek}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Created this week</p>
           </CardContent>
         </Card>
       </div>

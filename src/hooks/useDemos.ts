@@ -10,6 +10,7 @@ export type VoiceProvider = 'openai' | 'elevenlabs';
 export interface Demo {
   id: string;
   rep_id: string | null;
+  affiliate_id: string | null;
   lead_id: string | null;
   contact_id: string | null;
   business_name: string;
@@ -38,6 +39,7 @@ export interface Demo {
 // Input type for creating a new demo
 export interface CreateDemoInput {
   rep_id?: string | null;
+  affiliate_id?: string | null;
   lead_id?: string | null;
   contact_id?: string | null;
   business_name: string;
@@ -118,6 +120,7 @@ export const useDemos = () => {
         .from('demos')
         .insert({
           rep_id: input.rep_id ?? null,
+          affiliate_id: input.affiliate_id ?? null,
           lead_id: input.lead_id ?? null,
           contact_id: input.contact_id ?? null,
           business_name: input.business_name,
