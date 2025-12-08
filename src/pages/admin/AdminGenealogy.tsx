@@ -4,21 +4,29 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Network, 
   AlertCircle, 
   ChevronDown, 
   ChevronRight,
   Users,
-  Calendar,
-  DollarSign
+  DollarSign,
+  Loader2
 } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+
+interface CommissionPlan {
+  id: string;
+  name: string;
+  is_default: boolean;
+}
 
 interface AffiliateWithGenealogy {
   id: string;
@@ -106,18 +114,105 @@ function useCompanyGenealogy() {
   });
 }
 
+function useCommissionPlans() {
+  return useQuery({
+    queryKey: ['commission-plans'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('commission_plans')
+        .select('id, name, is_default')
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data as CommissionPlan[];
+    },
+  });
+}
+
+function useAssignCommissionPlan() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ affiliateId, planId }: { affiliateId: string; planId: string | null }) => {
+      const { error } = await supabase
+        .from('affiliates')
+        .update({ commission_plan_id: planId })
+        .eq('id', affiliateId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-genealogy'] });
+      toast.success('Commission plan assigned successfully');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to assign commission plan');
+    },
+  });
+}
+
+function CommissionPlanSelector({ 
+  affiliateId,
+  currentPlanId,
+  plans,
+  disabled = false
+}: { 
+  affiliateId: string;
+  currentPlanId: string | null;
+  plans: CommissionPlan[];
+  disabled?: boolean;
+}) {
+  const assignPlan = useAssignCommissionPlan();
+  const defaultPlan = plans.find(p => p.is_default);
+  
+  const handleChange = (value: string) => {
+    const planId = value === 'default' ? null : value;
+    assignPlan.mutate({ affiliateId, planId });
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Select
+        value={currentPlanId || 'default'}
+        onValueChange={handleChange}
+        disabled={disabled || assignPlan.isPending}
+      >
+        <SelectTrigger className="w-[160px] h-8 text-xs">
+          <SelectValue placeholder="Select plan" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="default">
+            (Default{defaultPlan ? `: ${defaultPlan.name}` : ''})
+          </SelectItem>
+          {plans.map(plan => (
+            <SelectItem key={plan.id} value={plan.id}>
+              {plan.name}
+              {plan.is_default && ' (Default)'}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {assignPlan.isPending && (
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      )}
+    </div>
+  );
+}
+
 function AffiliateRow({ 
   affiliate, 
   level = 0,
   isExpanded,
   onToggle,
-  hasChildren
+  hasChildren,
+  commissionPlans
 }: { 
   affiliate: AffiliateWithGenealogy;
   level?: number;
   isExpanded: boolean;
   onToggle: () => void;
   hasChildren: boolean;
+  commissionPlans: CommissionPlan[];
 }) {
   const totalDownline = (affiliate.tier1_count || 0) + (affiliate.tier2_count || 0) + (affiliate.tier3_count || 0);
 
@@ -159,9 +254,11 @@ function AffiliateRow({
         </Badge>
       </TableCell>
       <TableCell>
-        <Badge variant="outline">
-          {affiliate.commission_plan?.name || 'Default'}
-        </Badge>
+        <CommissionPlanSelector
+          affiliateId={affiliate.id}
+          currentPlanId={affiliate.commission_plan_id}
+          plans={commissionPlans}
+        />
       </TableCell>
     </TableRow>
   );
@@ -171,6 +268,7 @@ export default function AdminGenealogy() {
   const { role, isLoading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const { data: affiliates = [], isLoading } = useCompanyGenealogy();
+  const { data: commissionPlans = [] } = useCommissionPlans();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleExpanded = (id: string) => {
@@ -234,6 +332,7 @@ export default function AdminGenealogy() {
         isExpanded={isExpanded}
         onToggle={() => toggleExpanded(affiliate.id)}
         hasChildren={hasChildren}
+        commissionPlans={commissionPlans}
       />
     ];
 
@@ -249,16 +348,17 @@ export default function AdminGenealogy() {
   // Stats
   const totalAffiliates = affiliates.length;
   const rootCount = rootAffiliates.length;
+  const withCustomPlan = affiliates.filter(a => a.commission_plan_id).length;
 
   return (
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Company Genealogy</h1>
-        <p className="text-muted-foreground">Complete affiliate network visualization</p>
+        <p className="text-muted-foreground">Complete affiliate network visualization and commission plan assignment</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -292,8 +392,21 @@ export default function AdminGenealogy() {
                 <DollarSign className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Avg Network Depth</p>
-                <p className="text-2xl font-bold">3 Tiers</p>
+                <p className="text-sm text-muted-foreground">Custom Plans</p>
+                <p className="text-2xl font-bold">{withCustomPlan}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-lg bg-primary/10">
+                <DollarSign className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Comp Plans</p>
+                <p className="text-2xl font-bold">{commissionPlans.length}</p>
               </div>
             </div>
           </CardContent>
@@ -308,7 +421,7 @@ export default function AdminGenealogy() {
             Affiliate Network Tree
           </CardTitle>
           <CardDescription>
-            Expand rows to view downline structure
+            Expand rows to view downline structure. Use the dropdown to assign commission plans.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -332,8 +445,8 @@ export default function AdminGenealogy() {
                     <TableHead className="text-center">Tier 3</TableHead>
                     <TableHead className="text-center">Total</TableHead>
                     <TableHead>Joined</TableHead>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Comp Plan</TableHead>
+                    <TableHead>Affiliate Plan</TableHead>
+                    <TableHead>Commission Plan</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
