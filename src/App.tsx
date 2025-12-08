@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CRMLayout } from "./components/crm/CRMLayout";
+import { AffiliateLayout } from "./components/affiliate/AffiliateLayout";
 import Dashboard from "./pages/Dashboard";
 import Email from "./pages/Email";
 import Contacts from "./pages/Contacts";
@@ -26,6 +27,14 @@ import Sales from "./pages/Sales";
 import Checkout from "./pages/Checkout";
 import BusinessOpportunity from "./pages/BusinessOpportunity";
 import NotFound from "./pages/NotFound";
+import Unauthorized from "./pages/Unauthorized";
+
+// Affiliate pages
+import AffiliateDashboard from "./pages/affiliate/AffiliateDashboard";
+import AffiliateCommissions from "./pages/affiliate/AffiliateCommissions";
+import AffiliateTeam from "./pages/affiliate/AffiliateTeam";
+import AffiliateTraining from "./pages/affiliate/AffiliateTraining";
+import AffiliateSettings from "./pages/affiliate/AffiliateSettings";
 
 const queryClient = new QueryClient();
 
@@ -36,13 +45,26 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Public pages - outside CRM layout */}
+          {/* Public pages - outside any layout */}
           <Route path="/demo/:id" element={<PublicDemo />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/biz" element={<BusinessOpportunity />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
           
-          {/* CRM routes - inside CRM layout */}
+          {/* Affiliate routes - inside AffiliateLayout */}
+          <Route element={<AffiliateLayout />}>
+            <Route path="/affiliate" element={<AffiliateDashboard />} />
+            <Route path="/affiliate/leads" element={<Leads />} />
+            <Route path="/affiliate/demos" element={<Demos />} />
+            <Route path="/affiliate/demos/:id" element={<DemoDetail />} />
+            <Route path="/affiliate/commissions" element={<AffiliateCommissions />} />
+            <Route path="/affiliate/team" element={<AffiliateTeam />} />
+            <Route path="/affiliate/training" element={<AffiliateTraining />} />
+            <Route path="/affiliate/settings" element={<AffiliateSettings />} />
+          </Route>
+          
+          {/* CRM routes - inside CRM layout (for admins/super_admins) */}
           <Route element={<CRMLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/calendar" element={<Calendar />} />
