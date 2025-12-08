@@ -59,6 +59,7 @@ import AdminGenealogy from "./pages/admin/AdminGenealogy";
 // Customer Portal pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import CustomerSettings from "./pages/customer/CustomerSettings";
+import VoiceSettings from "./pages/customer/VoiceSettings";
 import CustomerLeads from "./pages/customer/CustomerLeads";
 import CustomerBilling from "./pages/customer/CustomerBilling";
 import CustomerSupport from "./pages/customer/CustomerSupport";
@@ -137,6 +138,7 @@ const App = () => (
             <Route path="/customer" element={<CustomerDashboard />} />
             <Route path="/customer/dashboard" element={<CustomerDashboard />} />
             <Route path="/customer/settings" element={<CustomerSettings />} />
+            <Route path="/customer/settings/voice" element={<VoiceSettings />} />
             <Route path="/customer/leads" element={<CustomerLeads />} />
             <Route path="/customer/billing" element={<CustomerBilling />} />
             <Route path="/customer/support" element={<CustomerSupport />} />

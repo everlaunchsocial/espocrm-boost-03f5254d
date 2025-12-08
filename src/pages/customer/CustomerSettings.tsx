@@ -1,5 +1,52 @@
-import { Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Settings, Mic, BookOpen, Users, Calendar, Code } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+interface SettingsLink {
+  title: string;
+  description: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  available: boolean;
+}
+
+const settingsLinks: SettingsLink[] = [
+  {
+    title: 'Voice & Personality',
+    description: 'Configure voice gender, style, greeting, and response pace',
+    href: '/customer/settings/voice',
+    icon: Mic,
+    available: true,
+  },
+  {
+    title: 'Knowledge & Content',
+    description: 'Manage website knowledge and uploaded documents',
+    href: '/customer/settings/knowledge',
+    icon: BookOpen,
+    available: false,
+  },
+  {
+    title: 'Lead Capture & Routing',
+    description: 'Set up how leads are captured and where they go',
+    href: '/customer/settings/leads',
+    icon: Users,
+    available: false,
+  },
+  {
+    title: 'Calendar & Appointments',
+    description: 'Connect calendar and configure booking availability',
+    href: '/customer/settings/calendar',
+    icon: Calendar,
+    available: false,
+  },
+  {
+    title: 'Deploy & Embed',
+    description: 'Get your embed code and phone number',
+    href: '/customer/settings/deploy',
+    icon: Code,
+    available: false,
+  },
+];
 
 export default function CustomerSettings() {
   return (
@@ -12,28 +59,59 @@ export default function CustomerSettings() {
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-primary" />
-              AI Configuration
-            </CardTitle>
-            <CardDescription>
-              Here you'll be able to configure your AI settings (voice, knowledge, lead routing, calendar, and deploy).
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Settings className="h-16 w-16 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground text-lg mb-2">
-                Settings Coming Soon
-              </p>
-              <p className="text-sm text-muted-foreground max-w-md">
-                Voice settings, knowledge management, lead routing, and calendar configuration will be available here in the next update.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4">
+          {settingsLinks.map((link) => {
+            const Icon = link.icon;
+            
+            if (!link.available) {
+              return (
+                <Card key={link.href} className="opacity-60">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-muted rounded-lg">
+                        <Icon className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          {link.title}
+                          <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                            Coming soon
+                          </span>
+                        </CardTitle>
+                        <CardDescription className="mt-0.5">
+                          {link.description}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              );
+            }
+
+            return (
+              <Link key={link.href} to={link.href}>
+                <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle className="text-base">{link.title}</CardTitle>
+                        <CardDescription className="mt-0.5">
+                          {link.description}
+                        </CardDescription>
+                      </div>
+                      <div className="text-muted-foreground">
+                        →
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
