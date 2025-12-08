@@ -128,16 +128,16 @@ export default function CustomerBuySuccess() {
                 </div>
               </div>
 
-              <div className="mt-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="mt-6 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                 <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-medium text-amber-600 dark:text-amber-400">
-                      Billing Activation Pending
+                    <div className="font-medium text-green-600 dark:text-green-400">
+                      Payment Received
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Your billing will be finalized once we complete your account setup. 
-                      You'll receive an email with payment instructions.
+                      Your payment has been processed successfully. 
+                      Our team will now begin setting up your AI assistant.
                     </p>
                   </div>
                 </div>

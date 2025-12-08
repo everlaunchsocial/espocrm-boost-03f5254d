@@ -68,3 +68,15 @@ verify_jwt = false
 
 [functions.vapi-create-demo-assistant]
 verify_jwt = false
+
+[functions.affiliate-checkout]
+verify_jwt = false
+
+[functions.affiliate-checkout-success]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.customer-checkout]
+verify_jwt = false

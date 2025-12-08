@@ -142,10 +142,10 @@ export default function CustomerBuy() {
     if (!user) {
       // Redirect to auth with return URL
       toast.info('Please sign in to continue');
-      // For now, show a simple message - in production, redirect to auth page
       return;
     }
 
+    // First create the customer profile
     const result = await createCustomerProfile(
       user.id,
       selectedPlan.id,
@@ -153,11 +153,40 @@ export default function CustomerBuy() {
       formData
     );
 
-    if (result.success) {
-      // Navigate to confirmation page
-      navigate(`/buy/success?plan=${selectedPlan.code}&customerId=${result.customerId}`);
-    } else {
+    if (!result.success) {
       toast.error(result.error || 'Failed to complete signup');
+      return;
+    }
+
+    // Now create Stripe checkout session
+    try {
+      const response = await supabase.functions.invoke('customer-checkout', {
+        body: {
+          planId: selectedPlan.id,
+          customerId: result.customerId,
+          affiliateId: affiliateId,
+          customerEmail: formData.email,
+          customerName: `${formData.firstName} ${formData.lastName}`,
+          successUrl: `${window.location.origin}/buy/success?plan=${selectedPlan.code}&customerId=${result.customerId}`,
+          cancelUrl: `${window.location.origin}/buy?plan=${selectedPlan.code}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to create checkout session');
+      }
+
+      const { url } = response.data;
+      
+      if (url) {
+        // Redirect to Stripe Checkout
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error('Failed to initiate payment. Please try again.');
     }
   };
 
