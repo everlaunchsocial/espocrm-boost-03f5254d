@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle, Mail } from 'lucide-react';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -15,6 +15,8 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [signupEmail, setSignupEmail] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if already logged in
@@ -88,7 +90,8 @@ export default function Auth() {
           },
         });
         if (error) throw error;
-        toast.success('Account created! Please check your email to confirm.');
+        setSignupSuccess(true);
+        setSignupEmail(email);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -108,6 +111,79 @@ export default function Auth() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show success state after signup
+  if (signupSuccess && signupEmail) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="h-10 w-10 text-green-600" />
+            </div>
+            <CardTitle className="text-2xl">Account Created!</CardTitle>
+            <CardDescription className="text-base mt-2">
+              We sent a confirmation email to:
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-muted rounded-lg p-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-foreground font-medium">
+                <Mail className="h-4 w-4" />
+                {signupEmail}
+              </div>
+            </div>
+            
+            <div className="text-center text-sm text-muted-foreground space-y-2">
+              <p>Please click the link in that email to activate your account.</p>
+              <p className="font-medium">👉 Don't see it? Check your <span className="text-foreground">Spam</span> or <span className="text-foreground">Junk</span> folder.</p>
+            </div>
+
+            <div className="space-y-3">
+              <Button 
+                className="w-full" 
+                onClick={() => {
+                  setSignupSuccess(false);
+                  setSignupEmail(null);
+                  setAuthMode('login');
+                  setEmail('');
+                  setPassword('');
+                }}
+              >
+                Go to Login
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={async () => {
+                  const { error } = await supabase.auth.resend({
+                    type: 'signup',
+                    email: signupEmail,
+                  });
+                  if (error) {
+                    toast.error('Failed to resend email');
+                  } else {
+                    toast.success('Confirmation email resent!');
+                  }
+                }}
+              >
+                Resend Confirmation Email
+              </Button>
+            </div>
+
+            <div className="pt-4 border-t border-border">
+              <p className="text-center text-sm text-muted-foreground">
+                Want to become an affiliate?{' '}
+                <Link to="/affiliate-signup" className="text-primary hover:underline">
+                  Join here
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
