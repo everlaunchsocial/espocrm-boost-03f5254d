@@ -333,9 +333,10 @@ export default function AffiliateSignup() {
                       onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
                       required
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Your public URL: everlaunch.ai/rep/{username || 'yourname'}
-                    </p>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>Your public URL: <span className="font-medium text-foreground">{username || 'yourname'}.tryeverlaunch.com</span></p>
+                      <p>Your new email: <span className="font-medium text-foreground">{username || 'yourname'}@tryeverlaunch.com</span></p>
+                    </div>
                   </div>
                 )}
                 <div className="space-y-2">
