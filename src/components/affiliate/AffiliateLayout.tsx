@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -53,8 +53,38 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { role, isLoading } = useUserRole();
   const { affiliate } = useCurrentAffiliate();
+  const [sponsorName, setSponsorName] = useState<string | null>(null);
 
   const replicatedUrl = affiliate?.username ? getReplicatedUrl(affiliate.username) : null;
+
+  // Fetch sponsor information
+  useEffect(() => {
+    const fetchSponsor = async () => {
+      if (!affiliate?.id) return;
+      
+      const { data: affiliateData } = await supabase
+        .from('affiliates')
+        .select('parent_affiliate_id')
+        .eq('id', affiliate.id)
+        .single();
+      
+      if (affiliateData?.parent_affiliate_id) {
+        // Get sponsor's user info
+        const { data: sponsorAffiliate } = await supabase
+          .from('affiliates')
+          .select('user_id, username')
+          .eq('id', affiliateData.parent_affiliate_id)
+          .single();
+        
+        if (sponsorAffiliate) {
+          // Try to get name from auth metadata via edge function or just use username
+          setSponsorName(sponsorAffiliate.username);
+        }
+      }
+    };
+    
+    fetchSponsor();
+  }, [affiliate?.id]);
 
   const copyReplicatedUrl = () => {
     if (replicatedUrl) {
@@ -236,7 +266,28 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
               />
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Sponsor Name */}
+            {sponsorName && (
+              <div className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span>Sponsor:</span>
+                <span className="font-medium text-foreground">{sponsorName}</span>
+              </div>
+            )}
+            
+            {/* Referral Link */}
+            {replicatedUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden md:flex items-center gap-2"
+                onClick={copyReplicatedUrl}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                <span className="text-xs">Copy Referral Link</span>
+              </Button>
+            )}
+            
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">

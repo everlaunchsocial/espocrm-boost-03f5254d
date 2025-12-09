@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,16 +7,57 @@ import { Switch } from '@/components/ui/switch';
 import { User, Bell, CreditCard, Link, Copy, ExternalLink } from 'lucide-react';
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
 import { getReplicatedUrl } from '@/utils/subdomainRouting';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export default function AffiliateSettings() {
   const { affiliate } = useCurrentAffiliate();
   const replicatedUrl = affiliate?.username ? getReplicatedUrl(affiliate.username) : null;
+  
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load user data on mount
+  useEffect(() => {
+    const loadUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setEmail(user.email || '');
+        setPhone(user.phone || user.user_metadata?.phone || '');
+        setFirstName(user.user_metadata?.first_name || '');
+        setLastName(user.user_metadata?.last_name || '');
+      }
+    };
+    loadUserData();
+  }, []);
 
   const copyReplicatedUrl = () => {
     if (replicatedUrl) {
       navigator.clipboard.writeText(replicatedUrl);
       toast.success('Replicated URL copied to clipboard!');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone,
+        }
+      });
+      
+      if (error) throw error;
+      toast.success('Profile updated successfully!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -72,22 +114,47 @@ export default function AffiliateSettings() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" placeholder="John" />
+                <Input 
+                  id="firstName" 
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="Enter your first name" 
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" placeholder="Doe" />
+                <Input 
+                  id="lastName" 
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Enter your last name" 
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="john@example.com" />
+              <Input 
+                id="email" 
+                type="email" 
+                value={email}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" />
+              <Input 
+                id="phone" 
+                type="tel" 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+1 (555) 123-4567" 
+              />
             </div>
-            <Button>Save Changes</Button>
+            <Button onClick={handleSaveProfile} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
           </CardContent>
         </Card>
 
