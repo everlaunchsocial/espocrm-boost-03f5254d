@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Force rebuild - timestamp: 2025-12-09T15:30:00Z
-console.log('[useUserRole] === HOOK FILE LOADED ===');
-
 export type GlobalRole = 'super_admin' | 'admin' | 'affiliate' | 'customer';
 
 interface UseUserRoleResult {
@@ -33,39 +30,36 @@ export function useUserRole(): UseUserRoleResult {
     setIsLoading(true);
     
     try {
-      console.log('[useUserRole] Fetching current user...');
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Use getSession() to ensure JWT is ready before making RPC calls
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      console.log('[useUserRole] User result:', { userId: user?.id, email: user?.email, userError });
-      
-      if (!user) {
-        console.log('[useUserRole] No user found, defaulting to customer');
+      if (!session || sessionError) {
         setRole('customer');
         setUserId(null);
         setIsLoading(false);
         return;
       }
 
-      setUserId(user.id);
+      const currentUserId = session.user.id;
+      setUserId(currentUserId);
 
-      console.log('[useUserRole] Calling RPC get_my_global_role()...');
-      
-      // Use RPC function to bypass RLS and get the role reliably
-      const { data: globalRole, error } = await supabase
-        .rpc('get_my_global_role');
+      // Try the standard RPC first
+      const { data: globalRole, error } = await supabase.rpc('get_my_global_role');
 
-      console.log('[useUserRole] RPC result:', { globalRole, error });
+      if (!error && globalRole) {
+        setRole(getGlobalRole({ global_role: globalRole }));
+        setIsLoading(false);
+        return;
+      }
 
-      if (error) {
-        console.error('[useUserRole] RPC error - check if function exists:', error);
-        setRole('customer');
-      } else if (!globalRole) {
-        console.warn('[useUserRole] No role returned for user:', user.id);
-        setRole('customer');
+      // Fallback: use the user_id-based RPC for reliability
+      const { data: fallbackRole, error: fallbackError } = await supabase
+        .rpc('get_global_role_for_user', { p_user_id: currentUserId });
+
+      if (!fallbackError && fallbackRole) {
+        setRole(getGlobalRole({ global_role: fallbackRole }));
       } else {
-        const resolvedRole = getGlobalRole({ global_role: globalRole });
-        console.log('[useUserRole] SUCCESS - Resolved role:', resolvedRole);
-        setRole(resolvedRole);
+        setRole('customer');
       }
     } catch (error) {
       console.error('[useUserRole] Unexpected error:', error);
@@ -79,7 +73,6 @@ export function useUserRole(): UseUserRoleResult {
     fetchUserRole();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      console.log('[useUserRole] Auth state changed:', event);
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         fetchUserRole();
       } else if (event === 'SIGNED_OUT') {

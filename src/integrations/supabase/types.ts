@@ -2074,6 +2074,7 @@ export type Database = {
         Args: { p_username: string }
         Returns: string
       }
+      get_global_role_for_user: { Args: { p_user_id: string }; Returns: string }
       get_my_global_role: { Args: never; Returns: string }
       get_my_parent_affiliate_id: { Args: never; Returns: string }
       get_own_affiliate_id: { Args: { _user_id: string }; Returns: string }
