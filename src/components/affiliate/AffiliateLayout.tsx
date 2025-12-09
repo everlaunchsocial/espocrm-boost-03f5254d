@@ -16,6 +16,8 @@ import {
   Search,
   LogOut,
   User,
+  Copy,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,11 +29,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useUserRole } from '@/hooks/useUserRole';
-
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Copy, ExternalLink } from 'lucide-react';
 
 interface AffiliateLayoutProps {
   children?: ReactNode;
@@ -51,54 +50,71 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { role, isLoading } = useUserRole();
-  
-  // Direct inline state for affiliate data (bypassing hook)
-  const [affiliateData, setAffiliateData] = useState<{ username: string; parent_affiliate_id: string | null } | null>(null);
-  const [sponsorName, setSponsorName] = useState<string | null>(null);
+  const { role, isLoading, userId } = useUserRole();
 
-  // Fetch affiliate and sponsor data directly
+  // State for affiliate data
+  const [affiliateData, setAffiliateData] = useState<{ 
+    username: string; 
+    parent_affiliate_id: string | null 
+  } | null>(null);
+  const [sponsorName, setSponsorName] = useState<string | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Fetch affiliate and sponsor data - ONLY when userId is available
   useEffect(() => {
     const fetchAffiliateData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log('[AffiliateLayout] No user found');
+      // Don't fetch until we have a userId
+      if (!userId) {
+        console.log('[AffiliateLayout] No userId yet, waiting...');
         return;
       }
 
-      console.log('[AffiliateLayout] Fetching affiliate for user:', user.id);
-      
-      const { data: affiliate, error } = await supabase
-        .from('affiliates')
-        .select('id, username, parent_affiliate_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      console.log('[AffiliateLayout] Fetching affiliate for user:', userId);
+      setDataLoading(true);
 
-      console.log('[AffiliateLayout] Affiliate data:', affiliate, 'Error:', error);
-      
-      if (affiliate) {
-        setAffiliateData(affiliate);
-        
-        // Fetch sponsor if exists
-        if (affiliate.parent_affiliate_id) {
-          const { data: sponsor } = await supabase
-            .from('affiliates')
-            .select('username')
-            .eq('id', affiliate.parent_affiliate_id)
-            .maybeSingle();
-          
-          console.log('[AffiliateLayout] Sponsor:', sponsor?.username);
-          setSponsorName(sponsor?.username || null);
+      try {
+        const { data: affiliate, error } = await supabase
+          .from('affiliates')
+          .select('id, username, parent_affiliate_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        console.log('[AffiliateLayout] Affiliate data:', affiliate, 'Error:', error);
+
+        if (error) {
+          console.error('[AffiliateLayout] Error fetching affiliate:', error);
+          setDataLoading(false);
+          return;
         }
+
+        if (affiliate) {
+          setAffiliateData(affiliate);
+
+          // Fetch sponsor if exists
+          if (affiliate.parent_affiliate_id) {
+            const { data: sponsor, error: sponsorError } = await supabase
+              .from('affiliates')
+              .select('username')
+              .eq('id', affiliate.parent_affiliate_id)
+              .maybeSingle();
+
+            console.log('[AffiliateLayout] Sponsor:', sponsor?.username, 'Error:', sponsorError);
+            setSponsorName(sponsor?.username || null);
+          }
+        }
+      } catch (err) {
+        console.error('[AffiliateLayout] Unexpected error:', err);
+      } finally {
+        setDataLoading(false);
       }
     };
 
     fetchAffiliateData();
-  }, []);
+  }, [userId]);
 
   // Build referral URL
-  const replicatedUrl = affiliateData?.username 
-    ? `https://tryeverlaunch.com/${affiliateData.username}` 
+  const replicatedUrl = affiliateData?.username
+    ? `https://tryeverlaunch.com/${affiliateData.username}`
     : null;
 
   const copyReplicatedUrl = () => {
@@ -199,7 +215,7 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
           <nav className="flex-1 overflow-y-auto py-4 px-3">
             <ul className="space-y-1">
               {affiliateNavigation.map((item) => {
-                const isActive = location.pathname === item.href || 
+                const isActive = location.pathname === item.href ||
                   (item.href !== '/affiliate' && location.pathname.startsWith(item.href));
                 return (
                   <li key={item.name}>
@@ -228,10 +244,14 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
               <DropdownMenuTrigger asChild>
                 <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 hover:bg-sidebar-accent transition-colors">
                   <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground text-sm font-medium">AF</span>
+                    <span className="text-primary-foreground text-sm font-medium">
+                      {affiliateData?.username?.charAt(0).toUpperCase() || 'AF'}
+                    </span>
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-medium text-sidebar-foreground">Affiliate</p>
+                    <p className="text-sm font-medium text-sidebar-foreground">
+                      {affiliateData?.username || 'Affiliate'}
+                    </p>
                     <p className="text-xs text-sidebar-foreground/60">Partner</p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-sidebar-foreground/60" />
@@ -279,33 +299,38 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
               />
             </div>
           </div>
+
+          {/* RIGHT SIDE OF HEADER */}
           <div className="flex items-center gap-3">
-            {/* Sponsor Name */}
-            {sponsorName && (
-              <div className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground">
-                <span>Sponsor:</span>
-                <span className="font-medium text-foreground">{sponsorName}</span>
-              </div>
-            )}
-            
-            {/* Referral Link */}
-            {replicatedUrl && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden md:flex items-center gap-2"
-                onClick={copyReplicatedUrl}
-              >
-                <Copy className="h-3.5 w-3.5" />
-                <span className="text-xs">Copy Referral Link</span>
-              </Button>
-            )}
-            
+            {/* Bell Icon */}
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
                 2
               </span>
+            </Button>
+
+            {/* Separator */}
+            <div className="hidden sm:block h-6 w-px bg-border" />
+
+            {/* Sponsor Name */}
+            <div className="hidden sm:flex items-center gap-1.5 text-sm text-muted-foreground">
+              <span>Sponsor:</span>
+              <span className="font-medium text-foreground">
+                {dataLoading ? '...' : (sponsorName || 'EverLaunch')}
+              </span>
+            </div>
+
+            {/* Copy Referral Link Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden sm:flex items-center gap-2"
+              onClick={copyReplicatedUrl}
+              disabled={!replicatedUrl || dataLoading}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              <span className="text-xs">Copy Link</span>
             </Button>
           </div>
         </header>
