@@ -25,6 +25,7 @@ import VoiceDemo from "./pages/VoiceDemo";
 import Demos from "./pages/Demos";
 import DemoDetail from "./pages/DemoDetail";
 import PublicDemo from "./pages/PublicDemo";
+import ReferralRedirect from "./pages/ReferralRedirect";
 import Calendar from "./pages/Calendar";
 import Sales from "./pages/Sales";
 import Checkout from "./pages/Checkout";
@@ -175,6 +176,9 @@ const App = () => (
             <Route path="/affiliate/training" element={<AffiliateTraining />} />
             <Route path="/affiliate/settings" element={<AffiliateSettings />} />
           </Route>
+          
+          {/* Referral links - check if username is valid affiliate, redirect to signup */}
+          <Route path="/:username" element={<ReferralRedirect />} />
           
           {/* CRM routes - inside CRM layout (for admins/super_admins) */}
           <Route element={<CRMLayout />}>
