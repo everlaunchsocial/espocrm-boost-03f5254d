@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, CheckCircle, Mail } from 'lucide-react';
+import { Loader2, Users } from 'lucide-react';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -14,9 +14,7 @@ export default function Auth() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
-  const [signupSuccess, setSignupSuccess] = useState(false);
-  const [signupEmail, setSignupEmail] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<'login' | 'forgot'>('login');
 
   useEffect(() => {
     // Check if already logged in
@@ -116,17 +114,6 @@ export default function Auth() {
         if (error) throw error;
         toast.success('Password reset email sent! Check your inbox.');
         setAuthMode('login');
-      } else if (authMode === 'signup') {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth`,
-          },
-        });
-        if (error) throw error;
-        setSignupSuccess(true);
-        setSignupEmail(email);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -150,79 +137,6 @@ export default function Auth() {
     );
   }
 
-  // Show success state after signup
-  if (signupSuccess && signupEmail) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="h-10 w-10 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl">Account Created!</CardTitle>
-            <CardDescription className="text-base mt-2">
-              We sent a confirmation email to:
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-muted rounded-lg p-4 text-center">
-              <div className="flex items-center justify-center gap-2 text-foreground font-medium">
-                <Mail className="h-4 w-4" />
-                {signupEmail}
-              </div>
-            </div>
-            
-            <div className="text-center text-sm text-muted-foreground space-y-2">
-              <p>Please click the link in that email to activate your account.</p>
-              <p className="font-medium">👉 Don't see it? Check your <span className="text-foreground">Spam</span> or <span className="text-foreground">Junk</span> folder.</p>
-            </div>
-
-            <div className="space-y-3">
-              <Button 
-                className="w-full" 
-                onClick={() => {
-                  setSignupSuccess(false);
-                  setSignupEmail(null);
-                  setAuthMode('login');
-                  setEmail('');
-                  setPassword('');
-                }}
-              >
-                Go to Login
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={async () => {
-                  const { error } = await supabase.auth.resend({
-                    type: 'signup',
-                    email: signupEmail,
-                  });
-                  if (error) {
-                    toast.error('Failed to resend email');
-                  } else {
-                    toast.success('Confirmation email resent!');
-                  }
-                }}
-              >
-                Resend Confirmation Email
-              </Button>
-            </div>
-
-            <div className="pt-4 border-t border-border">
-              <p className="text-center text-sm text-muted-foreground">
-                Want to become an affiliate?{' '}
-                <Link to="/affiliate-signup" className="text-primary hover:underline">
-                  Join here
-                </Link>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
@@ -231,18 +145,12 @@ export default function Auth() {
             <span className="text-primary-foreground font-bold text-xl">E</span>
           </div>
           <CardTitle className="text-2xl">
-            {authMode === 'forgot' 
-              ? 'Reset Password' 
-              : authMode === 'signup' 
-                ? 'Create Account' 
-                : 'Welcome Back'}
+            {authMode === 'forgot' ? 'Reset Password' : 'Welcome Back'}
           </CardTitle>
           <CardDescription>
             {authMode === 'forgot'
               ? 'Enter your email to receive a password reset link'
-              : authMode === 'signup'
-                ? 'Create your EverLaunch account'
-                : 'Sign in to your EverLaunch account'}
+              : 'Sign in to your EverLaunch account'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -287,15 +195,11 @@ export default function Auth() {
 
             <Button type="submit" className="w-full" disabled={isProcessing}>
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {authMode === 'forgot'
-                ? 'Send Reset Link'
-                : authMode === 'signup'
-                  ? 'Create Account'
-                  : 'Sign In'}
+              {authMode === 'forgot' ? 'Send Reset Link' : 'Sign In'}
             </Button>
 
-            <div className="text-center text-sm text-muted-foreground">
-              {authMode === 'forgot' ? (
+            {authMode === 'forgot' && (
+              <div className="text-center text-sm text-muted-foreground">
                 <button
                   type="button"
                   onClick={() => setAuthMode('login')}
@@ -303,39 +207,24 @@ export default function Auth() {
                 >
                   Back to sign in
                 </button>
-              ) : authMode === 'signup' ? (
-                <>
-                  Already have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode('login')}
-                    className="text-primary hover:underline"
-                  >
-                    Sign in
-                  </button>
-                </>
-              ) : (
-                <>
-                  Don&apos;t have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode('signup')}
-                    className="text-primary hover:underline"
-                  >
-                    Sign up
-                  </button>
-                </>
-              )}
-            </div>
+              </div>
+            )}
           </form>
 
-          <div className="mt-6 pt-6 border-t border-border">
+          <div className="mt-6 pt-6 border-t border-border space-y-4">
             <p className="text-center text-sm text-muted-foreground">
-              Want to become an affiliate?{' '}
-              <Link to="/affiliate-signup" className="text-primary hover:underline">
-                Join here
-              </Link>
+              Don't have an account yet?
             </p>
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              asChild
+            >
+              <Link to="/affiliate-signup" className="flex items-center justify-center gap-2">
+                <Users className="h-4 w-4" />
+                Become an Affiliate
+              </Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
