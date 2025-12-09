@@ -124,7 +124,9 @@ export default function AffiliateSignup() {
 
     if (data && !error) {
       setSponsor({ id: data.id, username: data.username });
-      console.log('Sponsor found:', data.username);
+      // Store in localStorage to persist across auth redirects
+      localStorage.setItem('affiliate_sponsor_id', data.id);
+      console.log('Sponsor found and stored:', data.username, data.id);
     } else {
       console.log('No sponsor found for ref:', refUser);
     }
@@ -221,7 +223,10 @@ export default function AffiliateSignup() {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    const sponsorId = sponsor?.id || user.user_metadata?.sponsor_affiliate_id || null;
+    // Get sponsor ID from multiple sources (localStorage persists across auth redirects)
+    const storedSponsorId = localStorage.getItem('affiliate_sponsor_id');
+    const sponsorId = sponsor?.id || storedSponsorId || user.user_metadata?.sponsor_affiliate_id || null;
+    console.log('Creating free affiliate with sponsor:', sponsorId, { sponsor: sponsor?.id, stored: storedSponsorId, meta: user.user_metadata?.sponsor_affiliate_id });
 
     if (existingAffiliate) {
       // Update existing affiliate to free plan
@@ -281,12 +286,18 @@ export default function AffiliateSignup() {
       }
     }
 
+    // Clean up localStorage after successful creation
+    localStorage.removeItem('affiliate_sponsor_id');
+    
     toast.success('Welcome to EverLaunch! Redirecting to your dashboard...');
     setTimeout(() => navigate('/affiliate'), 1500);
   };
 
   const startStripeCheckout = async (plan: AffiliatePlan) => {
-    const sponsorId = sponsor?.id || user.user_metadata?.sponsor_affiliate_id || null;
+    // Get sponsor ID from multiple sources (localStorage persists across auth redirects)
+    const storedSponsorId = localStorage.getItem('affiliate_sponsor_id');
+    const sponsorId = sponsor?.id || storedSponsorId || user.user_metadata?.sponsor_affiliate_id || null;
+    console.log('Starting Stripe checkout with sponsor:', sponsorId);
 
     const { data, error } = await supabase.functions.invoke('affiliate-checkout', {
       body: {
