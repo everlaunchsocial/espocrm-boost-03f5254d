@@ -52,39 +52,52 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { role, isLoading } = useUserRole();
-  const { affiliate } = useCurrentAffiliate();
+  const { affiliate, isLoading: affiliateLoading } = useCurrentAffiliate();
   const [sponsorName, setSponsorName] = useState<string | null>(null);
 
+  console.log('[AffiliateLayout] Hook results:', { 
+    role, 
+    isLoading, 
+    affiliate, 
+    affiliateLoading 
+  });
+
   const replicatedUrl = affiliate?.username ? getReplicatedUrl(affiliate.username) : null;
+  
+  console.log('[AffiliateLayout] Derived values:', { 
+    replicatedUrl, 
+    hasAffiliate: !!affiliate,
+    username: affiliate?.username 
+  });
 
   // Fetch sponsor information
   useEffect(() => {
     const fetchSponsor = async () => {
-      if (!affiliate?.id) return;
+      console.log('[AffiliateLayout] fetchSponsor called, affiliate:', affiliate);
       
-      const { data: affiliateData } = await supabase
+      if (!affiliate?.parent_affiliate_id) {
+        console.log('[AffiliateLayout] No parent_affiliate_id, skipping sponsor fetch');
+        setSponsorName(null);
+        return;
+      }
+      
+      console.log('[AffiliateLayout] Fetching sponsor for parent_id:', affiliate.parent_affiliate_id);
+      
+      const { data: sponsorAffiliate, error } = await supabase
         .from('affiliates')
-        .select('parent_affiliate_id')
-        .eq('id', affiliate.id)
-        .single();
+        .select('username')
+        .eq('id', affiliate.parent_affiliate_id)
+        .maybeSingle();
       
-      if (affiliateData?.parent_affiliate_id) {
-        // Get sponsor's user info
-        const { data: sponsorAffiliate } = await supabase
-          .from('affiliates')
-          .select('user_id, username')
-          .eq('id', affiliateData.parent_affiliate_id)
-          .single();
-        
-        if (sponsorAffiliate) {
-          // Try to get name from auth metadata via edge function or just use username
-          setSponsorName(sponsorAffiliate.username);
-        }
+      console.log('[AffiliateLayout] Sponsor query result:', { sponsorAffiliate, error });
+      
+      if (sponsorAffiliate) {
+        setSponsorName(sponsorAffiliate.username);
       }
     };
     
     fetchSponsor();
-  }, [affiliate?.id]);
+  }, [affiliate?.id, affiliate?.parent_affiliate_id]);
 
   const copyReplicatedUrl = () => {
     if (replicatedUrl) {
