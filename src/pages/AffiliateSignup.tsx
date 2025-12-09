@@ -45,6 +45,9 @@ export default function AffiliateSignup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [sponsor, setSponsor] = useState<SponsorInfo | null>(null);
 
   useEffect(() => {
@@ -138,6 +141,12 @@ export default function AffiliateSignup() {
 
     try {
       if (authMode === 'signup') {
+        if (!firstName.trim() || !lastName.trim()) {
+          toast.error('Please enter your first and last name');
+          setIsProcessing(false);
+          return;
+        }
+        
         if (!username.trim()) {
           toast.error('Please enter a username');
           setIsProcessing(false);
@@ -164,6 +173,9 @@ export default function AffiliateSignup() {
             emailRedirectTo: `${window.location.origin}/affiliate`,
             data: {
               username: username.toLowerCase(),
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+              phone: phone.trim(),
               sponsor_affiliate_id: sponsor?.id || null,
             },
           },
@@ -373,20 +385,56 @@ export default function AffiliateSignup() {
             <CardContent>
               <form onSubmit={handleAuth} className="space-y-4">
                 {authMode === 'signup' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder="yourname"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Your public URL: <span className="font-medium text-foreground">{username || 'yourname'}.tryeverlaunch.com</span>
-                    </p>
-                  </div>
+                  <>
+                    <div className="grid gap-4 grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name *</Label>
+                        <Input
+                          id="firstName"
+                          type="text"
+                          placeholder="John"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name *</Label>
+                        <Input
+                          id="lastName"
+                          type="text"
+                          placeholder="Smith"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone (optional)</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="+1 (555) 123-4567"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Username *</Label>
+                      <Input
+                        id="username"
+                        type="text"
+                        placeholder="yourname"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Your public URL: <span className="font-medium text-foreground">{username || 'yourname'}.tryeverlaunch.com</span>
+                      </p>
+                    </div>
+                  </>
                 )}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email (personal or other)</Label>
