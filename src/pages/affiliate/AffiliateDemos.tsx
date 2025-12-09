@@ -1,17 +1,73 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAffiliateDemos } from '@/hooks/useAffiliateDemos';
-import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
 import { DataTable } from '@/components/crm/DataTable';
-import { StatusBadge } from '@/components/crm/StatusBadge';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Eye, MessageSquare, Phone } from 'lucide-react';
+import { Globe, Eye, MessageSquare, Phone, Mail, MailOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { Demo } from '@/hooks/useDemos';
+import { supabase } from '@/integrations/supabase/client';
+
+interface EmailStatus {
+  sent: boolean;
+  opened: boolean;
+}
 
 export default function AffiliateDemos() {
   const { data: demos = [], isLoading } = useAffiliateDemos();
+  const [emailStatuses, setEmailStatuses] = useState<Record<string, EmailStatus>>({});
+
+  // Fetch email statuses for all demos
+  useEffect(() => {
+    const fetchEmailStatuses = async () => {
+      if (demos.length === 0) return;
+
+      const demoIds = demos.map(d => d.id);
+      
+      // Query emails table to find emails linked to these demos via contact_id
+      // Demos have contact_id or lead_id, and emails are linked via contact_id
+      const contactIds = demos
+        .filter(d => d.contact_id)
+        .map(d => d.contact_id);
+      
+      const leadIds = demos
+        .filter(d => d.lead_id)
+        .map(d => d.lead_id);
+
+      if (contactIds.length === 0 && leadIds.length === 0) return;
+
+      // Get emails that match demo contacts/leads
+      const { data: emails, error } = await supabase
+        .from('emails')
+        .select('contact_id, status, open_count, opened_at')
+        .or(`contact_id.in.(${contactIds.join(',')}),contact_id.in.(${leadIds.join(',')})`);
+
+      if (error) {
+        console.error('[AffiliateDemos] Error fetching email statuses:', error);
+        return;
+      }
+
+      // Map email statuses to demos
+      const statusMap: Record<string, EmailStatus> = {};
+      demos.forEach(demo => {
+        const relatedId = demo.contact_id || demo.lead_id;
+        if (!relatedId) {
+          statusMap[demo.id] = { sent: false, opened: false };
+          return;
+        }
+
+        const relatedEmails = emails?.filter(e => e.contact_id === relatedId) || [];
+        const hasSent = relatedEmails.some(e => e.status === 'sent' || e.status === 'delivered');
+        const hasOpened = relatedEmails.some(e => e.open_count > 0 || e.opened_at);
+
+        statusMap[demo.id] = { sent: hasSent, opened: hasOpened };
+      });
+
+      setEmailStatuses(statusMap);
+    };
+
+    fetchEmailStatuses();
+  }, [demos]);
 
   const columns = [
     {
@@ -60,13 +116,32 @@ export default function AffiliateDemos() {
       },
     },
     {
-      key: 'voice_provider',
-      label: 'Voice',
-      render: (demo: Demo) => (
-        <Badge variant="outline" className="capitalize">
-          {demo.voice_provider}
-        </Badge>
-      ),
+      key: 'email_status',
+      label: 'Email',
+      render: (demo: Demo) => {
+        const status = emailStatuses[demo.id];
+        
+        if (!status || (!status.sent && !status.opened)) {
+          return <span className="text-sm text-muted-foreground">—</span>;
+        }
+
+        return (
+          <div className="flex items-center gap-1.5">
+            {status.sent && (
+              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                <Mail className="h-3 w-3" />
+                Sent
+              </Badge>
+            )}
+            {status.opened && (
+              <Badge variant="outline" className="text-xs flex items-center gap-1 bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+                <MailOpen className="h-3 w-3" />
+                Opened
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'engagement',
@@ -100,7 +175,6 @@ export default function AffiliateDemos() {
   ];
 
   const handleRowClick = (demo: Demo) => {
-    // Navigate to demo detail - use affiliate path
     window.location.href = `/affiliate/demos/${demo.id}`;
   };
 
