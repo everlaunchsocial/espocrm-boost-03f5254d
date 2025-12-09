@@ -1,11 +1,11 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Users, Presentation, Calendar, Copy, Phone } from 'lucide-react';
+import { DollarSign, Users, Presentation, Calendar, Copy } from 'lucide-react';
 import { useAffiliateLeadCount } from '@/hooks/useAffiliateLeads';
 import { useAffiliateDemoCount, useAffiliateDemosThisWeek } from '@/hooks/useAffiliateDemos';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DemoCreditsCard } from '@/components/affiliate/DemoCreditsCard';
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
-import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -15,49 +15,75 @@ export default function AffiliateDashboard() {
   const { data: demoCount, isLoading: demosLoading } = useAffiliateDemoCount();
   const { data: demosThisWeek, isLoading: weekLoading } = useAffiliateDemosThisWeek();
   const { affiliate, isLoading: affiliateLoading } = useCurrentAffiliate();
+  
+  const [sponsorName, setSponsorName] = useState<string | null>(null);
+  const [sponsorLoading, setSponsorLoading] = useState(false);
 
-  // Fetch sponsor info separately to avoid RLS issues with self-referential joins
-  const { data: sponsorUsername, isLoading: sponsorLoading } = useQuery({
-    queryKey: ['affiliate-sponsor', affiliate?.id],
-    queryFn: async () => {
-      if (!affiliate?.id) {
-        console.log('[AffiliateDashboard] No affiliate id, skipping sponsor query');
-        return null;
-      }
-      
-      console.log('[AffiliateDashboard] Fetching sponsor for affiliate:', affiliate.id);
-      
-      // First, get the parent_affiliate_id from current affiliate
-      const parentId = affiliate.parent_affiliate_id;
-      console.log('[AffiliateDashboard] Parent affiliate ID:', parentId);
-      
-      if (!parentId) {
-        console.log('[AffiliateDashboard] No parent affiliate (top-level affiliate)');
-        return null;
-      }
+  console.log('[AffiliateDashboard] Render - affiliate:', affiliate, 'isLoading:', affiliateLoading);
 
-      // Then, fetch sponsor's username separately
-      const { data: sponsor, error: sponsorError } = await supabase
+  // Debug: Test direct query to affiliates table
+  useEffect(() => {
+    const debugQuery = async () => {
+      console.log('[AffiliateDashboard DEBUG] Testing direct query to affiliates table...');
+      const { data, error } = await supabase
         .from('affiliates')
-        .select('username')
-        .eq('id', parentId)
-        .maybeSingle();
+        .select('*')
+        .limit(1);
+      
+      console.log('[AffiliateDashboard DEBUG] Sample affiliates record:', data?.[0]);
+      console.log('[AffiliateDashboard DEBUG] Query error:', error);
+    };
+    
+    debugQuery();
+  }, []);
 
-      console.log('[AffiliateDashboard] Sponsor query result:', { sponsor, sponsorError });
-
-      if (sponsorError) {
-        console.error('[AffiliateDashboard] Error fetching sponsor - RLS may be blocking:', sponsorError);
-        return null;
+  // Fetch sponsor info
+  useEffect(() => {
+    const fetchSponsor = async () => {
+      console.log('[AffiliateDashboard] fetchSponsor called, affiliate:', affiliate);
+      
+      if (!affiliate?.parent_affiliate_id) {
+        console.log('[AffiliateDashboard] No parent_affiliate_id, sponsor = null');
+        setSponsorName(null);
+        return;
       }
 
-      return sponsor?.username || null;
-    },
-    enabled: !!affiliate?.id,
-  });
+      setSponsorLoading(true);
+      console.log('[AffiliateDashboard] Fetching sponsor for parent_id:', affiliate.parent_affiliate_id);
+
+      try {
+        const { data, error } = await supabase
+          .from('affiliates')
+          .select('username')
+          .eq('id', affiliate.parent_affiliate_id)
+          .maybeSingle();
+
+        console.log('[AffiliateDashboard] Sponsor query result:', { data, error });
+
+        if (error) {
+          console.error('[AffiliateDashboard] Sponsor query error:', error);
+        } else if (data) {
+          console.log('[AffiliateDashboard] Sponsor found:', data.username);
+          setSponsorName(data.username);
+        } else {
+          console.log('[AffiliateDashboard] No sponsor record found');
+          setSponsorName(null);
+        }
+      } catch (err) {
+        console.error('[AffiliateDashboard] Sponsor fetch exception:', err);
+      } finally {
+        setSponsorLoading(false);
+      }
+    };
+
+    fetchSponsor();
+  }, [affiliate?.id, affiliate?.parent_affiliate_id]);
 
   const referralLink = affiliate?.username 
     ? `https://tryeverlaunch.com/${affiliate.username}`
     : '';
+
+  console.log('[AffiliateDashboard] Derived values:', { referralLink, sponsorName });
 
   const copyReferralLink = () => {
     if (referralLink) {
@@ -79,8 +105,8 @@ export default function AffiliateDashboard() {
             <span className="text-sm text-muted-foreground">Your Sponsor:</span>
           {affiliateLoading || sponsorLoading ? (
               <Skeleton className="h-5 w-32" />
-            ) : sponsorUsername ? (
-              <span className="font-medium capitalize">{sponsorUsername}</span>
+            ) : sponsorName ? (
+              <span className="font-medium capitalize">{sponsorName}</span>
             ) : (
               <span className="text-muted-foreground italic">Not assigned yet</span>
             )}

@@ -22,18 +22,26 @@ export function useCurrentAffiliate(): UseCurrentAffiliateResult {
   const [affiliate, setAffiliate] = useState<CurrentAffiliate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  console.log('[useCurrentAffiliate] Hook initialized, current state:', { affiliate, isLoading });
+
   useEffect(() => {
     let isMounted = true;
 
     const fetchCurrentAffiliate = async () => {
+      console.log('[useCurrentAffiliate] fetchCurrentAffiliate called');
+      
       try {
-        console.log('[useCurrentAffiliate] Fetching current user...');
+        console.log('[useCurrentAffiliate] Getting current user from auth...');
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        console.log('[useCurrentAffiliate] User result:', { user: user?.id, email: user?.email, userError });
+        console.log('[useCurrentAffiliate] Auth result:', { 
+          userId: user?.id, 
+          email: user?.email, 
+          error: userError?.message 
+        });
         
         if (!user) {
-          console.log('[useCurrentAffiliate] No user found, returning null');
+          console.log('[useCurrentAffiliate] No authenticated user found');
           if (isMounted) {
             setAffiliate(null);
             setIsLoading(false);
@@ -49,17 +57,22 @@ export function useCurrentAffiliate(): UseCurrentAffiliateResult {
           .eq('user_id', user.id)
           .maybeSingle();
 
-        console.log('[useCurrentAffiliate] Query result:', { data, error });
+        console.log('[useCurrentAffiliate] Affiliates query result:', { 
+          data, 
+          error: error?.message,
+          errorDetails: error?.details,
+          errorHint: error?.hint
+        });
 
         if (isMounted) {
           if (error) {
-            console.error('[useCurrentAffiliate] Query error - RLS may be blocking:', error);
+            console.error('[useCurrentAffiliate] Query ERROR - RLS may be blocking:', error);
             setAffiliate(null);
           } else if (!data) {
-            console.log('[useCurrentAffiliate] No affiliate record found for user');
+            console.warn('[useCurrentAffiliate] No affiliate record found for user:', user.id);
             setAffiliate(null);
           } else {
-            console.log('[useCurrentAffiliate] SUCCESS - Affiliate found:', data);
+            console.log('[useCurrentAffiliate] SUCCESS - Affiliate record found:', data);
             setAffiliate({
               id: data.id,
               username: data.username,
@@ -70,7 +83,7 @@ export function useCurrentAffiliate(): UseCurrentAffiliateResult {
           setIsLoading(false);
         }
       } catch (err) {
-        console.error('[useCurrentAffiliate] Unexpected error:', err);
+        console.error('[useCurrentAffiliate] Unexpected exception:', err);
         if (isMounted) {
           setAffiliate(null);
           setIsLoading(false);
@@ -80,18 +93,24 @@ export function useCurrentAffiliate(): UseCurrentAffiliateResult {
 
     fetchCurrentAffiliate();
 
+    console.log('[useCurrentAffiliate] Setting up auth state change listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[useCurrentAffiliate] Auth state changed:', event, session?.user?.id);
+      console.log('[useCurrentAffiliate] Auth state changed:', event, 'userId:', session?.user?.id);
       fetchCurrentAffiliate();
     });
 
     return () => {
+      console.log('[useCurrentAffiliate] Cleanup - unmounting');
       isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  console.log('[useCurrentAffiliate] Returning:', { affiliate, isLoading, affiliateId: affiliate?.id ?? null });
+  console.log('[useCurrentAffiliate] Returning:', { 
+    affiliate, 
+    isLoading, 
+    affiliateId: affiliate?.id ?? null 
+  });
 
   return {
     affiliate,
