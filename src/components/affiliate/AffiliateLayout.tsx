@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
-import { getReplicatedUrl } from '@/utils/subdomainRouting';
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Copy, ExternalLink } from 'lucide-react';
@@ -47,102 +47,45 @@ const affiliateNavigation = [
   { name: 'Settings', href: '/affiliate/settings', icon: Settings },
 ];
 
-// Force rebuild - timestamp: 2025-12-09T15:30:00Z
-console.log('[AffiliateLayout] === COMPONENT FILE LOADED ===');
-
 export function AffiliateLayout({ children }: AffiliateLayoutProps) {
-  console.log('[AffiliateLayout] === COMPONENT FUNCTION CALLED ===');
-  
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { role, isLoading, userId } = useUserRole();
-  const { affiliate, isLoading: affiliateLoading } = useCurrentAffiliate();
+  const { role, isLoading } = useUserRole();
+  const { affiliate } = useCurrentAffiliate();
   const [sponsorName, setSponsorName] = useState<string | null>(null);
 
-  console.log('[AffiliateLayout] Hook results:', { 
-    role, 
-    isLoading, 
-    userId,
-    affiliate, 
-    affiliateLoading 
-  });
+  // Build referral URL
+  const replicatedUrl = affiliate?.username 
+    ? `https://tryeverlaunch.com/${affiliate.username}` 
+    : null;
 
-  // Direct RPC test on mount
-  useEffect(() => {
-    const testDirectRpc = async () => {
-      console.log('[AffiliateLayout] === DIRECT RPC TEST START ===');
-      
-      // Test 1: Get current session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      console.log('[AffiliateLayout] Session test:', { 
-        hasSession: !!sessionData?.session,
-        userId: sessionData?.session?.user?.id,
-        email: sessionData?.session?.user?.email,
-        sessionError 
-      });
-      
-      // Test 2: Direct RPC call
-      const { data: rpcRole, error: rpcError } = await supabase.rpc('get_my_global_role');
-      console.log('[AffiliateLayout] Direct RPC get_my_global_role:', { rpcRole, rpcError });
-      
-      // Test 3: Direct affiliates query
-      if (sessionData?.session?.user?.id) {
-        const { data: affiliateData, error: affiliateError } = await supabase
-          .from('affiliates')
-          .select('id, username, user_id, parent_affiliate_id')
-          .eq('user_id', sessionData.session.user.id)
-          .maybeSingle();
-        console.log('[AffiliateLayout] Direct affiliates query:', { affiliateData, affiliateError });
-      }
-      
-      console.log('[AffiliateLayout] === DIRECT RPC TEST END ===');
-    };
-    
-    testDirectRpc();
-  }, []);
-
-  const replicatedUrl = affiliate?.username ? getReplicatedUrl(affiliate.username) : null;
-  
-  console.log('[AffiliateLayout] Derived values:', { 
-    replicatedUrl, 
-    hasAffiliate: !!affiliate,
-    username: affiliate?.username 
-  });
-
-  // Fetch sponsor information
+  // Fetch sponsor name when affiliate loads
   useEffect(() => {
     const fetchSponsor = async () => {
-      console.log('[AffiliateLayout] fetchSponsor called, affiliate:', affiliate);
-      
       if (!affiliate?.parent_affiliate_id) {
-        console.log('[AffiliateLayout] No parent_affiliate_id, skipping sponsor fetch');
         setSponsorName(null);
         return;
       }
-      
-      console.log('[AffiliateLayout] Fetching sponsor for parent_id:', affiliate.parent_affiliate_id);
-      
-      const { data: sponsorAffiliate, error } = await supabase
+
+      const { data } = await supabase
         .from('affiliates')
         .select('username')
         .eq('id', affiliate.parent_affiliate_id)
         .maybeSingle();
-      
-      console.log('[AffiliateLayout] Sponsor query result:', { sponsorAffiliate, error });
-      
-      if (sponsorAffiliate) {
-        setSponsorName(sponsorAffiliate.username);
+
+      if (data) {
+        setSponsorName(data.username);
       }
     };
-    
+
     fetchSponsor();
-  }, [affiliate?.id, affiliate?.parent_affiliate_id]);
+  }, [affiliate?.parent_affiliate_id]);
 
   const copyReplicatedUrl = () => {
     if (replicatedUrl) {
       navigator.clipboard.writeText(replicatedUrl);
-      toast.success('Replicated URL copied to clipboard!');
+      toast.success('Referral link copied!', { description: replicatedUrl });
     }
   };
 
@@ -152,11 +95,7 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
     navigate('/auth');
   };
 
-  // Show loading state
-  console.log('[AffiliateLayout] Checking loading state:', { isLoading, role });
-  
   if (isLoading) {
-    console.log('[AffiliateLayout] Still loading, showing spinner');
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-muted-foreground">Loading...</div>
@@ -164,20 +103,12 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
     );
   }
 
-  // Redirect non-affiliates
-  console.log('[AffiliateLayout] Role check:', { role, isAffiliate: role === 'affiliate' });
-  
   if (role !== 'affiliate') {
-    console.log('[AffiliateLayout] ❌ REDIRECTING - role is not affiliate:', role);
     if (role === 'super_admin' || role === 'admin') {
-      console.log('[AffiliateLayout] Redirecting admin to /');
       return <Navigate to="/" replace />;
     }
-    console.log('[AffiliateLayout] Redirecting to /unauthorized');
     return <Navigate to="/unauthorized" replace />;
   }
-  
-  console.log('[AffiliateLayout] ✅ ACCESS GRANTED - rendering affiliate dashboard');
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
