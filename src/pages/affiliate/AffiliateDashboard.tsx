@@ -16,33 +16,37 @@ export default function AffiliateDashboard() {
   const { data: demosThisWeek, isLoading: weekLoading } = useAffiliateDemosThisWeek();
   const { affiliate, isLoading: affiliateLoading } = useCurrentAffiliate();
 
-  // Fetch sponsor info
-  const { data: sponsorInfo, isLoading: sponsorLoading } = useQuery({
-    queryKey: ['sponsor-info', affiliate?.id],
+  // Fetch current affiliate with sponsor info in one query
+  const { data: affiliateWithSponsor, isLoading: sponsorLoading } = useQuery({
+    queryKey: ['affiliate-with-sponsor', affiliate?.id],
     queryFn: async () => {
       if (!affiliate?.id) return null;
       
-      // Get current affiliate's parent_affiliate_id
-      const { data: currentAffiliate, error: affError } = await supabase
+      // Get current affiliate with parent info using a join
+      const { data, error } = await supabase
         .from('affiliates')
-        .select('parent_affiliate_id')
+        .select(`
+          id,
+          username,
+          parent_affiliate_id,
+          parent:affiliates!affiliates_parent_affiliate_id_fkey(username)
+        `)
         .eq('id', affiliate.id)
         .maybeSingle();
       
-      if (affError || !currentAffiliate?.parent_affiliate_id) return null;
-      
-      // Get sponsor's username (we don't have phone in affiliates table, so just show username)
-      const { data: sponsor, error: sponsorError } = await supabase
-        .from('affiliates')
-        .select('username')
-        .eq('id', currentAffiliate.parent_affiliate_id)
-        .maybeSingle();
-      
-      if (sponsorError) return null;
-      return sponsor;
+      if (error) {
+        console.error('Error fetching sponsor:', error);
+        return null;
+      }
+      return data;
     },
     enabled: !!affiliate?.id,
   });
+
+  const parentData = affiliateWithSponsor?.parent as { username: string }[] | { username: string } | null;
+  const sponsorUsername = Array.isArray(parentData) 
+    ? parentData[0]?.username 
+    : parentData?.username;
 
   const referralLink = affiliate?.username 
     ? `https://tryeverlaunch.com/${affiliate.username}`
@@ -66,10 +70,10 @@ export default function AffiliateDashboard() {
           {/* Sponsor Info */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
             <span className="text-sm text-muted-foreground">Your Sponsor:</span>
-            {affiliateLoading || sponsorLoading ? (
+          {affiliateLoading || sponsorLoading ? (
               <Skeleton className="h-5 w-32" />
-            ) : sponsorInfo?.username ? (
-              <span className="font-medium">{sponsorInfo.username}</span>
+            ) : sponsorUsername ? (
+              <span className="font-medium capitalize">{sponsorUsername}</span>
             ) : (
               <span className="text-muted-foreground italic">Not assigned yet</span>
             )}
