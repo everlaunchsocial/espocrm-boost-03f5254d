@@ -30,14 +30,27 @@ export default function Auth() {
           .eq('user_id', user.id)
           .single();
 
-        if (profile?.global_role === 'super_admin' || profile?.global_role === 'admin') {
+        const role = profile?.global_role || 'customer';
+
+        if (role === 'super_admin' || role === 'admin') {
           navigate('/');
-        } else if (profile?.global_role === 'affiliate') {
-          navigate('/affiliate');
-        } else if (profile?.global_role === 'customer') {
+        } else if (role === 'affiliate') {
+          // Check if affiliate record actually exists
+          const { data: affiliate } = await supabase
+            .from('affiliates')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          
+          if (affiliate) {
+            navigate('/affiliate');
+          } else {
+            // Profile says affiliate but no record - send to complete signup
+            navigate('/affiliate-signup');
+          }
+        } else if (role === 'customer') {
           navigate('/customer');
         } else {
-          // Default for new users without role
           navigate('/');
         }
       }
@@ -62,11 +75,24 @@ export default function Auth() {
             .eq('user_id', session.user.id)
             .single();
 
-          if (profile?.global_role === 'super_admin' || profile?.global_role === 'admin') {
+          const role = profile?.global_role || 'customer';
+
+          if (role === 'super_admin' || role === 'admin') {
             navigate('/');
-          } else if (profile?.global_role === 'affiliate') {
-            navigate('/affiliate');
-          } else if (profile?.global_role === 'customer') {
+          } else if (role === 'affiliate') {
+            // Check if affiliate record actually exists
+            const { data: affiliate } = await supabase
+              .from('affiliates')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
+            
+            if (affiliate) {
+              navigate('/affiliate');
+            } else {
+              navigate('/affiliate-signup');
+            }
+          } else if (role === 'customer') {
             navigate('/customer');
           } else {
             navigate('/');
