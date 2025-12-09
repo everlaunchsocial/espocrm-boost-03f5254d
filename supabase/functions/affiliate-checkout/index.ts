@@ -7,11 +7,11 @@ const corsHeaders = {
 };
 
 interface CheckoutRequest {
-  plan_code: string;
-  user_id: string;
+  planCode: string;
+  userId: string;
   email: string;
   username: string;
-  sponsor_affiliate_id?: string | null;
+  sponsorId?: string | null;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -44,15 +44,15 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { plan_code, user_id, email, username, sponsor_affiliate_id }: CheckoutRequest = await req.json();
+    const { planCode, userId, email, username, sponsorId }: CheckoutRequest = await req.json();
 
-    console.log("Checkout request:", { plan_code, user_id, email, username, sponsor_affiliate_id });
+    console.log("Checkout request:", { planCode, userId, email, username, sponsorId });
 
     // Validate plan exists and is paid
     const { data: plan, error: planError } = await supabase
       .from("affiliate_plans")
       .select("*")
-      .eq("code", plan_code)
+      .eq("code", planCode)
       .eq("is_active", true)
       .single();
 
@@ -73,7 +73,7 @@ serve(async (req: Request): Promise<Response> => {
     // Check for Stripe price ID
     const stripePriceId = plan.stripe_price_id;
     if (!stripePriceId) {
-      console.log(`No Stripe price ID configured for plan: ${plan_code}`);
+      console.log(`No Stripe price ID configured for plan: ${planCode}`);
       return new Response(
         JSON.stringify({ 
           error: "This plan is not available for purchase yet. Please contact support.",
@@ -107,14 +107,14 @@ serve(async (req: Request): Promise<Response> => {
       ],
       success_url: `${origin}/affiliate-signup/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/affiliate-signup`,
-      client_reference_id: user_id,
+      client_reference_id: userId,
       customer_email: email,
       metadata: {
-        user_id,
-        plan_code,
+        user_id: userId,
+        plan_code: planCode,
         username,
         affiliate_plan_id: plan.id,
-        sponsor_affiliate_id: sponsor_affiliate_id || "",
+        sponsor_affiliate_id: sponsorId || "",
       },
     });
 
