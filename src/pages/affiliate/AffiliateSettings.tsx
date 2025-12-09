@@ -9,9 +9,10 @@ import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
 import { getReplicatedUrl } from '@/utils/subdomainRouting';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import UpgradePlanSection from '@/components/affiliate/UpgradePlanSection';
 
 export default function AffiliateSettings() {
-  const { affiliate } = useCurrentAffiliate();
+  const { affiliate, refetch } = useCurrentAffiliate();
   const replicatedUrl = affiliate?.username ? getReplicatedUrl(affiliate.username) : null;
   
   const [firstName, setFirstName] = useState('');
@@ -101,6 +102,12 @@ export default function AffiliateSettings() {
             </CardContent>
           </Card>
         )}
+
+        {/* Plan Upgrade Section */}
+        <UpgradePlanSection 
+          currentPlanCode={affiliate?.planCode || null} 
+          onUpgradeComplete={refetch}
+        />
 
         <Card>
           <CardHeader>

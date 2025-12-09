@@ -245,6 +245,7 @@ Deno.serve(async (req) => {
 
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
+        const previousAttributes = (event.data as any).previous_attributes;
         console.log("Subscription updated:", subscription.id);
 
         // Update subscription status
@@ -257,6 +258,48 @@ Deno.serve(async (req) => {
 
         if (error) {
           console.error("Error updating subscription status:", error);
+        }
+
+        // Check if this is a plan change (price changed)
+        if (previousAttributes?.items) {
+          const newPriceId = subscription.items.data[0]?.price?.id;
+          console.log("Price changed to:", newPriceId);
+
+          if (newPriceId) {
+            // Look up the affiliate plan by stripe_price_id
+            const { data: newPlan, error: planError } = await supabase
+              .from("affiliate_plans")
+              .select("id, code")
+              .eq("stripe_price_id", newPriceId)
+              .single();
+
+            if (planError) {
+              console.log("Price not found in affiliate_plans, checking customer_plans");
+            } else if (newPlan) {
+              console.log("Found affiliate plan:", newPlan.code);
+              
+              // Get billing subscription to find affiliate
+              const { data: billingData } = await supabase
+                .from("billing_subscriptions")
+                .select("affiliate_id")
+                .eq("stripe_subscription_id", subscription.id)
+                .single();
+
+              if (billingData?.affiliate_id) {
+                // Update affiliate's plan
+                const { error: updateError } = await supabase
+                  .from("affiliates")
+                  .update({ affiliate_plan_id: newPlan.id })
+                  .eq("id", billingData.affiliate_id);
+
+                if (updateError) {
+                  console.error("Error updating affiliate plan:", updateError);
+                } else {
+                  console.log("Updated affiliate", billingData.affiliate_id, "to plan", newPlan.code);
+                }
+              }
+            }
+          }
         }
         break;
       }

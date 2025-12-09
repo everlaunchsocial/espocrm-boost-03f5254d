@@ -159,6 +159,67 @@ export type Database = {
           },
         ]
       }
+      affiliate_plan_history: {
+        Row: {
+          affiliate_id: string
+          changed_at: string | null
+          id: string
+          initiated_by: string | null
+          new_plan_code: string
+          new_plan_id: string
+          old_plan_code: string | null
+          old_plan_id: string | null
+          proration_amount_cents: number | null
+          stripe_subscription_id: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          changed_at?: string | null
+          id?: string
+          initiated_by?: string | null
+          new_plan_code: string
+          new_plan_id: string
+          old_plan_code?: string | null
+          old_plan_id?: string | null
+          proration_amount_cents?: number | null
+          stripe_subscription_id?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          changed_at?: string | null
+          id?: string
+          initiated_by?: string | null
+          new_plan_code?: string
+          new_plan_id?: string
+          old_plan_code?: string | null
+          old_plan_id?: string | null
+          proration_amount_cents?: number | null
+          stripe_subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_plan_history_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_plan_history_new_plan_id_fkey"
+            columns: ["new_plan_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_plan_history_old_plan_id_fkey"
+            columns: ["old_plan_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_plans: {
         Row: {
           code: string
