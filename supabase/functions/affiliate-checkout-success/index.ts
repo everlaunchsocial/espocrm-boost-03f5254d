@@ -182,6 +182,27 @@ serve(async (req: Request): Promise<Response> => {
       // Don't fail the whole request for this
     }
 
+    // Log payment completed event for analytics
+    const email = session.customer_details?.email || session.metadata?.email || null;
+    await supabase.from("signup_events").insert({
+      email: email,
+      username: username,
+      plan: planCode,
+      referrer: sponsorAffiliateId ? "has_sponsor" : null,
+      event_name: "payment_completed",
+      step: "payment",
+    });
+
+    // Log account created event
+    await supabase.from("signup_events").insert({
+      email: email,
+      username: username,
+      plan: planCode,
+      referrer: sponsorAffiliateId ? "has_sponsor" : null,
+      event_name: "account_created",
+      step: "complete",
+    });
+
     console.log("Affiliate setup complete:", affiliateId);
 
     return new Response(

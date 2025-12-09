@@ -137,11 +137,29 @@ export default function AffiliateSignup() {
     return true;
   };
 
+  const logSignupEvent = async (eventName: string, step: string, planCode?: string) => {
+    try {
+      await supabase.from('signup_events').insert({
+        email: email || null,
+        username: username || null,
+        plan: planCode || null,
+        referrer: sponsor?.username || null,
+        event_name: eventName,
+        step: step,
+      });
+    } catch (error) {
+      console.error('Failed to log signup event:', error);
+    }
+  };
+
   const handlePlanSelect = async (planCode: string) => {
     if (!validateForm()) return;
     
     setSelectedPlanCode(planCode);
     setIsSubmitting(true);
+
+    // Log signup started event
+    await logSignupEvent('signup_started', 'account_form', planCode);
 
     try {
       const selectedPlan = plans.find(p => p.code === planCode);
@@ -205,12 +223,18 @@ export default function AffiliateSignup() {
           return;
         }
 
+        // Log account created event
+        await logSignupEvent('account_created', 'complete', planCode);
+
         toast.success('Account created successfully!');
         navigate('/affiliate');
         return;
       }
 
       // For PAID plans, redirect to Stripe checkout
+      // Log stripe redirect event
+      await logSignupEvent('stripe_redirect', 'stripe_checkout', planCode);
+
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('affiliate-checkout', {
         body: {
           planCode: planCode,

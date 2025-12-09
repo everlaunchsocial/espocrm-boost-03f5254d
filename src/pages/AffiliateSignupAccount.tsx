@@ -91,6 +91,21 @@ const AffiliateSignupAccount = () => {
     return () => clearTimeout(timeoutId);
   };
 
+  const logSignupEvent = async (eventName: string, step: string) => {
+    try {
+      await supabase.from('signup_events').insert({
+        email: formData.email || null,
+        username: formData.username || null,
+        plan: selectedPlan?.code || null,
+        referrer: referrer || null,
+        event_name: eventName,
+        step: step,
+      });
+    } catch (error) {
+      console.error('Failed to log signup event:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -110,6 +125,9 @@ const AffiliateSignupAccount = () => {
     }
 
     setIsLoading(true);
+
+    // Log signup started event
+    await logSignupEvent('signup_started', 'account_form');
 
     try {
       // Step 1: Create Supabase auth user
@@ -187,6 +205,9 @@ const AffiliateSignupAccount = () => {
           });
         }
 
+        // Log account created event
+        await logSignupEvent('account_created', 'complete');
+
         // Clear localStorage
         localStorage.removeItem("selectedAffiliatePlan");
         localStorage.removeItem("affiliateReferrer");
@@ -196,6 +217,9 @@ const AffiliateSignupAccount = () => {
       } else {
         // PAID PLAN: Redirect to Stripe checkout
         
+        // Log stripe redirect event
+        await logSignupEvent('stripe_redirect', 'stripe_checkout');
+
         // Store user data for post-checkout processing
         localStorage.setItem("pendingAffiliateUserId", userId);
         localStorage.setItem("pendingAffiliateUsername", formData.username.toLowerCase());

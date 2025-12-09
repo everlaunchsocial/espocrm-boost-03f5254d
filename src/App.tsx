@@ -57,6 +57,7 @@ import CustomerUsage from "./pages/CustomerUsage";
 import AdminProfile from "./pages/admin/AdminProfile";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminCompPlans from "./pages/admin/AdminCompPlans";
+import SignupAnalytics from "./pages/admin/SignupAnalytics";
 import AdminGenealogy from "./pages/admin/AdminGenealogy";
 
 // Customer Portal pages
@@ -181,6 +182,7 @@ const App = () => (
             <Route path="/admin/genealogy" element={<AdminGenealogy />} />
             <Route path="/admin/payouts" element={<AdminPayouts />} />
             <Route path="/admin/customer-usage" element={<AdminCustomerUsage />} />
+            <Route path="/admin/signup-analytics" element={<SignupAnalytics />} />
             <Route path="/customer/usage" element={<CustomerUsage />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/email" element={<Email />} />

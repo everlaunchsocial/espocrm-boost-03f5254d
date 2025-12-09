@@ -1717,6 +1717,39 @@ export type Database = {
         }
         Relationships: []
       }
+      signup_events: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          event_name: string
+          id: string
+          plan: string | null
+          referrer: string | null
+          step: string | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          event_name: string
+          id?: string
+          plan?: string | null
+          referrer?: string | null
+          step?: string | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          event_name?: string
+          id?: string
+          plan?: string | null
+          referrer?: string | null
+          step?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
