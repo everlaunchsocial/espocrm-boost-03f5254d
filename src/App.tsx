@@ -57,6 +57,7 @@ import CustomerUsage from "./pages/CustomerUsage";
 import AdminProfile from "./pages/admin/AdminProfile";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminCompPlans from "./pages/admin/AdminCompPlans";
+import AdminAffiliates from "./pages/admin/AdminAffiliates";
 import SignupAnalytics from "./pages/admin/SignupAnalytics";
 import AdminGenealogy from "./pages/admin/AdminGenealogy";
 
@@ -179,6 +180,7 @@ const App = () => (
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/comp-plans" element={<AdminCompPlans />} />
+            <Route path="/admin/affiliates" element={<AdminAffiliates />} />
             <Route path="/admin/genealogy" element={<AdminGenealogy />} />
             <Route path="/admin/payouts" element={<AdminPayouts />} />
             <Route path="/admin/customer-usage" element={<AdminCustomerUsage />} />
