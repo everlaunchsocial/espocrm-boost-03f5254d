@@ -16,37 +16,44 @@ export default function AffiliateDashboard() {
   const { data: demosThisWeek, isLoading: weekLoading } = useAffiliateDemosThisWeek();
   const { affiliate, isLoading: affiliateLoading } = useCurrentAffiliate();
 
-  // Fetch current affiliate with sponsor info in one query
-  const { data: affiliateWithSponsor, isLoading: sponsorLoading } = useQuery({
-    queryKey: ['affiliate-with-sponsor', affiliate?.id],
+  // Fetch sponsor info separately to avoid RLS issues with self-referential joins
+  const { data: sponsorUsername, isLoading: sponsorLoading } = useQuery({
+    queryKey: ['affiliate-sponsor', affiliate?.id],
     queryFn: async () => {
-      if (!affiliate?.id) return null;
-      
-      // Get current affiliate with parent info using a join
-      const { data, error } = await supabase
-        .from('affiliates')
-        .select(`
-          id,
-          username,
-          parent_affiliate_id,
-          parent:affiliates!affiliates_parent_affiliate_id_fkey(username)
-        `)
-        .eq('id', affiliate.id)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching sponsor:', error);
+      if (!affiliate?.id) {
+        console.log('[AffiliateDashboard] No affiliate id, skipping sponsor query');
         return null;
       }
-      return data;
+      
+      console.log('[AffiliateDashboard] Fetching sponsor for affiliate:', affiliate.id);
+      
+      // First, get the parent_affiliate_id from current affiliate
+      const parentId = affiliate.parent_affiliate_id;
+      console.log('[AffiliateDashboard] Parent affiliate ID:', parentId);
+      
+      if (!parentId) {
+        console.log('[AffiliateDashboard] No parent affiliate (top-level affiliate)');
+        return null;
+      }
+
+      // Then, fetch sponsor's username separately
+      const { data: sponsor, error: sponsorError } = await supabase
+        .from('affiliates')
+        .select('username')
+        .eq('id', parentId)
+        .maybeSingle();
+
+      console.log('[AffiliateDashboard] Sponsor query result:', { sponsor, sponsorError });
+
+      if (sponsorError) {
+        console.error('[AffiliateDashboard] Error fetching sponsor - RLS may be blocking:', sponsorError);
+        return null;
+      }
+
+      return sponsor?.username || null;
     },
     enabled: !!affiliate?.id,
   });
-
-  const parentData = affiliateWithSponsor?.parent as { username: string }[] | { username: string } | null;
-  const sponsorUsername = Array.isArray(parentData) 
-    ? parentData[0]?.username 
-    : parentData?.username;
 
   const referralLink = affiliate?.username 
     ? `https://tryeverlaunch.com/${affiliate.username}`

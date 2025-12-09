@@ -5,6 +5,7 @@ interface CurrentAffiliate {
   id: string;
   username: string;
   userId: string;
+  parent_affiliate_id?: string | null;
 }
 
 interface UseCurrentAffiliateResult {
@@ -26,9 +27,13 @@ export function useCurrentAffiliate(): UseCurrentAffiliateResult {
 
     const fetchCurrentAffiliate = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        console.log('[useCurrentAffiliate] Fetching current user...');
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        console.log('[useCurrentAffiliate] User result:', { user: user?.id, email: user?.email, userError });
         
         if (!user) {
+          console.log('[useCurrentAffiliate] No user found, returning null');
           if (isMounted) {
             setAffiliate(null);
             setIsLoading(false);
@@ -36,26 +41,36 @@ export function useCurrentAffiliate(): UseCurrentAffiliateResult {
           return;
         }
 
+        console.log('[useCurrentAffiliate] Querying affiliates table for user_id:', user.id);
+        
         const { data, error } = await supabase
           .from('affiliates')
-          .select('id, username, user_id')
+          .select('id, username, user_id, parent_affiliate_id')
           .eq('user_id', user.id)
           .maybeSingle();
 
+        console.log('[useCurrentAffiliate] Query result:', { data, error });
+
         if (isMounted) {
-          if (error || !data) {
+          if (error) {
+            console.error('[useCurrentAffiliate] Query error - RLS may be blocking:', error);
+            setAffiliate(null);
+          } else if (!data) {
+            console.log('[useCurrentAffiliate] No affiliate record found for user');
             setAffiliate(null);
           } else {
+            console.log('[useCurrentAffiliate] SUCCESS - Affiliate found:', data);
             setAffiliate({
               id: data.id,
               username: data.username,
               userId: data.user_id,
+              parent_affiliate_id: data.parent_affiliate_id,
             });
           }
           setIsLoading(false);
         }
       } catch (err) {
-        console.error('Error fetching current affiliate:', err);
+        console.error('[useCurrentAffiliate] Unexpected error:', err);
         if (isMounted) {
           setAffiliate(null);
           setIsLoading(false);
@@ -65,7 +80,8 @@ export function useCurrentAffiliate(): UseCurrentAffiliateResult {
 
     fetchCurrentAffiliate();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[useCurrentAffiliate] Auth state changed:', event, session?.user?.id);
       fetchCurrentAffiliate();
     });
 
@@ -74,6 +90,8 @@ export function useCurrentAffiliate(): UseCurrentAffiliateResult {
       subscription.unsubscribe();
     };
   }, []);
+
+  console.log('[useCurrentAffiliate] Returning:', { affiliate, isLoading, affiliateId: affiliate?.id ?? null });
 
   return {
     affiliate,

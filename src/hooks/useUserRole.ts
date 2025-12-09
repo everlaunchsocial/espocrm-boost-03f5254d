@@ -30,9 +30,10 @@ export function useUserRole(): UseUserRoleResult {
     setIsLoading(true);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      console.log('[useUserRole] Fetching current user...');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      console.log('[useUserRole] Current user:', user?.id, user?.email);
+      console.log('[useUserRole] User result:', { userId: user?.id, email: user?.email, userError });
       
       if (!user) {
         console.log('[useUserRole] No user found, defaulting to customer');
@@ -44,21 +45,23 @@ export function useUserRole(): UseUserRoleResult {
 
       setUserId(user.id);
 
+      console.log('[useUserRole] Calling RPC get_my_global_role()...');
+      
       // Use RPC function to bypass RLS and get the role reliably
       const { data: globalRole, error } = await supabase
         .rpc('get_my_global_role');
 
-      console.log('[useUserRole] RPC get_my_global_role result:', { globalRole, error });
+      console.log('[useUserRole] RPC result:', { globalRole, error });
 
       if (error) {
-        console.error('[useUserRole] Error fetching role via RPC:', error);
+        console.error('[useUserRole] RPC error - check if function exists:', error);
         setRole('customer');
       } else if (!globalRole) {
-        console.warn('[useUserRole] No role found for user:', user.id);
+        console.warn('[useUserRole] No role returned for user:', user.id);
         setRole('customer');
       } else {
         const resolvedRole = getGlobalRole({ global_role: globalRole });
-        console.log('[useUserRole] Resolved role:', resolvedRole);
+        console.log('[useUserRole] SUCCESS - Resolved role:', resolvedRole);
         setRole(resolvedRole);
       }
     } catch (error) {
