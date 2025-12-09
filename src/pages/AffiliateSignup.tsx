@@ -97,14 +97,15 @@ export default function AffiliateSignup() {
   };
 
   const loadSponsor = async (refUser: string) => {
-    const { data, error } = await supabase
-      .from('affiliates')
-      .select('id, username')
-      .eq('username', refUser.toLowerCase())
-      .maybeSingle();
+    // Use RPC to bypass RLS for public sponsor lookup
+    const { data, error } = await supabase.rpc('get_affiliate_id_by_username', {
+      p_username: refUser.toLowerCase()
+    });
 
     if (data && !error) {
-      setSponsor({ id: data.id, username: data.username });
+      setSponsor({ id: data, username: refUser });
+    } else {
+      console.error('[loadSponsor] Failed to load sponsor:', error);
     }
   };
 
