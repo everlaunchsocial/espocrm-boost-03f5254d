@@ -1962,6 +1962,7 @@ export type Database = {
           total_amount: number
         }[]
       }
+      get_my_global_role: { Args: never; Returns: string }
       get_own_affiliate_id: { Args: { _user_id: string }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
