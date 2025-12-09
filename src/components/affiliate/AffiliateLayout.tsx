@@ -34,8 +34,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 
 interface AffiliateLayoutProps {
   children?: ReactNode;
@@ -62,6 +64,7 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { role, isLoading, userId } = useUserRole();
+  const { affiliate: currentAffiliate, isLoading: affiliateLoading, isImpersonating } = useCurrentAffiliate();
 
   // State for affiliate data
   const [affiliateData, setAffiliateData] = useState<{ 
@@ -71,9 +74,32 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   const [sponsorName, setSponsorName] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
-  // Fetch affiliate and sponsor data - ONLY when userId is available
+  // Fetch affiliate and sponsor data - use impersonated affiliate if applicable
   useEffect(() => {
     const fetchAffiliateData = async () => {
+      // If impersonating, use the currentAffiliate from the hook
+      if (isImpersonating && currentAffiliate) {
+        console.log('[AffiliateLayout] Using impersonated affiliate:', currentAffiliate);
+        setAffiliateData({
+          username: currentAffiliate.username,
+          parent_affiliate_id: currentAffiliate.parent_affiliate_id,
+        });
+
+        // Fetch sponsor if exists
+        if (currentAffiliate.parent_affiliate_id) {
+          const { data: sponsor } = await supabase
+            .from('affiliates')
+            .select('username')
+            .eq('id', currentAffiliate.parent_affiliate_id)
+            .maybeSingle();
+          setSponsorName(sponsor?.username || null);
+        } else {
+          setSponsorName(null);
+        }
+        setDataLoading(false);
+        return;
+      }
+
       // Don't fetch until we have a userId
       if (!userId) {
         console.log('[AffiliateLayout] No userId yet, waiting...');
@@ -121,7 +147,7 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
     };
 
     fetchAffiliateData();
-  }, [userId]);
+  }, [userId, currentAffiliate, isImpersonating]);
 
   // Build referral URL
   const replicatedUrl = affiliateData?.username
@@ -141,7 +167,7 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
     navigate('/auth');
   };
 
-  if (isLoading) {
+  if (isLoading || affiliateLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-muted-foreground">Loading...</div>
@@ -149,7 +175,10 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
     );
   }
 
-  if (role !== 'affiliate') {
+  // Allow access if user is affiliate OR if super_admin is impersonating
+  const canAccess = role === 'affiliate' || (role === 'super_admin' && isImpersonating);
+
+  if (!canAccess) {
     if (role === 'super_admin' || role === 'admin') {
       return <Navigate to="/" replace />;
     }
@@ -157,7 +186,9 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <>
+      <ImpersonationBanner />
+      <div className={cn("flex h-screen overflow-hidden bg-background", isImpersonating && "pt-10")}>
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -352,5 +383,6 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
         </main>
       </div>
     </div>
+    </>
   );
 }
