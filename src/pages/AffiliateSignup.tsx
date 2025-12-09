@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Check, Loader2, Zap, Crown, Building2, Sparkles, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -36,6 +38,18 @@ export default function AffiliateSignup() {
   const [plans, setPlans] = useState<AffiliatePlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sponsor, setSponsor] = useState<SponsorInfo | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPlanCode, setSelectedPlanCode] = useState<string | null>(null);
+  
+  // Form fields
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   useEffect(() => {
     loadPlans();
@@ -43,6 +57,28 @@ export default function AffiliateSignup() {
       loadSponsor(refUsername);
     }
   }, [refUsername]);
+
+  // Check username availability with debounce
+  useEffect(() => {
+    if (!username || username.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setCheckingUsername(true);
+      const { data, error } = await supabase
+        .from('affiliates')
+        .select('id')
+        .eq('username', username.toLowerCase())
+        .maybeSingle();
+      
+      setUsernameAvailable(!data && !error);
+      setCheckingUsername(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [username]);
 
   const loadPlans = async () => {
     const { data, error } = await supabase
@@ -72,18 +108,139 @@ export default function AffiliateSignup() {
     }
   };
 
-  const handlePlanSelect = (planCode: string) => {
-    // Store selected plan in localStorage
-    localStorage.setItem('selectedPlan', planCode);
-    
-    // Store referrer if present
-    const ref = searchParams.get('ref');
-    if (ref) {
-      localStorage.setItem('referrer', ref);
+  const validateForm = (): boolean => {
+    if (!username || username.length < 3) {
+      toast.error('Username must be at least 3 characters');
+      return false;
     }
+    if (usernameAvailable === false) {
+      toast.error('Username is already taken');
+      return false;
+    }
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email');
+      return false;
+    }
+    if (!password || password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return false;
+    }
+    if (!firstName.trim()) {
+      toast.error('First name is required');
+      return false;
+    }
+    if (!lastName.trim()) {
+      toast.error('Last name is required');
+      return false;
+    }
+    return true;
+  };
+
+  const handlePlanSelect = async (planCode: string) => {
+    if (!validateForm()) return;
     
-    // Navigate to account creation page
-    navigate('/affiliate-signup/account');
+    setSelectedPlanCode(planCode);
+    setIsSubmitting(true);
+
+    try {
+      const selectedPlan = plans.find(p => p.code === planCode);
+      if (!selectedPlan) {
+        toast.error('Invalid plan selected');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Create the Supabase auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            phone: phone,
+          }
+        }
+      });
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        toast.error(authError.message);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!authData.user) {
+        toast.error('Failed to create account');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const userId = authData.user.id;
+
+      // For FREE plan, create affiliate directly
+      if (selectedPlan.monthly_price === 0) {
+        // Update profile to affiliate role
+        await supabase
+          .from('profiles')
+          .update({ global_role: 'affiliate' })
+          .eq('user_id', userId);
+
+        // Create affiliate record
+        const { error: affiliateError } = await supabase
+          .from('affiliates')
+          .insert({
+            user_id: userId,
+            username: username.toLowerCase(),
+            affiliate_plan_id: selectedPlan.id,
+            parent_affiliate_id: sponsor?.id || null,
+            demo_credits_balance: selectedPlan.demo_credits_per_month || 0,
+          });
+
+        if (affiliateError) {
+          console.error('Affiliate creation error:', affiliateError);
+          toast.error('Failed to create affiliate account');
+          setIsSubmitting(false);
+          return;
+        }
+
+        toast.success('Account created successfully!');
+        navigate('/affiliate');
+        return;
+      }
+
+      // For PAID plans, redirect to Stripe checkout
+      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke('affiliate-checkout', {
+        body: {
+          planCode: planCode,
+          email: email,
+          userId: userId,
+          username: username.toLowerCase(),
+          firstName: firstName,
+          lastName: lastName,
+          phone: phone,
+          sponsorId: sponsor?.id || null,
+        }
+      });
+
+      if (checkoutError) {
+        console.error('Checkout error:', checkoutError);
+        toast.error('Failed to start checkout');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (checkoutData?.url) {
+        window.location.href = checkoutData.url;
+      } else {
+        toast.error('No checkout URL received');
+        setIsSubmitting(false);
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      toast.error('An error occurred during signup');
+      setIsSubmitting(false);
+    }
   };
 
   const formatCredits = (credits: number | null) => {
@@ -103,12 +260,12 @@ export default function AffiliateSignup() {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 py-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Hero Section */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-foreground mb-4">
             Become an EverLaunch Affiliate
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Earn 30% commissions selling AI receptionists to local businesses. Choose your plan to get started.
+            Earn 30% commissions selling AI receptionists to local businesses.
           </p>
           
           {sponsor && (
@@ -121,7 +278,98 @@ export default function AffiliateSignup() {
           )}
         </div>
 
+        {/* Account Creation Form */}
+        <Card className="max-w-xl mx-auto mb-10">
+          <CardHeader>
+            <CardTitle className="text-center">Create Your Account</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Doe"
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="username">Username *</Label>
+              <div className="relative">
+                <Input
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+                  placeholder="johndoe"
+                  disabled={isSubmitting}
+                />
+                {checkingUsername && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+                {!checkingUsername && usernameAvailable === true && username.length >= 3 && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                )}
+              </div>
+              {usernameAvailable === false && (
+                <p className="text-sm text-destructive">Username is already taken</p>
+              )}
+              <p className="text-xs text-muted-foreground">Your referral link: tryeverlaunch.com/{username || 'username'}</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="john@example.com"
+                disabled={isSubmitting}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Min 6 characters"
+                disabled={isSubmitting}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone (optional)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(555) 123-4567"
+                disabled={isSubmitting}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Pricing Cards */}
+        <h2 className="text-2xl font-bold text-center mb-6">Choose Your Plan</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan) => (
             <Card 
@@ -177,8 +425,12 @@ export default function AffiliateSignup() {
                   className="w-full"
                   variant={plan.code === 'pro' ? 'default' : 'outline'}
                   onClick={() => handlePlanSelect(plan.code)}
+                  disabled={isSubmitting}
                 >
-                  Next
+                  {isSubmitting && selectedPlanCode === plan.code ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  {plan.monthly_price === 0 ? 'Start Free' : 'Get Started'}
                 </Button>
               </CardContent>
             </Card>
