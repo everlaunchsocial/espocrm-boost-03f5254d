@@ -153,7 +153,10 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   };
 
   // Show loading state
+  console.log('[AffiliateLayout] Checking loading state:', { isLoading, role });
+  
   if (isLoading) {
+    console.log('[AffiliateLayout] Still loading, showing spinner');
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-muted-foreground">Loading...</div>
@@ -162,12 +165,19 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   }
 
   // Redirect non-affiliates
+  console.log('[AffiliateLayout] Role check:', { role, isAffiliate: role === 'affiliate' });
+  
   if (role !== 'affiliate') {
+    console.log('[AffiliateLayout] ❌ REDIRECTING - role is not affiliate:', role);
     if (role === 'super_admin' || role === 'admin') {
+      console.log('[AffiliateLayout] Redirecting admin to /');
       return <Navigate to="/" replace />;
     }
+    console.log('[AffiliateLayout] Redirecting to /unauthorized');
     return <Navigate to="/unauthorized" replace />;
   }
+  
+  console.log('[AffiliateLayout] ✅ ACCESS GRANTED - rendering affiliate dashboard');
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
