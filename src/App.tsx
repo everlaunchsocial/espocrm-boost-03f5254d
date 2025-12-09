@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { SubdomainRouter } from "./components/SubdomainRouter";
 import { CRMLayout } from "./components/crm/CRMLayout";
 import { AffiliateLayout } from "./components/affiliate/AffiliateLayout";
 import { CustomerPortalLayout } from "./components/customer/CustomerPortalLayout";
@@ -85,7 +86,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
+        <SubdomainRouter>
+          <Routes>
           {/* Public pages - outside any layout */}
           <Route path="/demo/:id" element={<PublicDemo />} />
           <Route path="/sales" element={<Sales />} />
@@ -196,7 +198,8 @@ const App = () => (
             <Route path="/demos/:id" element={<DemoDetail />} />
             <Route path="*" element={<NotFound />} />
           </Route>
-        </Routes>
+          </Routes>
+        </SubdomainRouter>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

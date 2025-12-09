@@ -27,8 +27,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
+import { getReplicatedUrl } from '@/utils/subdomainRouting';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Copy, ExternalLink } from 'lucide-react';
 
 interface AffiliateLayoutProps {
   children?: ReactNode;
@@ -49,6 +52,16 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { role, isLoading } = useUserRole();
+  const { affiliate } = useCurrentAffiliate();
+
+  const replicatedUrl = affiliate?.username ? getReplicatedUrl(affiliate.username) : null;
+
+  const copyReplicatedUrl = () => {
+    if (replicatedUrl) {
+      navigator.clipboard.writeText(replicatedUrl);
+      toast.success('Replicated URL copied to clipboard!');
+    }
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -108,6 +121,36 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
               <X className="h-5 w-5" />
             </Button>
           </div>
+
+          {/* Replicated URL Card */}
+          {replicatedUrl && (
+            <div className="px-3 py-3 border-b border-sidebar-border">
+              <div className="text-xs text-sidebar-foreground/60 mb-2">Your Replicated Site</div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 text-xs text-sidebar-foreground font-medium truncate">
+                  {replicatedUrl.replace('https://', '')}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  onClick={copyReplicatedUrl}
+                  title="Copy URL"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  onClick={() => window.open(replicatedUrl, '_blank')}
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-4 px-3">
