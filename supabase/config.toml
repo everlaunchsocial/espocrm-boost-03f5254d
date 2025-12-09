@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.customer-checkout]
 verify_jwt = false
+
+[functions.affiliate-upgrade]
+verify_jwt = false

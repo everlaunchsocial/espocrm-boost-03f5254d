@@ -6,6 +6,8 @@ interface CurrentAffiliate {
   username: string;
   user_id: string;
   parent_affiliate_id: string | null;
+  affiliate_plan_id: string | null;
+  planCode?: string | null;
 }
 
 // Helper to check if currently impersonating
@@ -30,71 +32,75 @@ export function useCurrentAffiliate() {
   const [isLoading, setIsLoading] = useState(true);
   const [isImpersonating, setIsImpersonating] = useState(false);
 
-  useEffect(() => {
-    const fetchAffiliate = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          setAffiliate(null);
-          setIsLoading(false);
-          return;
-        }
-
-        // Check if super_admin is impersonating an affiliate
-        const impersonatingId = localStorage.getItem('impersonating_affiliate_id');
-        
-        if (impersonatingId) {
-          // Verify user is super_admin before allowing impersonation
-          const { data: roleData } = await supabase.rpc('get_my_global_role');
-          
-          if (roleData === 'super_admin') {
-            // Fetch the impersonated affiliate's data
-            const { data, error } = await supabase
-              .from('affiliates')
-              .select('id, user_id, username, parent_affiliate_id')
-              .eq('id', impersonatingId)
-              .maybeSingle();
-
-            if (error) {
-              console.error('Error fetching impersonated affiliate:', error);
-              clearImpersonation();
-            } else if (data) {
-              console.log('Impersonating affiliate:', data);
-              setAffiliate(data);
-              setIsImpersonating(true);
-              setIsLoading(false);
-              return;
-            }
-          } else {
-            // Not super_admin, clear impersonation
-            clearImpersonation();
-          }
-        }
-
-        // Normal flow: fetch logged-in user's affiliate record
-        const { data, error } = await supabase
-          .from('affiliates')
-          .select('id, user_id, username, parent_affiliate_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Error fetching affiliate:', error);
-          setAffiliate(null);
-        } else {
-          console.log('Affiliate loaded:', data);
-          setAffiliate(data);
-        }
-        setIsImpersonating(false);
-      } catch (err) {
-        console.error('Exception fetching affiliate:', err);
+  const fetchAffiliate = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
         setAffiliate(null);
-      } finally {
         setIsLoading(false);
+        return;
       }
-    };
 
+      // Check if super_admin is impersonating an affiliate
+      const impersonatingId = localStorage.getItem('impersonating_affiliate_id');
+      
+      if (impersonatingId) {
+        // Verify user is super_admin before allowing impersonation
+        const { data: roleData } = await supabase.rpc('get_my_global_role');
+        
+        if (roleData === 'super_admin') {
+          // Fetch the impersonated affiliate's data with plan
+          const { data, error } = await supabase
+            .from('affiliates')
+            .select('id, user_id, username, parent_affiliate_id, affiliate_plan_id, affiliate_plans(code)')
+            .eq('id', impersonatingId)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error fetching impersonated affiliate:', error);
+            clearImpersonation();
+          } else if (data) {
+            console.log('Impersonating affiliate:', data);
+            const planCode = (data.affiliate_plans as any)?.code || null;
+            setAffiliate({ ...data, planCode });
+            setIsImpersonating(true);
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          // Not super_admin, clear impersonation
+          clearImpersonation();
+        }
+      }
+
+      // Normal flow: fetch logged-in user's affiliate record with plan
+      const { data, error } = await supabase
+        .from('affiliates')
+        .select('id, user_id, username, parent_affiliate_id, affiliate_plan_id, affiliate_plans(code)')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching affiliate:', error);
+        setAffiliate(null);
+      } else if (data) {
+        console.log('Affiliate loaded:', data);
+        const planCode = (data.affiliate_plans as any)?.code || null;
+        setAffiliate({ ...data, planCode });
+      } else {
+        setAffiliate(null);
+      }
+      setIsImpersonating(false);
+    } catch (err) {
+      console.error('Exception fetching affiliate:', err);
+      setAffiliate(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAffiliate();
 
     // Listen for storage changes to detect impersonation changes
@@ -113,5 +119,6 @@ export function useCurrentAffiliate() {
     isLoading,
     affiliateId: affiliate?.id ?? null,
     isImpersonating,
+    refetch: fetchAffiliate,
   };
 }
