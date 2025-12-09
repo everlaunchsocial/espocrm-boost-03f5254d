@@ -33,6 +33,7 @@ import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
 import AffiliatePublicPage from "./pages/AffiliatePublicPage";
 import AffiliateSignup from "./pages/AffiliateSignup";
+import AffiliateSignupAccount from "./pages/AffiliateSignupAccount";
 import AffiliateSignupSuccess from "./pages/AffiliateSignupSuccess";
 import ResetPassword from "./pages/ResetPassword";
 import Auth from "./pages/Auth";
@@ -108,6 +109,7 @@ const App = () => (
           
           {/* Affiliate signup - public */}
           <Route path="/affiliate-signup" element={<AffiliateSignup />} />
+          <Route path="/affiliate-signup/account" element={<AffiliateSignupAccount />} />
           <Route path="/affiliate-signup/success" element={<AffiliateSignupSuccess />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           
