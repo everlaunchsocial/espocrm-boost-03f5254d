@@ -14,17 +14,33 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check if we have a valid session from the reset link
+    // Listen for PASSWORD_RECOVERY event which confirms valid reset session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // Valid recovery session - allow password reset
+        setIsValidSession(true);
+      }
+    });
+
+    // Also check if we already have a session (user might have arrived here already)
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Invalid or expired reset link. Please request a new password reset.');
+      if (session) {
+        // We have a session - assume it's valid for password reset
+        // The user clicked a valid reset link which created this session
+        setIsValidSession(true);
+      } else {
+        // No session at all - invalid or expired link
+        setIsValidSession(false);
       }
     };
+    
     checkSession();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,10 +66,29 @@ export default function ResetPassword() {
       setIsSuccess(true);
       toast.success('Password updated successfully!');
       
-      // Redirect after short delay
-      setTimeout(() => {
-        navigate('/affiliate');
-      }, 2000);
+      // Get user role and redirect appropriately
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('global_role')
+          .eq('user_id', user.id)
+          .single();
+
+        setTimeout(() => {
+          if (profile?.global_role === 'super_admin' || profile?.global_role === 'admin') {
+            navigate('/');
+          } else if (profile?.global_role === 'affiliate') {
+            navigate('/affiliate');
+          } else if (profile?.global_role === 'customer') {
+            navigate('/customer');
+          } else {
+            navigate('/');
+          }
+        }, 2000);
+      } else {
+        setTimeout(() => navigate('/auth'), 2000);
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to update password');
     } finally {
@@ -61,20 +96,32 @@ export default function ResetPassword() {
     }
   };
 
-  if (error) {
+  // Still checking session validity
+  if (isValidSession === null) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center px-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Invalid or expired reset link
+  if (isValidSession === false) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center px-4">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             <CardTitle className="text-destructive">Reset Link Expired</CardTitle>
-            <CardDescription>{error}</CardDescription>
+            <CardDescription>
+              Invalid or expired reset link. Please request a new password reset.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button 
               className="w-full" 
-              onClick={() => navigate('/affiliate-signup')}
+              onClick={() => navigate('/auth')}
             >
-              Request New Reset Link
+              Back to Login
             </Button>
           </CardContent>
         </Card>

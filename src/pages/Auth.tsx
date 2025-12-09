@@ -46,23 +46,32 @@ export default function Auth() {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('global_role')
-          .eq('user_id', session.user.id)
-          .single();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Skip redirects for password recovery - let ResetPassword.tsx handle it
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password');
+        return;
+      }
 
-        if (profile?.global_role === 'super_admin' || profile?.global_role === 'admin') {
-          navigate('/');
-        } else if (profile?.global_role === 'affiliate') {
-          navigate('/affiliate');
-        } else if (profile?.global_role === 'customer') {
-          navigate('/customer');
-        } else {
-          navigate('/');
-        }
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Defer the profile fetch to avoid deadlock
+        setTimeout(async () => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('global_role')
+            .eq('user_id', session.user.id)
+            .single();
+
+          if (profile?.global_role === 'super_admin' || profile?.global_role === 'admin') {
+            navigate('/');
+          } else if (profile?.global_role === 'affiliate') {
+            navigate('/affiliate');
+          } else if (profile?.global_role === 'customer') {
+            navigate('/customer');
+          } else {
+            navigate('/');
+          }
+        }, 0);
       }
     });
 
