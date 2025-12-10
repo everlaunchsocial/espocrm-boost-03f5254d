@@ -7,23 +7,70 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // EARLY LOGGING - First thing in the function
+  console.log('=== provision-customer-phone function called ===');
+  console.log('Request method:', req.method);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { customerId, areaCode } = await req.json();
+    // Check environment variables FIRST
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const vapiApiKeyFromEnv = Deno.env.get('VAPI_API_KEY');
+
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      hasVapiKey: !!vapiApiKeyFromEnv,
+    });
+
+    if (!supabaseUrl) {
+      console.error('SUPABASE_URL is not configured');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Server configuration error: SUPABASE_URL missing' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!supabaseServiceKey) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not configured');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Server configuration error: SUPABASE_SERVICE_ROLE_KEY missing' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Parse request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('Request body:', JSON.stringify(requestBody));
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { customerId, areaCode } = requestBody;
 
     if (!customerId) {
-      throw new Error('customerId is required');
+      console.error('customerId is missing from request');
+      return new Response(
+        JSON.stringify({ success: false, error: 'customerId is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`Provisioning phone for customer: ${customerId}, area code: ${areaCode || 'any'}`);
 
     // Create Supabase client with service role for admin access
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Check if customer already has a phone number
@@ -71,7 +118,7 @@ serve(async (req) => {
       .maybeSingle();
 
     // Get Vapi API key from secrets (primary) or fall back to vapi_accounts table
-    let vapiApiKey = Deno.env.get('VAPI_API_KEY');
+    let vapiApiKey = vapiApiKeyFromEnv;
     let vapiAccount: { id: string; name: string; numbers_provisioned: number; max_numbers: number } | null = null;
 
     if (vapiApiKey) {
