@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +30,13 @@ export default function OnboardingStep6() {
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [areaCode, setAreaCode] = useState('');
   const [provisionedNumber, setProvisionedNumber] = useState<string | null>(twilioNumber);
+
+  // Sync provisionedNumber when twilioNumber resolves from async fetch
+  useEffect(() => {
+    if (twilioNumber) {
+      setProvisionedNumber(twilioNumber);
+    }
+  }, [twilioNumber]);
 
   const embedScript = `<!-- EverLaunch AI Widget -->
 <script src="https://widget.everlaunch.ai/embed.js" 
