@@ -40,8 +40,10 @@ export default function DeploySettings() {
     setIsProvisioning(true);
     try {
       const result = await provisionPhoneNumber(areaCode || undefined);
-      if (result) {
-        toast.success(`Phone number provisioned: ${result}`);
+      if (result.success && result.phoneNumber) {
+        toast.success(`Phone number provisioned: ${result.phoneNumber}`);
+      } else {
+        toast.error(result.error || 'Failed to provision phone number');
       }
     } catch (error) {
       console.error('Error provisioning phone:', error);
