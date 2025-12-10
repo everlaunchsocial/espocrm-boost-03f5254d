@@ -82,6 +82,17 @@ export function CRMLayout({ children }: CRMLayoutProps) {
   const [userEmail, setUserEmail] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
 
+  // Redirect non-admin users to their appropriate portal
+  useEffect(() => {
+    if (!isLoading && role) {
+      if (role === 'customer') {
+        navigate('/customer');
+      } else if (role === 'affiliate') {
+        navigate('/affiliate');
+      }
+    }
+  }, [role, isLoading, navigate]);
+
   useEffect(() => {
     async function fetchUser() {
       const { data: { user } } = await supabase.auth.getUser();
