@@ -88,6 +88,8 @@ export function useCustomerOnboarding() {
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
   const [twilioNumber, setTwilioNumber] = useState<string | null>(null);
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
   const fetchCustomerData = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -150,15 +152,15 @@ export function useCustomerOnboarding() {
       
       setKnowledgeSources((sources || []) as unknown as KnowledgeSource[]);
 
-      // Fetch Twilio number
-      const { data: twilio } = await supabase
-        .from('twilio_numbers')
-        .select('twilio_number')
+      // Fetch customer phone number
+      const { data: phoneNumber } = await supabase
+        .from('customer_phone_numbers')
+        .select('phone_number')
         .eq('customer_id', profile.id)
         .eq('status', 'active')
         .maybeSingle();
       
-      setTwilioNumber(twilio?.twilio_number || null);
+      setTwilioNumber(phoneNumber?.phone_number || null);
 
     } catch (error) {
       console.error('Error fetching customer data:', error);
@@ -359,6 +361,39 @@ export function useCustomerOnboarding() {
 
   const isOnboardingComplete = customerProfile?.onboarding_stage === 'wizard_complete';
 
+  const provisionPhoneNumber = useCallback(async (areaCode?: string): Promise<{ success: boolean; phoneNumber?: string; error?: string }> => {
+    if (!customerProfile) {
+      return { success: false, error: 'Customer profile not loaded' };
+    }
+
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/provision-customer-phone`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({
+          customerId: customerProfile.id,
+          areaCode: areaCode || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error('Provisioning failed:', result);
+        return { success: false, error: result.error || 'Failed to provision phone number' };
+      }
+
+      setTwilioNumber(result.phoneNumber);
+      return { success: true, phoneNumber: result.phoneNumber };
+    } catch (error) {
+      console.error('Provisioning error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }, [customerProfile, supabaseUrl]);
+
   return {
     isLoading,
     customerProfile,
@@ -375,6 +410,7 @@ export function useCustomerOnboarding() {
     removeKnowledgeSource,
     goToStep,
     completeOnboarding,
+    provisionPhoneNumber,
     isOnboardingComplete,
     refetch: fetchCustomerData
   };
