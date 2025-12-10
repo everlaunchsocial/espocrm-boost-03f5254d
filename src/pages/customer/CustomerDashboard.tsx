@@ -15,7 +15,10 @@ import {
   BarChart3,
   Mic,
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  Play,
+  Bot,
+  PhoneCall
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -107,6 +110,57 @@ export default function CustomerDashboard() {
           calendarOptional={calendarOptional}
           deployComplete={deployComplete}
         />
+
+        {/* Preview Your AI Card */}
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 bg-primary/10 rounded-full">
+                <Bot className="h-5 w-5 text-primary" />
+              </div>
+              Test Your AI Assistant
+            </CardTitle>
+            <CardDescription>
+              Try your AI before going live — test chat responses or call your AI phone number
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Chat Preview Button */}
+              <Button asChild className="flex-1 gap-2" size="lg">
+                <Link to="/customer/preview">
+                  <Play className="h-4 w-4" />
+                  Open Chat Preview
+                </Link>
+              </Button>
+
+              {/* Phone Call Section */}
+              {twilioNumber ? (
+                <div className="flex-1 flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+                  <div className="p-2 bg-green-500/10 rounded-full">
+                    <PhoneCall className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground">Call Your AI</p>
+                    <a 
+                      href={`tel:${twilioNumber}`}
+                      className="font-mono font-semibold text-primary hover:underline"
+                    >
+                      {twilioNumber}
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <Button variant="outline" asChild className="flex-1 gap-2" size="lg">
+                  <Link to="/customer/settings/deploy">
+                    <Phone className="h-4 w-4" />
+                    Get Phone Number
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Top Row: Plan & Usage + Activity Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
