@@ -153,6 +153,7 @@ export default function CustomerCheckoutPage() {
             affiliateId: resolvedAffiliateId,
             customerEmail: email,
             customerName: contactName,
+            businessName: businessName,
             successUrl: `${window.location.origin}/customer/buy-success?session_id={CHECKOUT_SESSION_ID}`,
             cancelUrl: `${window.location.origin}/buy?plan=${selectedPlan}`,
           },

@@ -67,10 +67,11 @@ Deno.serve(async (req) => {
         const session = event.data.object as Stripe.Checkout.Session;
         console.log("Checkout session completed:", session.id);
 
-        const customerId = session.metadata?.customer_id;
+        const customerId = session.metadata?.customer_id; // This is auth.users.id
         const planId = session.metadata?.plan_id;
-        const affiliateId = session.metadata?.affiliate_id;
+        const affiliateId = session.metadata?.affiliate_id || null;
         const customerName = session.metadata?.customer_name;
+        const businessName = session.metadata?.business_name;
         const stripeCustomerId = session.customer as string;
         const stripeSubscriptionId = session.subscription as string;
 
@@ -79,31 +80,128 @@ Deno.serve(async (req) => {
           break;
         }
 
-        // Update customer profile with Stripe info
-        const { error: profileError } = await supabase
-          .from("customer_profiles")
-          .update({
-            customer_plan_id: planId,
-          })
-          .eq("id", customerId);
+        console.log("Processing customer:", customerId, "plan:", planId, "affiliate:", affiliateId);
 
-        if (profileError) {
-          console.error("Error updating customer profile:", profileError);
+        // Get plan details
+        const { data: plan, error: planFetchError } = await supabase
+          .from("customer_plans")
+          .select("minutes_included, overage_rate, name")
+          .eq("id", planId)
+          .single();
+
+        if (planFetchError) {
+          console.error("Error fetching plan:", planFetchError);
         }
 
-        // Update billing subscription
-        const { error: subError } = await supabase
-          .from("billing_subscriptions")
-          .update({
-            status: "active",
-            stripe_customer_id: stripeCustomerId,
-            stripe_subscription_id: stripeSubscriptionId,
-          })
-          .eq("customer_id", customerId)
-          .eq("subscription_type", "customer");
+        // Calculate billing cycle (30 days)
+        const cycleStart = new Date().toISOString().split('T')[0];
+        const cycleEndDate = new Date();
+        cycleEndDate.setDate(cycleEndDate.getDate() + 30);
+        const cycleEnd = cycleEndDate.toISOString().split('T')[0];
 
-        if (subError) {
-          console.error("Error updating billing subscription:", subError);
+        // Check if customer profile already exists
+        const { data: existingProfile } = await supabase
+          .from("customer_profiles")
+          .select("id")
+          .eq("user_id", customerId)
+          .maybeSingle();
+
+        let customerProfileId: string;
+
+        if (existingProfile) {
+          // Update existing profile
+          customerProfileId = existingProfile.id;
+          console.log("Updating existing customer profile:", customerProfileId);
+          
+          const { error: updateError } = await supabase
+            .from("customer_profiles")
+            .update({
+              customer_plan_id: planId,
+              billing_cycle_start: cycleStart,
+              billing_cycle_end: cycleEnd,
+              minutes_included: plan?.minutes_included || 0,
+              overage_rate: plan?.overage_rate || 0,
+              plan_name: plan?.name || null,
+            })
+            .eq("id", customerProfileId);
+
+          if (updateError) {
+            console.error("Error updating customer profile:", updateError);
+          }
+        } else {
+          // CREATE new customer profile
+          console.log("Creating new customer profile for user:", customerId);
+          
+          const { data: newProfile, error: profileError } = await supabase
+            .from("customer_profiles")
+            .insert({
+              user_id: customerId,
+              business_name: businessName || null,
+              contact_name: customerName || null,
+              customer_plan_id: planId,
+              affiliate_id: affiliateId || null,
+              billing_cycle_start: cycleStart,
+              billing_cycle_end: cycleEnd,
+              minutes_included: plan?.minutes_included || 0,
+              overage_rate: plan?.overage_rate || 0,
+              plan_name: plan?.name || null,
+              onboarding_stage: "pending_portal_entry",
+              onboarding_current_step: 0,
+            })
+            .select("id")
+            .single();
+
+          if (profileError) {
+            console.error("Error creating customer profile:", profileError);
+            break;
+          }
+          
+          customerProfileId = newProfile.id;
+          console.log("Created customer profile:", customerProfileId);
+        }
+
+        // Check if billing subscription exists
+        const { data: existingSub } = await supabase
+          .from("billing_subscriptions")
+          .select("id")
+          .eq("customer_id", customerProfileId)
+          .eq("subscription_type", "customer")
+          .maybeSingle();
+
+        if (existingSub) {
+          // Update existing subscription
+          const { error: subUpdateError } = await supabase
+            .from("billing_subscriptions")
+            .update({
+              status: "active",
+              stripe_customer_id: stripeCustomerId,
+              stripe_subscription_id: stripeSubscriptionId,
+              plan_id: planId,
+            })
+            .eq("id", existingSub.id);
+
+          if (subUpdateError) {
+            console.error("Error updating billing subscription:", subUpdateError);
+          }
+        } else {
+          // CREATE new billing subscription
+          const { error: subError } = await supabase
+            .from("billing_subscriptions")
+            .insert({
+              customer_id: customerProfileId,
+              affiliate_id: affiliateId || null,
+              subscription_type: "customer",
+              status: "active",
+              stripe_customer_id: stripeCustomerId,
+              stripe_subscription_id: stripeSubscriptionId,
+              plan_id: planId,
+            });
+
+          if (subError) {
+            console.error("Error creating billing subscription:", subError);
+          } else {
+            console.log("Created billing subscription for customer:", customerProfileId);
+          }
         }
 
         // Distribute commissions if affiliate attached
@@ -117,7 +215,7 @@ Deno.serve(async (req) => {
 
           if (planData?.setup_fee) {
             const { error: commError } = await supabase.rpc("distribute_commissions", {
-              p_customer_id: customerId,
+              p_customer_id: customerProfileId,
               p_gross_amount: Number(planData.setup_fee),
               p_event_type: "customer_signup",
             });
@@ -125,7 +223,7 @@ Deno.serve(async (req) => {
             if (commError) {
               console.error("Error distributing commissions:", commError);
             } else {
-              console.log("Commissions distributed for customer:", customerId);
+              console.log("Commissions distributed for customer:", customerProfileId);
             }
           }
         }
@@ -239,7 +337,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        console.log("Customer activation complete for:", customerId);
+        console.log("Customer activation complete for:", customerProfileId);
         break;
       }
 
