@@ -158,8 +158,9 @@ Thanks!`);
             <h3 className="font-semibold">Your AI Phone Number</h3>
           </div>
 
-          {displayNumber ? (
-            <div className="flex items-center justify-between">
+          {/* TEMP: Force button to always show for testing */}
+          {displayNumber && (
+            <div className="flex items-center justify-between mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
               <p className="text-2xl font-mono font-bold text-primary">
                 {displayNumber}
               </p>
@@ -174,8 +175,10 @@ Thanks!`);
                 {isTestingCall ? 'Calling...' : 'Test Call'}
               </Button>
             </div>
-          ) : (
-            <div className="space-y-4">
+          )}
+          
+          {/* Always show the button section */}
+          <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Choose your preferred area code (optional) and provision your AI phone number.
               </p>
@@ -236,7 +239,6 @@ Thanks!`);
                 )}
               </Button>
             </div>
-          )}
         </div>
 
         {/* Website Embed Code */}
