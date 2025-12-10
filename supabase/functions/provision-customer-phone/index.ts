@@ -70,24 +70,66 @@ serve(async (req) => {
       .eq('customer_id', customerId)
       .maybeSingle();
 
-    // Find available Vapi account with capacity
-    const { data: vapiAccount, error: accountError } = await supabase
-      .from('vapi_accounts')
-      .select('*')
-      .eq('is_active', true)
-      .lt('numbers_provisioned', 10) // Less than max
-      .order('numbers_provisioned', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    // Get Vapi API key from secrets (primary) or fall back to vapi_accounts table
+    let vapiApiKey = Deno.env.get('VAPI_API_KEY');
+    let vapiAccount: { id: string; name: string; numbers_provisioned: number; max_numbers: number } | null = null;
 
-    if (accountError || !vapiAccount) {
-      console.error('No available Vapi account:', accountError);
-      throw new Error('No available phone number capacity. Please contact support.');
+    if (vapiApiKey) {
+      // Use secret key - find or create a "Primary" account record for tracking
+      const { data: primaryAccount } = await supabase
+        .from('vapi_accounts')
+        .select('*')
+        .eq('name', 'Primary Vapi Account')
+        .maybeSingle();
+
+      if (primaryAccount) {
+        vapiAccount = primaryAccount;
+        console.log(`Using Primary Vapi Account from secrets (${primaryAccount.numbers_provisioned}/${primaryAccount.max_numbers})`);
+      } else {
+        // Create tracking record for the secret-based account
+        const { data: newAccount, error: createError } = await supabase
+          .from('vapi_accounts')
+          .insert({
+            name: 'Primary Vapi Account',
+            api_key: 'STORED_IN_SECRETS',
+            max_numbers: 10,
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Failed to create tracking account:', createError);
+          throw new Error('Failed to initialize phone provisioning system');
+        }
+        vapiAccount = newAccount;
+        console.log('Created Primary Vapi Account tracking record');
+      }
+    } else {
+      // Fall back to vapi_accounts table for multi-account rotation
+      const { data: account, error: accountError } = await supabase
+        .from('vapi_accounts')
+        .select('*')
+        .eq('is_active', true)
+        .neq('api_key', 'STORED_IN_SECRETS')
+        .lt('numbers_provisioned', 10)
+        .order('numbers_provisioned', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (accountError || !account) {
+        console.error('No available Vapi account:', accountError);
+        throw new Error('No available phone number capacity. Please contact support.');
+      }
+
+      vapiAccount = account;
+      vapiApiKey = account.api_key;
+      console.log(`Using Vapi account: ${account.name} (${account.numbers_provisioned}/${account.max_numbers})`);
     }
 
-    console.log(`Using Vapi account: ${vapiAccount.name} (${vapiAccount.numbers_provisioned}/${vapiAccount.max_numbers})`);
-
-    const vapiApiKey = vapiAccount.api_key;
+    if (!vapiApiKey || !vapiAccount) {
+      throw new Error('Vapi API key not configured. Please contact support.');
+    }
 
     // Build assistant system prompt
     const businessName = customerProfile.business_name || 'our company';
