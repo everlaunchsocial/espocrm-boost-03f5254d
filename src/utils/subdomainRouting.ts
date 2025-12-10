@@ -6,6 +6,14 @@
 const REPLICATED_DOMAIN = 'tryeverlaunch.com';
 
 /**
+ * Check if current hostname is the root replicated domain (no subdomain)
+ */
+export function isRootReplicatedDomain(): boolean {
+  const hostname = window.location.hostname;
+  return hostname === REPLICATED_DOMAIN || hostname === `www.${REPLICATED_DOMAIN}`;
+}
+
+/**
  * Check if current hostname is a subdomain of the replicated domain
  */
 export function isReplicatedSubdomain(): boolean {
