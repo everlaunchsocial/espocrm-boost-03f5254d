@@ -52,7 +52,11 @@ export default function OnboardingStep6() {
   };
 
   const handleProvisionPhone = async () => {
+    console.log('=== handleProvisionPhone called ===');
+    console.log('customerProfile:', customerProfile?.id);
+    
     if (!customerProfile) {
+      console.error('Customer profile not loaded');
       toast.error('Customer profile not loaded');
       return;
     }
@@ -64,17 +68,23 @@ export default function OnboardingStep6() {
     }
 
     setIsProvisioning(true);
+    console.log('Starting phone provisioning for customer:', customerProfile.id, 'area code:', areaCode || 'any');
+    
     try {
       const result = await provisionPhoneNumber(areaCode || undefined);
+      console.log('Provisioning result:', result);
+      
       if (result.success && result.phoneNumber) {
         setProvisionedNumber(result.phoneNumber);
         toast.success(`Phone number ${result.phoneNumber} provisioned successfully!`);
       } else {
+        console.error('Provisioning failed:', result.error);
         toast.error(result.error || 'Failed to provision phone number');
       }
     } catch (error) {
       console.error('Provisioning error:', error);
-      toast.error('Failed to provision phone number');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to provision phone number: ${errorMessage}`);
     } finally {
       setIsProvisioning(false);
     }
