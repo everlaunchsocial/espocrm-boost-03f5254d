@@ -367,26 +367,27 @@ export function useCustomerOnboarding() {
     }
 
     try {
-      const response = await fetch('/api/provision-phone', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call Supabase Edge Function instead of Express route
+      // This works on both Replit (dev) and Lovable (production)
+      const { data, error } = await supabase.functions.invoke('provision-customer-phone', {
+        body: {
           customerId: customerProfile.id,
           areaCode: areaCode || null,
-        }),
+        },
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        console.error('Provisioning failed:', result);
-        return { success: false, error: result.error || 'Failed to provision phone number' };
+      if (error) {
+        console.error('Provisioning failed:', error);
+        return { success: false, error: error.message || 'Failed to provision phone number' };
       }
 
-      setTwilioNumber(result.phoneNumber);
-      return { success: true, phoneNumber: result.phoneNumber };
+      if (!data?.success) {
+        console.error('Provisioning failed:', data);
+        return { success: false, error: data?.error || 'Failed to provision phone number' };
+      }
+
+      setTwilioNumber(data.phoneNumber);
+      return { success: true, phoneNumber: data.phoneNumber };
     } catch (error) {
       console.error('Provisioning error:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
