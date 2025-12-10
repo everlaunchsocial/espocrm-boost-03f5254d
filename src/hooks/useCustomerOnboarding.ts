@@ -94,12 +94,10 @@ export function useCustomerOnboarding() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // No user - they need to buy/signup first
         navigate('/buy');
         return;
       }
 
-      // Fetch customer profile
       const { data: profile, error: profileError } = await supabase
         .from('customer_profiles')
         .select('*')
@@ -109,14 +107,12 @@ export function useCustomerOnboarding() {
       if (profileError) throw profileError;
       
       if (!profile) {
-        // No customer profile - redirect to purchase
         navigate('/buy');
         return;
       }
 
       setCustomerProfile(profile as unknown as CustomerProfile);
 
-      // Fetch voice settings
       const { data: voice } = await supabase
         .from('voice_settings')
         .select('*')
@@ -125,7 +121,6 @@ export function useCustomerOnboarding() {
       
       setVoiceSettings(voice as unknown as VoiceSettings);
 
-      // Fetch chat settings
       const { data: chat } = await supabase
         .from('chat_settings')
         .select('*')
@@ -134,7 +129,6 @@ export function useCustomerOnboarding() {
       
       setChatSettings(chat as unknown as ChatSettings);
 
-      // Fetch calendar integration
       const { data: calendar } = await supabase
         .from('calendar_integrations')
         .select('*')
@@ -143,7 +137,6 @@ export function useCustomerOnboarding() {
       
       setCalendarIntegration(calendar as unknown as CalendarIntegration);
 
-      // Fetch knowledge sources
       const { data: sources } = await supabase
         .from('customer_knowledge_sources')
         .select('*')
@@ -152,7 +145,6 @@ export function useCustomerOnboarding() {
       
       setKnowledgeSources((sources || []) as unknown as KnowledgeSource[]);
 
-      // Fetch customer phone number
       const { data: phoneNumber } = await supabase
         .from('customer_phone_numbers')
         .select('phone_number')
@@ -178,7 +170,6 @@ export function useCustomerOnboarding() {
     if (!customerProfile) return false;
     
     try {
-      // Use user_id for update since RLS policy checks user_id = auth.uid()
       const { error } = await supabase
         .from('customer_profiles')
         .update(updates as Record<string, unknown>)
@@ -367,8 +358,6 @@ export function useCustomerOnboarding() {
     }
 
     try {
-      // Call Supabase Edge Function instead of Express route
-      // This works on both Replit (dev) and Lovable (production)
       const { data, error } = await supabase.functions.invoke('provision-customer-phone', {
         body: {
           customerId: customerProfile.id,
