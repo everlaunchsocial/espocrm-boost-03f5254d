@@ -14,10 +14,23 @@ const RESERVED_PATHS = [
 
 /**
  * Check if current hostname is the replicated domain (root or www)
+ * Also returns true in development for testing affiliate paths
  */
 export function isRootReplicatedDomain(): boolean {
   const hostname = window.location.hostname;
-  return hostname === REPLICATED_DOMAIN || hostname === `www.${REPLICATED_DOMAIN}`;
+  
+  // Production domains
+  if (hostname === REPLICATED_DOMAIN || hostname === `www.${REPLICATED_DOMAIN}`) {
+    return true;
+  }
+  
+  // Development: check if URL param forces replicated mode for testing
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('_test_replicated') === 'true') {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
