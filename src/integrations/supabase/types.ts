@@ -104,6 +104,47 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_billing_history: {
+        Row: {
+          affiliate_id: string
+          amount_cents: number
+          created_at: string | null
+          description: string
+          id: string
+          invoice_pdf_url: string | null
+          status: string | null
+          stripe_invoice_id: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          amount_cents: number
+          created_at?: string | null
+          description: string
+          id?: string
+          invoice_pdf_url?: string | null
+          status?: string | null
+          stripe_invoice_id?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          amount_cents?: number
+          created_at?: string | null
+          description?: string
+          id?: string
+          invoice_pdf_url?: string | null
+          status?: string | null
+          stripe_invoice_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_billing_history_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_commissions: {
         Row: {
           affiliate_id: string
@@ -155,6 +196,41 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_credit_purchases: {
+        Row: {
+          affiliate_id: string
+          amount_cents: number
+          credits_purchased: number
+          id: string
+          purchased_at: string | null
+          stripe_payment_intent_id: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          amount_cents: number
+          credits_purchased: number
+          id?: string
+          purchased_at?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          amount_cents?: number
+          credits_purchased?: number
+          id?: string
+          purchased_at?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_credit_purchases_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
             referencedColumns: ["id"]
           },
         ]
@@ -256,10 +332,13 @@ export type Database = {
       affiliates: {
         Row: {
           affiliate_plan_id: string | null
+          billing_cycle_start: string | null
           commission_plan_id: string | null
           created_at: string
           demo_credits_balance: number | null
+          demo_credits_remaining: number | null
           demo_credits_reset_at: string | null
+          demo_credits_used_this_month: number | null
           id: string
           parent_affiliate_id: string | null
           user_id: string
@@ -267,10 +346,13 @@ export type Database = {
         }
         Insert: {
           affiliate_plan_id?: string | null
+          billing_cycle_start?: string | null
           commission_plan_id?: string | null
           created_at?: string
           demo_credits_balance?: number | null
+          demo_credits_remaining?: number | null
           demo_credits_reset_at?: string | null
+          demo_credits_used_this_month?: number | null
           id?: string
           parent_affiliate_id?: string | null
           user_id: string
@@ -278,10 +360,13 @@ export type Database = {
         }
         Update: {
           affiliate_plan_id?: string | null
+          billing_cycle_start?: string | null
           commission_plan_id?: string | null
           created_at?: string
           demo_credits_balance?: number | null
+          demo_credits_remaining?: number | null
           demo_credits_reset_at?: string | null
+          demo_credits_used_this_month?: number | null
           id?: string
           parent_affiliate_id?: string | null
           user_id?: string

@@ -83,3 +83,9 @@ verify_jwt = false
 
 [functions.affiliate-upgrade]
 verify_jwt = false
+
+[functions.get-billing-info]
+verify_jwt = false
+
+[functions.create-portal-session]
+verify_jwt = false

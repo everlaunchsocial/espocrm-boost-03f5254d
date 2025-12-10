@@ -50,6 +50,7 @@ import AffiliateCommissions from "./pages/affiliate/AffiliateCommissions";
 import AffiliateTeam from "./pages/affiliate/AffiliateTeam";
 import AffiliateTraining from "./pages/affiliate/AffiliateTraining";
 import AffiliateSettings from "./pages/affiliate/AffiliateSettings";
+import AffiliateBilling from "./pages/affiliate/AffiliateBilling";
 import AffiliateAbandonments from "./pages/affiliate/AffiliateAbandonments";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminCustomerUsage from "./pages/AdminCustomerUsage";
@@ -174,6 +175,7 @@ const App = () => (
             <Route path="/affiliate/commissions" element={<AffiliateCommissions />} />
             <Route path="/affiliate/team" element={<AffiliateTeam />} />
             <Route path="/affiliate/training" element={<AffiliateTraining />} />
+            <Route path="/affiliate/billing" element={<AffiliateBilling />} />
             <Route path="/affiliate/settings" element={<AffiliateSettings />} />
           </Route>
           

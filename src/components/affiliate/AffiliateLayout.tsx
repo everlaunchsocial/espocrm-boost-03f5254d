@@ -24,6 +24,8 @@ import {
   Copy,
   ExternalLink,
   UserX,
+  CreditCard,
+  Sparkles,
 } from 'lucide-react';
 import { useAffiliateAbandonments } from '@/hooks/useAffiliateAbandonments';
 import { Button } from '@/components/ui/button';
@@ -59,6 +61,7 @@ const affiliateNavigation = [
   { name: 'Commissions', href: '/affiliate/commissions', icon: DollarSign },
   { name: 'Team', href: '/affiliate/team', icon: Users },
   { name: 'How-To', href: '/affiliate/training', icon: GraduationCap },
+  { name: 'Billing', href: '/affiliate/billing', icon: CreditCard },
   { name: 'Settings', href: '/affiliate/settings', icon: Settings },
 ];
 
@@ -73,9 +76,12 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   // State for affiliate data
   const [affiliateData, setAffiliateData] = useState<{ 
     username: string; 
-    parent_affiliate_id: string | null 
+    parent_affiliate_id: string | null;
+    demo_credits_remaining: number | null;
+    affiliate_plan_id: string | null;
   } | null>(null);
   const [sponsorName, setSponsorName] = useState<string | null>(null);
+  const [planCode, setPlanCode] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
   // Fetch affiliate and sponsor data - use impersonated affiliate if applicable
@@ -87,7 +93,19 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
         setAffiliateData({
           username: currentAffiliate.username,
           parent_affiliate_id: currentAffiliate.parent_affiliate_id,
+          demo_credits_remaining: (currentAffiliate as any).demo_credits_remaining ?? null,
+          affiliate_plan_id: (currentAffiliate as any).affiliate_plan_id ?? null,
         });
+
+        // Fetch plan code if we have a plan_id
+        if ((currentAffiliate as any).affiliate_plan_id) {
+          const { data: plan } = await supabase
+            .from('affiliate_plans')
+            .select('code')
+            .eq('id', (currentAffiliate as any).affiliate_plan_id)
+            .maybeSingle();
+          setPlanCode(plan?.code || null);
+        }
 
         // Fetch sponsor if exists
         if (currentAffiliate.parent_affiliate_id) {
@@ -116,7 +134,7 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
       try {
         const { data: affiliate, error } = await supabase
           .from('affiliates')
-          .select('id, username, parent_affiliate_id')
+          .select('id, username, parent_affiliate_id, demo_credits_remaining, affiliate_plan_id')
           .eq('user_id', userId)
           .maybeSingle();
 
@@ -129,7 +147,21 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
         }
 
         if (affiliate) {
-          setAffiliateData(affiliate);
+          setAffiliateData({
+            ...affiliate,
+            demo_credits_remaining: affiliate.demo_credits_remaining ?? null,
+            affiliate_plan_id: affiliate.affiliate_plan_id ?? null,
+          });
+
+          // Fetch plan code
+          if (affiliate.affiliate_plan_id) {
+            const { data: plan } = await supabase
+              .from('affiliate_plans')
+              .select('code')
+              .eq('id', affiliate.affiliate_plan_id)
+              .maybeSingle();
+            setPlanCode(plan?.code || null);
+          }
 
           // Fetch sponsor if exists
           if (affiliate.parent_affiliate_id) {
@@ -292,6 +324,17 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
 
           {/* User section */}
           <div className="border-t border-sidebar-border p-4">
+            {/* Demo Credits Badge - clickable */}
+            <Link 
+              to="/affiliate/billing"
+              className="flex items-center gap-2 px-3 py-2 mb-2 rounded-lg bg-sidebar-accent/50 hover:bg-sidebar-accent transition-colors cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              <span className="text-xs font-medium text-sidebar-foreground">
+                {planCode === 'agency' ? 'Unlimited' : (affiliateData?.demo_credits_remaining ?? 0)} credits
+              </span>
+            </Link>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 hover:bg-sidebar-accent transition-colors">
