@@ -105,6 +105,7 @@ const App = () => (
           <Route path="/sales" element={<Sales />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/biz" element={<BusinessOpportunity />} />
+          <Route path="/partner" element={<AffiliateSignup />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           
           {/* Product & Customer purchase pages - public */}

@@ -9,7 +9,7 @@ const REPLICATED_DOMAIN = 'tryeverlaunch.com';
 const RESERVED_PATHS = [
   'auth', 'affiliate', 'affiliate-signup', 'admin', 'customer', 
   'buy', 'demo-request', 'checkout', 'product', 'biz', 'sales',
-  'demo', 'demos', 'api', 'reset-password', 'unauthorized'
+  'demo', 'demos', 'api', 'reset-password', 'unauthorized', 'partner', 'rep'
 ];
 
 /**
