@@ -40,7 +40,13 @@ import ResetPassword from "./pages/ResetPassword";
 import Auth from "./pages/Auth";
 import Product from "./pages/Product";
 import CustomerBuy from "./pages/CustomerBuy";
-import CustomerBuySuccess from "./pages/CustomerBuySuccess";
+import CustomerBuySuccessOld from "./pages/CustomerBuySuccess";
+
+// New customer pre-signup pages
+import CustomerLandingPage from "./pages/customer/CustomerLandingPage";
+import CustomerCheckoutPage from "./pages/customer/CustomerCheckoutPage";
+import DemoRequestPage from "./pages/customer/DemoRequestPage";
+import CustomerBuySuccess from "./pages/customer/CustomerBuySuccess";
 
 // Affiliate pages
 import AffiliateDashboard from "./pages/affiliate/AffiliateDashboard";
@@ -103,8 +109,9 @@ const App = () => (
           
           {/* Product & Customer purchase pages - public */}
           <Route path="/product" element={<Product />} />
-          <Route path="/buy" element={<CustomerBuy />} />
-          <Route path="/buy/success" element={<CustomerBuySuccess />} />
+          <Route path="/buy" element={<CustomerCheckoutPage />} />
+          <Route path="/demo-request" element={<DemoRequestPage />} />
+          <Route path="/customer/buy-success" element={<CustomerBuySuccess />} />
           
           {/* Affiliate replicated URL - public facing */}
           <Route path="/rep/:username" element={<AffiliatePublicPage />} />

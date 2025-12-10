@@ -1,0 +1,336 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Check, Loader2, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { getStoredAffiliateId } from "@/utils/affiliateAttribution";
+import { getAffiliateUsernameFromSubdomain } from "@/utils/subdomainRouting";
+import { useAffiliateContext } from "@/hooks/useAffiliateContext";
+
+const plans = [
+  {
+    id: "starter",
+    name: "Starter",
+    price: 99,
+    minutes: 100,
+    features: [
+      "100 minutes/month",
+      "AI Voice Receptionist",
+      "Lead Capture",
+      "Email Notifications",
+      "Business Hours Routing",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: 189,
+    minutes: 300,
+    popular: true,
+    features: [
+      "300 minutes/month",
+      "Everything in Starter",
+      "Appointment Booking",
+      "SMS Notifications",
+      "Priority Support",
+      "Custom Greeting",
+    ],
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: 299,
+    minutes: 600,
+    features: [
+      "600 minutes/month",
+      "Everything in Pro",
+      "Multiple Locations",
+      "Advanced Analytics",
+      "Dedicated Account Manager",
+      "Custom Integrations",
+    ],
+  },
+];
+
+export default function CustomerCheckoutPage() {
+  const navigate = useNavigate();
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<"plan" | "account">("plan");
+  
+  // Account form state
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [phone, setPhone] = useState("");
+
+  // Get affiliate from subdomain or stored attribution
+  const affiliateUsername = getAffiliateUsernameFromSubdomain();
+  const { affiliate } = useAffiliateContext(affiliateUsername || undefined);
+  const [resolvedAffiliateId, setResolvedAffiliateId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Priority: subdomain affiliate > stored attribution
+    if (affiliate?.id) {
+      setResolvedAffiliateId(affiliate.id);
+    } else {
+      const storedId = getStoredAffiliateId();
+      if (storedId) {
+        setResolvedAffiliateId(storedId);
+      }
+    }
+  }, [affiliate?.id]);
+
+  const handlePlanSelect = (planId: string) => {
+    setSelectedPlan(planId);
+    setStep("account");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedPlan) {
+      toast.error("Please select a plan");
+      return;
+    }
+
+    if (!email || !password || !businessName || !contactName) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            business_name: businessName,
+            contact_name: contactName,
+            phone,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Failed to create account");
+
+      // 2. Fetch the customer plan from database
+      const { data: planData, error: planError } = await supabase
+        .from("customer_plans")
+        .select("*")
+        .eq("is_active", true)
+        .order("monthly_price", { ascending: true });
+
+      if (planError) throw planError;
+
+      // Map selected plan to database plan (by index: starter=0, pro=1, enterprise=2)
+      const planIndex = plans.findIndex(p => p.id === selectedPlan);
+      const dbPlan = planData?.[planIndex];
+
+      if (!dbPlan) {
+        toast.error("Selected plan not found");
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Call customer-checkout edge function
+      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
+        "customer-checkout",
+        {
+          body: {
+            planId: dbPlan.id,
+            customerId: authData.user.id,
+            affiliateId: resolvedAffiliateId,
+            customerEmail: email,
+            customerName: contactName,
+            successUrl: `${window.location.origin}/customer/buy-success?session_id={CHECKOUT_SESSION_ID}`,
+            cancelUrl: `${window.location.origin}/buy`,
+          },
+        }
+      );
+
+      if (checkoutError) throw checkoutError;
+
+      if (checkoutData?.url) {
+        window.location.href = checkoutData.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to start checkout");
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background py-12">
+      <div className="container mx-auto px-4">
+        {step === "plan" ? (
+          <>
+            <div className="mx-auto mb-12 max-w-2xl text-center">
+              <h1 className="mb-4 text-3xl font-bold text-foreground">
+                Choose Your Plan
+              </h1>
+              <p className="text-muted-foreground">
+                Select the plan that fits your business needs. All plans include a 7-day free trial.
+              </p>
+            </div>
+            
+            <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-3">
+              {plans.map((plan) => (
+                <Card 
+                  key={plan.id} 
+                  className={`relative cursor-pointer transition-all hover:shadow-lg ${
+                    plan.popular ? "border-primary shadow-lg" : "border-border/50"
+                  } ${selectedPlan === plan.id ? "ring-2 ring-primary" : ""}`}
+                  onClick={() => handlePlanSelect(plan.id)}
+                >
+                  {plan.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                        Most Popular
+                      </span>
+                    </div>
+                  )}
+                  <CardHeader className="text-center">
+                    <CardTitle className="text-xl">{plan.name}</CardTitle>
+                    <div className="mt-4">
+                      <span className="text-4xl font-bold text-foreground">${plan.price}</span>
+                      <span className="text-muted-foreground">/month</span>
+                    </div>
+                    <CardDescription className="mt-2">
+                      {plan.minutes} minutes included
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="mb-6 space-y-3">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2">
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <span className="text-sm text-muted-foreground">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button 
+                      className="w-full" 
+                      variant={plan.popular ? "default" : "outline"}
+                    >
+                      Select {plan.name}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="mx-auto max-w-md">
+            <Button
+              variant="ghost"
+              className="mb-6"
+              onClick={() => setStep("plan")}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Plans
+            </Button>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Create Your Account</CardTitle>
+                <CardDescription>
+                  You selected the {plans.find(p => p.id === selectedPlan)?.name} plan at $
+                  {plans.find(p => p.id === selectedPlan)?.price}/month
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="businessName">Business Name *</Label>
+                    <Input
+                      id="businessName"
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder="Your Business Name"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="contactName">Your Name *</Label>
+                    <Input
+                      id="contactName"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      placeholder="John Smith"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@business.com"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password *</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Create a secure password"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Continue to Payment"
+                    )}
+                  </Button>
+                  
+                  <p className="text-center text-xs text-muted-foreground">
+                    By continuing, you agree to our Terms of Service and Privacy Policy.
+                  </p>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
