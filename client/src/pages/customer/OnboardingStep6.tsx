@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Rocket, Code, Phone, Play, Mail, Copy, Check, PartyPopper } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, Rocket, Code, Phone, Play, Mail, Copy, Check, PartyPopper, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function OnboardingStep6() {
   const navigate = useNavigate();
@@ -13,6 +16,8 @@ export default function OnboardingStep6() {
   const [isCopied, setIsCopied] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const [isTestingCall, setIsTestingCall] = useState(false);
+  const [areaCode, setAreaCode] = useState('');
+  const [isProvisioning, setIsProvisioning] = useState(false);
 
   const embedScript = `<!-- EverLaunch AI Widget -->
 <script src="https://widget.everlaunch.ai/embed.js" 
@@ -37,6 +42,48 @@ export default function OnboardingStep6() {
     // In production, this would trigger a test call via Vapi/Twilio
     toast.info(`Test call would be placed to your AI at ${twilioNumber}`);
     setTimeout(() => setIsTestingCall(false), 2000);
+  };
+
+  const handleProvisionPhone = async () => {
+    if (!customerProfile?.id) {
+      toast.error('Customer profile not found');
+      return;
+    }
+
+    if (areaCode && !/^\d{3}$/.test(areaCode)) {
+      toast.error('Please enter a valid 3-digit area code');
+      return;
+    }
+
+    setIsProvisioning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('provision-customer-phone', {
+        body: {
+          customerId: customerProfile.id,
+          areaCode: areaCode || undefined,
+        },
+      });
+
+      if (error) {
+        console.error('Provision error:', error);
+        toast.error('Failed to provision phone number');
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      toast.success('Phone number provisioned successfully!');
+      // Refresh the page to show new number
+      window.location.reload();
+    } catch (err) {
+      console.error('Provision error:', err);
+      toast.error('Failed to provision phone number');
+    } finally {
+      setIsProvisioning(false);
+    }
   };
 
   const handleEmailDeveloper = () => {
@@ -98,11 +145,12 @@ Thanks!`);
               <Phone className="h-5 w-5 text-primary" />
               <h3 className="font-semibold">Your AI Phone Number</h3>
             </div>
-            <div className="flex items-center justify-between">
-              <p className="text-2xl font-mono font-bold text-primary">
-                {twilioNumber || 'Pending Assignment'}
-              </p>
-              {twilioNumber && (
+            
+            {twilioNumber ? (
+              <div className="flex items-center justify-between">
+                <p className="text-2xl font-mono font-bold text-primary">
+                  {twilioNumber}
+                </p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -113,12 +161,42 @@ Thanks!`);
                   <Play className="h-4 w-4" />
                   {isTestingCall ? 'Calling...' : 'Test Call'}
                 </Button>
-              )}
-            </div>
-            {!twilioNumber && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Your phone number will be assigned shortly. You'll receive an email when it's ready.
-              </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="areaCode">Preferred Area Code (optional)</Label>
+                  <Input
+                    id="areaCode"
+                    type="text"
+                    placeholder="e.g., 212"
+                    maxLength={3}
+                    value={areaCode}
+                    onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-32"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter a 3-digit US area code or leave blank for any available number.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleProvisionPhone}
+                  disabled={isProvisioning}
+                  className="w-full gap-2"
+                >
+                  {isProvisioning ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Provisioning...
+                    </>
+                  ) : (
+                    <>
+                      <Phone className="h-4 w-4" />
+                      Get My AI Phone Number
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
 
