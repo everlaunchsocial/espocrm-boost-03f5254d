@@ -36,20 +36,30 @@ export default function OnboardingStep2() {
     }
   }, [voiceSettings]);
 
-  const handleSave = async (showToast = false) => {
+  const handleSave = async (showToast = false, overrides: Partial<{
+    voiceGender: string;
+    voiceStyle: string;
+    responsePace: string;
+    greetingText: string;
+  }> = {}) => {
+    const finalVoiceGender = overrides.voiceGender ?? voiceGender;
+    const finalVoiceStyle = overrides.voiceStyle ?? voiceStyle;
+    const finalGreetingText = overrides.greetingText ?? greetingText;
+    const finalResponsePace = overrides.responsePace ?? responsePace;
+
     const success = await updateVoiceSettings({
-      voice_gender: voiceGender,
-      voice_style: voiceStyle,
-      greeting_text: greetingText,
-      response_pace: responsePace,
+      voice_gender: finalVoiceGender,
+      voice_style: finalVoiceStyle,
+      greeting_text: finalGreetingText,
+      response_pace: finalResponsePace,
       language_code: 'en'
     });
 
     // Mirror greeting and tone to chat settings
     if (success) {
       await updateChatSettings({
-        greeting_text: greetingText,
-        tone: voiceStyle
+        greeting_text: finalGreetingText,
+        tone: finalVoiceStyle
       });
     }
 
@@ -117,7 +127,7 @@ export default function OnboardingStep2() {
               ].map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => { setVoiceGender(option.value); handleSave(false); }}
+                  onClick={() => { setVoiceGender(option.value); handleSave(false, { voiceGender: option.value }); }}
                   className={cn(
                     "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
                     voiceGender === option.value
@@ -138,7 +148,7 @@ export default function OnboardingStep2() {
               <Sparkles className="h-4 w-4 text-muted-foreground" />
               Personality Style
             </Label>
-            <RadioGroup value={voiceStyle} onValueChange={(v) => { setVoiceStyle(v); handleSave(false); }}>
+            <RadioGroup value={voiceStyle} onValueChange={(v) => { setVoiceStyle(v); handleSave(false, { voiceStyle: v }); }}>
               <div className="grid gap-3">
                 {[
                   { value: 'friendly', label: 'Friendly', description: 'Warm, approachable, and casual' },
@@ -190,7 +200,7 @@ export default function OnboardingStep2() {
               <Gauge className="h-4 w-4 text-muted-foreground" />
               Response Pace
             </Label>
-            <RadioGroup value={responsePace} onValueChange={(v) => { setResponsePace(v); handleSave(false); }}>
+            <RadioGroup value={responsePace} onValueChange={(v) => { setResponsePace(v); handleSave(false, { responsePace: v }); }}>
               <div className="grid grid-cols-3 gap-3">
                 {[
                   { value: 'quick', label: 'Quick', description: 'Fast responses' },
