@@ -40,7 +40,6 @@ import ResetPassword from "./pages/ResetPassword";
 import Auth from "./pages/Auth";
 import Product from "./pages/Product";
 import CustomerBuy from "./pages/CustomerBuy";
-import CustomerBuySuccessOld from "./pages/CustomerBuySuccess";
 
 // New customer pre-signup pages
 import CustomerLandingPage from "./pages/customer/CustomerLandingPage";
