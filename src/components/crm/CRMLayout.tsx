@@ -82,6 +82,17 @@ export function CRMLayout({ children }: CRMLayoutProps) {
   const [userEmail, setUserEmail] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
 
+  // Role-based redirect: customers and affiliates should not access CRM
+  useEffect(() => {
+    if (!isLoading && role) {
+      if (role === 'customer') {
+        navigate('/customer', { replace: true });
+      } else if (role === 'affiliate') {
+        navigate('/affiliate', { replace: true });
+      }
+    }
+  }, [role, isLoading, navigate]);
+
   useEffect(() => {
     async function fetchUser() {
       const { data: { user } } = await supabase.auth.getUser();
