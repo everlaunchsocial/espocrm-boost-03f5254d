@@ -82,15 +82,27 @@ export function CRMLayout({ children }: CRMLayoutProps) {
   const [userEmail, setUserEmail] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
 
-  // Redirect non-admin users to their appropriate portal
+  // Redirect authenticated non-admin users to their appropriate portal
   useEffect(() => {
-    if (!isLoading && role) {
+    async function checkAndRedirect() {
+      if (isLoading) return;
+      
+      // Only redirect if user is actually logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // Not logged in - redirect to auth page for CRM access
+        navigate('/auth');
+        return;
+      }
+      
+      // User is logged in - redirect based on role
       if (role === 'customer') {
         navigate('/customer');
       } else if (role === 'affiliate') {
         navigate('/affiliate');
       }
     }
+    checkAndRedirect();
   }, [role, isLoading, navigate]);
 
   useEffect(() => {
