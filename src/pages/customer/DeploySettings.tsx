@@ -1,3 +1,4 @@
+// Force rebuild - Dec 10 2025
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
