@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { isReplicatedSubdomain, isRootReplicatedDomain, getAffiliateUsernameFromSubdomain } from '@/utils/subdomainRouting';
+import { isRootReplicatedDomain, getAffiliateUsernameFromPath } from '@/utils/subdomainRouting';
 import CustomerLandingPage from '@/pages/customer/CustomerLandingPage';
 import CustomerCheckoutPage from '@/pages/customer/CustomerCheckoutPage';
 import DemoRequestPage from '@/pages/customer/DemoRequestPage';
@@ -10,65 +10,67 @@ interface SubdomainRouterProps {
   children: ReactNode;
 }
 
+// Reserved paths that should not be treated as affiliate usernames
+const RESERVED_PATHS = [
+  'auth', 'affiliate', 'affiliate-signup', 'admin', 'customer', 
+  'buy', 'demo-request', 'checkout', 'product', 'biz', 'sales',
+  'demo', 'demos', 'api', 'reset-password', 'unauthorized'
+];
+
 /**
- * Wrapper component that intercepts subdomain/root domain requests and routes to customer pages
+ * Wrapper component that intercepts requests on tryeverlaunch.com and routes to customer pages
+ * Path-based affiliate routing:
  * e.g., tryeverlaunch.com -> renders CustomerLandingPage without affiliate attribution
- * e.g., jimmy.tryeverlaunch.com -> renders CustomerLandingPage with affiliate attribution
- * e.g., jimmy.tryeverlaunch.com/buy -> renders CustomerCheckoutPage with affiliate attribution
+ * e.g., tryeverlaunch.com/jimmy -> renders CustomerLandingPage with affiliate attribution
+ * e.g., tryeverlaunch.com/jimmy/buy -> renders CustomerCheckoutPage with affiliate attribution
  */
 export function SubdomainRouter({ children }: SubdomainRouterProps) {
   const location = useLocation();
-  const [routeType, setRouteType] = useState<'none' | 'root' | 'subdomain'>('none');
-  const [username, setUsername] = useState<string | null>(null);
+  const [isReplicatedDomain, setIsReplicatedDomain] = useState(false);
 
   useEffect(() => {
-    if (isRootReplicatedDomain()) {
-      setRouteType('root');
-      setUsername(null); // No affiliate for root domain
-    } else if (isReplicatedSubdomain()) {
-      setRouteType('subdomain');
-      setUsername(getAffiliateUsernameFromSubdomain());
-    }
+    setIsReplicatedDomain(isRootReplicatedDomain());
   }, []);
 
-  // Handle root domain (tryeverlaunch.com) - show customer pages without affiliate attribution
-  if (routeType === 'root') {
-    const path = location.pathname;
-
-    if (path === '/buy') {
-      return <CustomerCheckoutPage />;
-    }
-    if (path === '/demo-request') {
-      return <DemoRequestPage />;
-    }
-    if (path === '/customer/buy-success') {
-      return <CustomerBuySuccess />;
-    }
-    // Default: show landing page without affiliate
-    if (path === '/' || path === '') {
-      return <CustomerLandingPage />;
-    }
+  // Only handle routing on the replicated domain (tryeverlaunch.com)
+  if (!isReplicatedDomain) {
+    return <>{children}</>;
   }
 
-  // Handle subdomain (jimmy.tryeverlaunch.com) - show customer pages with affiliate attribution
-  if (routeType === 'subdomain' && username) {
-    const path = location.pathname;
+  const path = location.pathname;
+  const pathSegments = path.split('/').filter(Boolean);
+  
+  // Root path: show landing page without affiliate
+  if (pathSegments.length === 0) {
+    return <CustomerLandingPage />;
+  }
 
-    if (path === '/buy') {
+  const firstSegment = pathSegments[0].toLowerCase();
+  
+  // Check if first segment is a reserved path - pass through to normal routing
+  if (RESERVED_PATHS.includes(firstSegment)) {
+    return <>{children}</>;
+  }
+
+  // First segment is an affiliate username
+  const affiliateUsername = getAffiliateUsernameFromPath(path);
+  
+  if (affiliateUsername) {
+    const subPath = pathSegments.length > 1 ? `/${pathSegments.slice(1).join('/')}` : '/';
+    
+    if (subPath === '/buy') {
       return <CustomerCheckoutPage />;
     }
-    if (path === '/demo-request') {
+    if (subPath === '/demo-request') {
       return <DemoRequestPage />;
     }
-    if (path === '/customer/buy-success') {
+    if (subPath === '/customer/buy-success' || subPath === '/buy-success') {
       return <CustomerBuySuccess />;
     }
     // Default: show landing page with affiliate
-    if (path === '/' || path === '') {
-      return <CustomerLandingPage />;
-    }
+    return <CustomerLandingPage />;
   }
 
-  // Otherwise, render the normal app routes
+  // Fallback: pass through to normal routing
   return <>{children}</>;
 }

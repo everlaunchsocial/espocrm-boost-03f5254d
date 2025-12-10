@@ -8,7 +8,7 @@ import { Loader2, CheckCircle, Phone, Calendar, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStoredAffiliateId, storeAffiliateAttribution } from "@/utils/affiliateAttribution";
-import { getAffiliateUsernameFromSubdomain } from "@/utils/subdomainRouting";
+import { getAffiliateUsernameFromPath } from "@/utils/subdomainRouting";
 import { useAffiliateContext } from "@/hooks/useAffiliateContext";
 
 const businessTypes = [
@@ -35,7 +35,7 @@ export default function DemoRequestPage() {
   const [businessType, setBusinessType] = useState("");
 
   // Get affiliate from subdomain or stored attribution
-  const affiliateUsername = getAffiliateUsernameFromSubdomain();
+  const affiliateUsername = getAffiliateUsernameFromPath(window.location.pathname);
   const { affiliate } = useAffiliateContext(affiliateUsername || undefined);
   const [resolvedAffiliateId, setResolvedAffiliateId] = useState<string | null>(null);
 

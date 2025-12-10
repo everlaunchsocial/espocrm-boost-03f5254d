@@ -1,12 +1,19 @@
 /**
- * Subdomain routing utilities for affiliate replicated sites
- * Handles detection and parsing of subdomains like john.tryeverlaunch.com
+ * Path-based routing utilities for affiliate replicated sites
+ * Handles detection and parsing of paths like tryeverlaunch.com/john
  */
 
 const REPLICATED_DOMAIN = 'tryeverlaunch.com';
 
+// Reserved paths that should not be treated as affiliate usernames
+const RESERVED_PATHS = [
+  'auth', 'affiliate', 'affiliate-signup', 'admin', 'customer', 
+  'buy', 'demo-request', 'checkout', 'product', 'biz', 'sales',
+  'demo', 'demos', 'api', 'reset-password', 'unauthorized'
+];
+
 /**
- * Check if current hostname is the root replicated domain (no subdomain)
+ * Check if current hostname is the replicated domain (root or www)
  */
 export function isRootReplicatedDomain(): boolean {
   const hostname = window.location.hostname;
@@ -14,43 +21,33 @@ export function isRootReplicatedDomain(): boolean {
 }
 
 /**
- * Check if current hostname is a subdomain of the replicated domain
+ * Extract affiliate username from path
+ * e.g., /john -> "john"
+ * e.g., /john/buy -> "john"
+ * Returns null if first segment is a reserved path
  */
-export function isReplicatedSubdomain(): boolean {
-  const hostname = window.location.hostname;
+export function getAffiliateUsernameFromPath(pathname: string): string | null {
+  const segments = pathname.split('/').filter(Boolean);
   
-  // Check if it's a subdomain of tryeverlaunch.com (but not www or the root)
-  if (hostname.endsWith(`.${REPLICATED_DOMAIN}`)) {
-    const subdomain = hostname.replace(`.${REPLICATED_DOMAIN}`, '');
-    // Exclude www and empty subdomains
-    return subdomain !== '' && subdomain !== 'www';
+  if (segments.length === 0) {
+    return null;
   }
   
-  return false;
+  const firstSegment = segments[0].toLowerCase();
+  
+  // Don't treat reserved paths as usernames
+  if (RESERVED_PATHS.includes(firstSegment)) {
+    return null;
+  }
+  
+  return firstSegment;
 }
 
 /**
- * Extract affiliate username from subdomain
- * e.g., john.tryeverlaunch.com -> "john"
- */
-export function getAffiliateUsernameFromSubdomain(): string | null {
-  const hostname = window.location.hostname;
-  
-  if (hostname.endsWith(`.${REPLICATED_DOMAIN}`)) {
-    const subdomain = hostname.replace(`.${REPLICATED_DOMAIN}`, '');
-    if (subdomain && subdomain !== 'www') {
-      return subdomain;
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Get the replicated URL for an affiliate
+ * Get the replicated URL for an affiliate (path-based)
  */
 export function getReplicatedUrl(username: string): string {
-  return `https://${username}.${REPLICATED_DOMAIN}`;
+  return `https://${REPLICATED_DOMAIN}/${username}`;
 }
 
 /**

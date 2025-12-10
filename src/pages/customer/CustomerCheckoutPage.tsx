@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStoredAffiliateId } from "@/utils/affiliateAttribution";
-import { getAffiliateUsernameFromSubdomain } from "@/utils/subdomainRouting";
+import { getAffiliateUsernameFromPath } from "@/utils/subdomainRouting";
 import { useAffiliateContext } from "@/hooks/useAffiliateContext";
 
 const plans = [
@@ -70,7 +70,7 @@ export default function CustomerCheckoutPage() {
   const [phone, setPhone] = useState("");
 
   // Get affiliate from subdomain or stored attribution
-  const affiliateUsername = getAffiliateUsernameFromSubdomain();
+  const affiliateUsername = getAffiliateUsernameFromPath(window.location.pathname);
   const { affiliate } = useAffiliateContext(affiliateUsername || undefined);
   const [resolvedAffiliateId, setResolvedAffiliateId] = useState<string | null>(null);
 
