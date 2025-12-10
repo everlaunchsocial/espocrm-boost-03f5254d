@@ -74,19 +74,18 @@ export default function CustomerDashboard() {
     ? format(new Date(billing.billing_cycle_end), 'MMM d, yyyy')
     : 'Not set';
 
-  // Calculate checklist completion status
-  const voiceComplete = !!(voiceSettings?.greeting_text && voiceSettings.greeting_text.length >= 20);
+  // Calculate checklist completion status based on onboarding wizard progress
+  // If user completed the wizard (onboarding_current_step reached that step), mark as complete
+  const currentStep = customerProfile?.onboarding_current_step || 0;
+  const wizardComplete = customerProfile?.onboarding_stage === 'wizard_complete';
   
-  const hasWebsiteKnowledge = !!(customerProfile?.website_url && chatSettings?.use_website_knowledge);
-  const hasDocumentKnowledge = knowledgeSources.some(s => s.source_type === 'document' && s.status === 'processed');
-  const knowledgeComplete = hasWebsiteKnowledge || hasDocumentKnowledge;
-  
-  const leadsComplete = !!(customerProfile?.lead_capture_enabled && (customerProfile?.lead_email || customerProfile?.lead_sms_number));
-  
-  const calendarOptional = !calendarIntegration?.appointments_enabled;
-  const calendarComplete = !!(calendarIntegration?.appointments_enabled && calendarIntegration?.provider);
-  
-  const deployComplete = !!(customerProfile?.embed_installed_at && customerProfile?.phone_tested_at);
+  // Step 2 = Voice & Personality, Step 3 = Knowledge, Step 4 = Lead Capture, Step 5 = Calendar, Step 6 = Deploy
+  const voiceComplete = currentStep >= 2 || wizardComplete;
+  const knowledgeComplete = currentStep >= 3 || wizardComplete;
+  const leadsComplete = currentStep >= 4 || wizardComplete;
+  const calendarOptional = true; // Calendar is always optional
+  const calendarComplete = currentStep >= 5 || wizardComplete;
+  const deployComplete = wizardComplete;
 
   return (
     <div className="p-6 md:p-8">
