@@ -117,7 +117,7 @@ export default function VerticalLandingPage() {
       >
         {/* Logo */}
         <div className="absolute top-6 left-6 z-10">
-          <img src={everlaunchLogo} alt="EverLaunch.ai" className="h-10 md:h-12" />
+          <img src={everlaunchLogo} alt="EverLaunch.ai" className="h-10 md:h-12 brightness-0 invert" />
         </div>
 
         {/* Nav Buttons */}
@@ -505,7 +505,7 @@ export default function VerticalLandingPage() {
       <footer className="py-8 bg-slate-900 border-t border-white/10">
         <div className="container max-w-6xl px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <img src={everlaunchLogo} alt="EverLaunch.ai" className="h-8" />
+            <img src={everlaunchLogo} alt="EverLaunch.ai" className="h-8 brightness-0 invert" />
             <p className="text-sm text-white/60">
               © {new Date().getFullYear()} EverLaunch.ai. All rights reserved.
             </p>
