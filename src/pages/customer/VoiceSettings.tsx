@@ -7,7 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Volume2, RotateCcw, Check } from "lucide-react";
 import { useVoiceSettings } from "@/hooks/useVoiceSettings";
-import { FEMALE_VOICES, MALE_VOICES, CartesiaVoice } from "@/lib/cartesiaVoices";
+import { CUSTOMER_FEMALE_VOICES, CUSTOMER_MALE_VOICES, CartesiaVoice } from "@/lib/cartesiaVoices";
 import { cn } from "@/lib/utils";
 
 export default function VoiceSettings() {
@@ -150,7 +150,7 @@ export default function VoiceSettings() {
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Female Voices</h3>
                 <div className="space-y-2">
-                  {FEMALE_VOICES.map((voice) => (
+                  {CUSTOMER_FEMALE_VOICES.map((voice) => (
                     <VoiceOption 
                       key={voice.id} 
                       voice={voice} 
@@ -164,7 +164,7 @@ export default function VoiceSettings() {
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Male Voices</h3>
                 <div className="space-y-2">
-                  {MALE_VOICES.map((voice) => (
+                  {CUSTOMER_MALE_VOICES.map((voice) => (
                     <VoiceOption 
                       key={voice.id} 
                       voice={voice} 
