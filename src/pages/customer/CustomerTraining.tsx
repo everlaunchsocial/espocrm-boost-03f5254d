@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { 
   GraduationCap, 
   Rocket,
@@ -10,14 +10,16 @@ import {
   Megaphone,
   Trophy,
   ChevronRight,
-  CheckCircle2,
   PlayCircle,
   Settings,
   Phone,
-  MessageSquare
+  MessageSquare,
+  Video,
+  FileText,
+  File,
+  Clock
 } from 'lucide-react';
-import { useTraining, TrainingModule } from '@/hooks/useTraining';
-import { TrainingModuleCard } from '@/components/training/TrainingModuleCard';
+import { useCustomerTraining, TrainingModule } from '@/hooks/useCustomerTraining';
 import { TrainingViewer } from '@/components/training/TrainingViewer';
 
 // Icon mapping for categories
@@ -32,27 +34,26 @@ const categoryIcons: Record<string, React.ElementType> = {
   'message-square': MessageSquare,
 };
 
+const contentTypeIcons: Record<string, React.ElementType> = {
+  video: Video,
+  article: FileText,
+  pdf: File,
+  quiz: BookOpen,
+};
+
 export default function CustomerTraining() {
   const {
     categories,
     modules,
     isLoading,
-    getModuleProgress,
     getModulesByCategory,
-    getCategoryProgress,
-    startModule,
-    updateProgress,
-    markComplete,
     totalModules,
-    completedModules,
-    overallProgress,
-  } = useTraining(); // Uses same training content as affiliates for now
+  } = useCustomerTraining();
 
   const [selectedModule, setSelectedModule] = useState<TrainingModule | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
-  const handleModuleClick = async (module: TrainingModule) => {
-    await startModule(module.id);
+  const handleModuleClick = (module: TrainingModule) => {
     setSelectedModule(module);
   };
 
@@ -60,25 +61,16 @@ export default function CustomerTraining() {
     setSelectedModule(null);
   };
 
-  const handleProgress = (moduleId: string) => async (percent: number, positionSeconds?: number) => {
-    await updateProgress(moduleId, percent, positionSeconds);
-  };
-
-  const handleComplete = (moduleId: string) => async () => {
-    await markComplete(moduleId);
-  };
-
   // Show viewer if module is selected
   if (selectedModule) {
-    const progress = getModuleProgress(selectedModule.id);
     return (
       <div className="p-6">
         <TrainingViewer
           module={selectedModule}
-          progress={progress}
+          progress={undefined}
           onBack={handleBack}
-          onProgress={handleProgress(selectedModule.id)}
-          onComplete={handleComplete(selectedModule.id)}
+          onProgress={() => {}}
+          onComplete={() => {}}
         />
       </div>
     );
@@ -108,26 +100,20 @@ export default function CustomerTraining() {
         <p className="text-muted-foreground">Learn how to get the most from your AI assistant</p>
       </div>
 
-      {/* Overall Progress Card */}
+      {/* Summary Card */}
       <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
         <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                <GraduationCap className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Your Learning Progress</h3>
-                <p className="text-sm text-muted-foreground">
-                  {completedModules} of {totalModules} tutorials completed
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+              <GraduationCap className="h-6 w-6 text-primary" />
             </div>
-            <div className="text-right">
-              <span className="text-3xl font-bold text-primary">{overallProgress}%</span>
+            <div>
+              <h3 className="font-semibold">Training Library</h3>
+              <p className="text-sm text-muted-foreground">
+                {totalModules} tutorials available to help you succeed
+              </p>
             </div>
           </div>
-          <Progress value={overallProgress} className="h-3" />
         </CardContent>
       </Card>
 
@@ -137,7 +123,6 @@ export default function CustomerTraining() {
           {categories.map((category) => {
             const Icon = categoryIcons[category.icon || 'book-open'] || BookOpen;
             const categoryModules = getModulesByCategory(category.id);
-            const { completed, total, percent } = getCategoryProgress(category.id);
             const isExpanded = expandedCategory === category.id || categories.length <= 3;
 
             if (categoryModules.length === 0) return null;
@@ -163,33 +148,49 @@ export default function CustomerTraining() {
                       </div>
                     </CardTitle>
                     <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <span className="text-sm font-medium">{completed}/{total}</span>
-                        <p className="text-xs text-muted-foreground">completed</p>
-                      </div>
-                      {percent === 100 ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <ChevronRight className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                      )}
+                      <span className="text-sm text-muted-foreground">
+                        {categoryModules.length} {categoryModules.length === 1 ? 'tutorial' : 'tutorials'}
+                      </span>
+                      <ChevronRight className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                     </div>
                   </div>
-                  {total > 0 && (
-                    <Progress value={percent} className="h-1.5 mt-3" />
-                  )}
                 </CardHeader>
                 
                 {isExpanded && (
                   <CardContent className="pt-0">
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {categoryModules.map((module) => (
-                        <TrainingModuleCard
-                          key={module.id}
-                          module={module}
-                          progress={getModuleProgress(module.id)}
-                          onClick={() => handleModuleClick(module)}
-                        />
-                      ))}
+                      {categoryModules.map((module) => {
+                        const ContentIcon = contentTypeIcons[module.content_type] || FileText;
+                        return (
+                          <Card
+                            key={module.id}
+                            className="cursor-pointer hover:border-primary/50 transition-colors"
+                            onClick={() => handleModuleClick(module)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                                  <ContentIcon className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-sm truncate">{module.title}</h4>
+                                  {module.description && (
+                                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                                      {module.description}
+                                    </p>
+                                  )}
+                                  {module.duration_minutes && (
+                                    <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{module.duration_minutes} min</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 )}
