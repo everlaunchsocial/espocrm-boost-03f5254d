@@ -93,6 +93,7 @@ import OnboardingStep3 from "./pages/customer/OnboardingStep3";
 import OnboardingStep4 from "./pages/customer/OnboardingStep4";
 import OnboardingStep5 from "./pages/customer/OnboardingStep5";
 import OnboardingStep6 from "./pages/customer/OnboardingStep6";
+import VerticalLandingPage from "./pages/verticals/VerticalLandingPage";
 
 const queryClient = new QueryClient();
 
@@ -194,6 +195,9 @@ const App = () => (
             <Route path="/affiliate/billing" element={<AffiliateBilling />} />
             <Route path="/affiliate/settings" element={<AffiliateSettings />} />
           </Route>
+          
+          {/* Vertical Landing Pages - /:username/sales/:vertical */}
+          <Route path="/:username/sales/:vertical" element={<VerticalLandingPage />} />
           
           {/* Referral links - check if username is valid affiliate, redirect to signup */}
           <Route path="/:username" element={<ReferralRedirect />} />

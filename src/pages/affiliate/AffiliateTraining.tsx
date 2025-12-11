@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,7 +12,8 @@ import {
   Trophy,
   ChevronRight,
   CheckCircle2,
-  PlayCircle
+  PlayCircle,
+  Sparkles
 } from 'lucide-react';
 import { useTraining, TrainingModule } from '@/hooks/useTraining';
 import { TrainingModuleCard } from '@/components/training/TrainingModuleCard';
@@ -99,6 +101,22 @@ export default function AffiliateTraining() {
         <h1 className="text-3xl font-bold tracking-tight">How-To & Training</h1>
         <p className="text-muted-foreground">Learn everything you need to succeed as an EverLaunch affiliate</p>
       </div>
+
+      {/* Sales Tools Banner */}
+      <Link to="/affiliate/sales-tools">
+        <Card className="bg-gradient-to-r from-amber-500/20 to-orange-500/10 border-amber-500/30 hover:border-amber-500/50 transition-colors cursor-pointer">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-6 w-6 text-amber-500" />
+              <div>
+                <h3 className="font-semibold text-foreground">Sales Tools</h3>
+                <p className="text-sm text-muted-foreground">Access your personalized landing pages for each industry vertical</p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Overall Progress Card */}
       <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
