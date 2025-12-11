@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Users, Presentation, Calendar, Copy } from 'lucide-react';
+import { DollarSign, Users, Presentation, Calendar, Copy, TrendingUp, Clock } from 'lucide-react';
 import { useAffiliateLeadCount } from '@/hooks/useAffiliateLeads';
 import { useAffiliateDemoCount, useAffiliateDemosThisWeek } from '@/hooks/useAffiliateDemos';
+import { useCommissionSummary } from '@/hooks/useAffiliateCommissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DemoCreditsCard } from '@/components/affiliate/DemoCreditsCard';
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
@@ -14,6 +15,7 @@ export default function AffiliateDashboard() {
   const { data: leadCount, isLoading: leadsLoading } = useAffiliateLeadCount();
   const { data: demoCount, isLoading: demosLoading } = useAffiliateDemoCount();
   const { data: demosThisWeek, isLoading: weekLoading } = useAffiliateDemosThisWeek();
+  const { data: commissionSummary, isLoading: commissionsLoading } = useCommissionSummary();
   const { affiliate, isLoading: affiliateLoading } = useCurrentAffiliate();
   
   const [sponsorName, setSponsorName] = useState<string | null>(null);
@@ -143,17 +145,38 @@ export default function AffiliateDashboard() {
         <p className="text-muted-foreground">Welcome to your affiliate back office</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <DemoCreditsCard compact />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Commissions</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            {commissionsLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold text-yellow-600">
+                ${(commissionSummary?.pendingThisMonth || 0).toFixed(2)}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">This month</p>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Commissions</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Lifetime Earned</CardTitle>
+            <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$0.00</div>
-            <p className="text-xs text-muted-foreground">Lifetime earnings</p>
+            {commissionsLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold text-green-600">
+                ${(commissionSummary?.lifetimeEarned || 0).toFixed(2)}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Total paid out</p>
           </CardContent>
         </Card>
 
@@ -169,6 +192,58 @@ export default function AffiliateDashboard() {
               <div className="text-2xl font-bold">{leadCount}</div>
             )}
             <p className="text-xs text-muted-foreground">In your pipeline</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Demos</CardTitle>
+            <Presentation className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {demosLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{demoCount}</div>
+            )}
+            <p className="text-xs text-muted-foreground">All time</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Demos This Week</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {weekLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{demosThisWeek}</div>
+            )}
+            <p className="text-xs text-muted-foreground">Created this week</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Second row: Credits + Quick Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <DemoCreditsCard compact />
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Est. Annual</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {commissionsLoading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold text-muted-foreground">
+                ${(commissionSummary?.projectedAnnual || 0).toFixed(0)}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Projected (not guaranteed)</p>
           </CardContent>
         </Card>
 

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAffiliateDemos } from '@/hooks/useAffiliateDemos';
 import { DataTable } from '@/components/crm/DataTable';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Eye, MessageSquare, Phone, Mail, MailOpen } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Globe, Eye, MessageSquare, Phone, Mail, MailOpen, Presentation, TrendingUp, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { Demo } from '@/hooks/useDemos';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,6 +68,22 @@ export default function AffiliateDemos() {
     };
 
     fetchEmailStatuses();
+  }, [demos]);
+
+  // Calculate summary stats
+  const stats = useMemo(() => {
+    const totalViews = demos.reduce((sum, d) => sum + (d.view_count || 0), 0);
+    const totalChats = demos.reduce((sum, d) => sum + (d.chat_interaction_count || 0), 0);
+    const totalVoice = demos.reduce((sum, d) => sum + (d.voice_interaction_count || 0), 0);
+    const engagedDemos = demos.filter(d => d.view_count > 0 || d.chat_interaction_count > 0 || d.voice_interaction_count > 0).length;
+    const engagementRate = demos.length > 0 ? Math.round((engagedDemos / demos.length) * 100) : 0;
+    
+    return {
+      total: demos.length,
+      totalViews,
+      totalInteractions: totalChats + totalVoice,
+      engagementRate,
+    };
   }, [demos]);
 
   const columns = [
@@ -189,6 +206,48 @@ export default function AffiliateDemos() {
           <h1 className="text-2xl font-semibold text-foreground">AI Demos</h1>
           <p className="text-muted-foreground mt-1">Manage your personalized AI demos</p>
         </div>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Demos</CardTitle>
+            <Presentation className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalViews}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Interactions</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalInteractions}</div>
+            <p className="text-xs text-muted-foreground">Chat + Voice</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Engagement Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.engagementRate}%</div>
+            <p className="text-xs text-muted-foreground">Demos with activity</p>
+          </CardContent>
+        </Card>
       </div>
 
       {demos.length === 0 ? (
