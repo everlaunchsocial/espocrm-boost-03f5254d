@@ -184,7 +184,7 @@ export default function CustomerCheckoutPage() {
               Choose Your Plan
             </h1>
             <p className="text-muted-foreground">
-              Select the plan that fits your business needs.
+              Choose the plan that fits your business needs.
             </p>
           </div>
           
