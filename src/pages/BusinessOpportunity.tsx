@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, ArrowRight, Zap, DollarSign, Users, TrendingUp, Gift, Rocket, Star, Play } from 'lucide-react';
+import { EarningsDisclaimer } from '@/components/EarningsDisclaimer';
 
 const BusinessOpportunity = () => {
   const navigate = useNavigate();
@@ -288,8 +289,11 @@ const BusinessOpportunity = () => {
 
       {/* Footer */}
       <footer className="border-t border-white/10 py-8">
-        <div className="container mx-auto px-4 text-center text-gray-400">
-          <p>&copy; {new Date().getFullYear()} EverLaunch AI. All rights reserved.</p>
+        <div className="container mx-auto px-4">
+          <div className="max-w-2xl mx-auto mb-6">
+            <EarningsDisclaimer variant="inline" showFullLink className="text-center text-gray-400" />
+          </div>
+          <p className="text-center text-gray-400">&copy; {new Date().getFullYear()} EverLaunch AI. All rights reserved.</p>
         </div>
       </footer>
     </div>

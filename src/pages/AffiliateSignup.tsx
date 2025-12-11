@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Check, Loader2, Zap, Crown, Building2, Sparkles, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { EarningsDisclaimer } from '@/components/EarningsDisclaimer';
 
 interface AffiliatePlan {
   id: string;
@@ -109,6 +110,9 @@ export default function AffiliateSignup() {
     }
   };
 
+  // Earnings disclaimer checkbox state
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+
   const validateForm = (): boolean => {
     if (!username || username.length < 3) {
       toast.error('Username must be at least 3 characters');
@@ -132,6 +136,10 @@ export default function AffiliateSignup() {
     }
     if (!lastName.trim()) {
       toast.error('Last name is required');
+      return false;
+    }
+    if (!disclaimerAccepted) {
+      toast.error('Please accept the earnings disclaimer to continue');
       return false;
     }
     return true;
@@ -391,11 +399,19 @@ export default function AffiliateSignup() {
                 disabled={isSubmitting}
               />
             </div>
+
+            <EarningsDisclaimer
+              variant="checkbox"
+              checked={disclaimerAccepted}
+              onCheckedChange={setDisclaimerAccepted}
+              required
+            />
           </CardContent>
         </Card>
 
         {/* Pricing Cards */}
-        <h2 className="text-2xl font-bold text-center mb-6">Choose Your Plan</h2>
+        <h2 className="text-2xl font-bold text-center mb-4">Choose Your Plan</h2>
+        <EarningsDisclaimer variant="inline" className="text-center mb-6" />
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan) => (
             <Card 
