@@ -1,8 +1,24 @@
-import { HelpCircle, MessageCircle, Mail, BookOpen } from 'lucide-react';
+import { HelpCircle, MessageCircle, Mail, BookOpen, Phone, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 export default function CustomerSupport() {
+  const navigate = useNavigate();
+
+  // Trigger the chat widget by simulating a click on the floating button
+  const openChatWidget = () => {
+    // The SupportChatWidget is rendered in CustomerPortalLayout
+    // We can dispatch a custom event to open it
+    const chatButton = document.querySelector('[data-support-chat-trigger]');
+    if (chatButton) {
+      (chatButton as HTMLElement).click();
+    } else {
+      // Fallback - scroll to bottom right where widget is
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -18,18 +34,22 @@ export default function CustomerSupport() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-primary" />
-                Knowledge Base
+                Training Center
               </CardTitle>
               <CardDescription>
-                Browse FAQs and how-to guides
+                Learn how to get the most from your AI
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Find answers to common questions and learn how to get the most out of your AI assistant.
+                Access tutorials, guides, and best practices for setting up and optimizing your AI assistant.
               </p>
-              <Button variant="outline" disabled className="w-full">
-                Coming Soon
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => navigate('/customer/training')}
+              >
+                View Training
               </Button>
             </CardContent>
           </Card>
@@ -41,15 +61,19 @@ export default function CustomerSupport() {
                 Live Chat
               </CardTitle>
               <CardDescription>
-                Chat with our support team
+                Chat with our AI support assistant
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Get instant help from our support team during business hours.
+                Get instant answers to common questions using our AI-powered chat support.
               </p>
-              <Button variant="outline" disabled className="w-full">
-                Coming Soon
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={openChatWidget}
+              >
+                Open Chat
               </Button>
             </CardContent>
           </Card>
@@ -66,7 +90,7 @@ export default function CustomerSupport() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                For non-urgent inquiries, send us an email and we'll respond within 24 hours.
+                For detailed inquiries, send us an email and we'll respond within 24 hours.
               </p>
               <Button 
                 variant="outline" 
@@ -81,7 +105,7 @@ export default function CustomerSupport() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <HelpCircle className="h-5 w-5 text-primary" />
+                <Phone className="h-5 w-5 text-primary" />
                 Schedule a Call
               </CardTitle>
               <CardDescription>
