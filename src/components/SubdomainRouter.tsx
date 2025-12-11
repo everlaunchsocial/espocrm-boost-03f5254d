@@ -56,7 +56,7 @@ export function SubdomainRouter({ children }: SubdomainRouterProps) {
     if (subPath.startsWith('sales/')) {
       const verticalSlug = subPath.replace('sales/', '');
       if (VERTICAL_SLUGS.includes(verticalSlug)) {
-        return <VerticalLandingPage />;
+        return <VerticalLandingPage affiliateUsername={affiliateUsername} verticalSlug={verticalSlug} />;
       }
     }
     
