@@ -5,6 +5,7 @@ export interface CartesiaVoice {
   name: string;
   gender: 'female' | 'male';
   customerVisible?: boolean; // If false, only visible to super_admin
+  emotive?: boolean; // Recommended for expressive/companion apps
 }
 
 // All available Cartesia voices (super admin can see all)
@@ -21,6 +22,7 @@ export const CARTESIA_VOICES: CartesiaVoice[] = [
   { id: '01eaafa9-308a-4276-a017-6ab0cf061b1f', name: 'Clara', gender: 'female', customerVisible: false },
   { id: '8918ddfe-2ad4-4cc8-a573-e020ca13f3f5', name: 'Erin', gender: 'female', customerVisible: false },
   { id: '1242fb95-7ddd-44ac-8a05-9e8a22a6137d', name: 'Cindy', gender: 'female', customerVisible: false },
+  { id: '2deb3edf-b9d8-4d06-8ea6-042f5d6b1c29', name: 'Ariana', gender: 'female', customerVisible: true, emotive: true },
   // Male voices
   { id: 'a167e0f3-df7e-4d52-a9c3-f949145efdab', name: 'Blake', gender: 'male', customerVisible: false },
   { id: 'd46abd1d-2d02-43e8-819f-51fb652c1c61', name: 'Grant', gender: 'male', customerVisible: true },
