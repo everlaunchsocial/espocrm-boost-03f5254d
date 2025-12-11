@@ -114,7 +114,7 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
         },
         voice: {
           provider: 'cartesia',
-          voiceId: voiceSettings?.voice_gender === 'male' ? 'ee7ea9f8-c0c1-498c-9f62-5c57f8f1f7d8' : '2b568345-1d48-4f7e-9571-7d4cd87f1765',
+          voiceId: voiceSettings?.voice_gender === 'male' ? 'd46abd1d-2d02-43e8-819f-51fb652c1c61' : '9626c31c-bec5-4cca-baa8-f8ba9e84c8bc', // Grant (male) / Jacqueline (female)
         },
         firstMessage: greeting,
       }),
@@ -185,9 +185,24 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
     }
 
     const phoneData = await phoneResponse.json();
-    const phoneNumber = phoneData.number;
+    console.log('Phone response data:', JSON.stringify(phoneData));
     const phoneNumberId = phoneData.id;
-    console.log('Purchased phone number:', phoneNumber);
+    
+    // Fetch phone number details to get the actual number
+    let phoneNumber = phoneData.number || phoneData.phoneNumber;
+    if (!phoneNumber && phoneNumberId) {
+      console.log('Fetching phone number details...');
+      const detailsResponse = await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
+        headers: { 'Authorization': `Bearer ${activeVapiKey}` },
+      });
+      if (detailsResponse.ok) {
+        const detailsData = await detailsResponse.json();
+        console.log('Phone details:', JSON.stringify(detailsData));
+        phoneNumber = detailsData.number || detailsData.phoneNumber;
+      }
+    }
+    
+    console.log('Purchased phone number:', phoneNumber, 'ID:', phoneNumberId);
 
     // 5b. Clear any inherited server URL from account defaults
     console.log('Clearing server URL for phone number...');
