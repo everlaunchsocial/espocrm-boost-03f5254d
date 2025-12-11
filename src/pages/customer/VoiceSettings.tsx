@@ -83,35 +83,49 @@ export default function VoiceSettings() {
     );
   }
 
+  const handleChooseVoice = async (voiceId: string) => {
+    setLocalSettings(prev => prev ? { ...prev, voiceId } : prev);
+    await updateSettings({ voiceId });
+  };
+
   const VoiceOption = ({ voice, isSelected }: { voice: CartesiaVoice; isSelected: boolean }) => (
     <div
-      onClick={() => handleVoiceSelect(voice.id)}
       className={cn(
-        "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all",
+        "flex items-center justify-between p-3 rounded-lg border transition-all",
         isSelected 
           ? "border-primary bg-primary/10" 
-          : "border-border hover:border-primary/50 hover:bg-muted/50"
+          : "border-border"
       )}
     >
       <div className="flex items-center gap-3">
         {isSelected && <Check className="h-4 w-4 text-primary" />}
         <span className={cn("font-medium", isSelected && "text-primary")}>{voice.name}</span>
       </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={(e) => {
-          e.stopPropagation();
-          handlePreviewVoice(voice.id);
-        }}
-        disabled={isPreviewLoading && previewingVoiceId === voice.id}
-        className="h-8 w-8 p-0"
-      >
-        <Volume2 className={cn(
-          "h-4 w-4",
-          isPreviewLoading && previewingVoiceId === voice.id && "animate-pulse"
-        )} />
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handlePreviewVoice(voice.id)}
+          disabled={isPreviewLoading && previewingVoiceId === voice.id}
+          className="h-8 w-8 p-0"
+        >
+          <Volume2 className={cn(
+            "h-4 w-4",
+            isPreviewLoading && previewingVoiceId === voice.id && "animate-pulse"
+          )} />
+        </Button>
+        {!isSelected && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleChooseVoice(voice.id)}
+            disabled={isSaving}
+            className="h-8"
+          >
+            Choose
+          </Button>
+        )}
+      </div>
     </div>
   );
 

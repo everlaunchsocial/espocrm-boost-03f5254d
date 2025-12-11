@@ -15,6 +15,9 @@ const DEFAULT_SETTINGS: VoiceSettingsData = {
   greetingText: "Hi there! Thanks for calling. How can I help you today?",
 };
 
+// Track current playing audio to stop it before playing new one
+let currentAudio: HTMLAudioElement | null = null;
+
 export function useVoiceSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -145,6 +148,13 @@ export function useVoiceSettings() {
   }, [customerId, settings]);
 
   const previewVoice = useCallback(async (voiceId: string, text: string) => {
+    // Stop any currently playing audio first
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      currentAudio = null;
+    }
+
     setIsPreviewLoading(true);
 
     try {
@@ -156,6 +166,10 @@ export function useVoiceSettings() {
 
       if (data?.audio) {
         const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+        currentAudio = audio;
+        audio.onended = () => {
+          currentAudio = null;
+        };
         await audio.play();
       } else if (data?.message) {
         toast.info(data.message);
