@@ -59,6 +59,7 @@ const affiliateNavigation = [
   { name: 'Deals', href: '/affiliate/deals', icon: Handshake },
   { name: 'Tasks', href: '/affiliate/tasks', icon: CheckSquare },
   { name: 'Demos', href: '/affiliate/demos', icon: Presentation },
+  { name: 'Sales Tools', href: '/affiliate/sales-tools', icon: Sparkles },
   { name: 'Commissions', href: '/affiliate/commissions', icon: DollarSign },
   { name: 'Team', href: '/affiliate/team', icon: Users },
   { name: 'How-To', href: '/affiliate/training', icon: GraduationCap },
