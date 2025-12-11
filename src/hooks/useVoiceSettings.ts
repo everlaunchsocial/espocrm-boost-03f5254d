@@ -154,8 +154,8 @@ export function useVoiceSettings() {
 
       if (error) throw error;
 
-      if (data?.audio_base64) {
-        const audio = new Audio(`data:audio/mp3;base64,${data.audio_base64}`);
+      if (data?.audio) {
+        const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
         await audio.play();
       } else if (data?.message) {
         toast.info(data.message);
