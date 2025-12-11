@@ -113,8 +113,8 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
           ],
         },
         voice: {
-          provider: 'openai',
-          voiceId: voiceSettings?.voice_gender === 'female' ? 'nova' : 'echo',
+          provider: 'cartesia',
+          voiceId: voiceSettings?.voice_gender === 'male' ? 'ee7ea9f8-c0c1-498c-9f62-5c57f8f1f7d8' : '2b568345-1d48-4f7e-9571-7d4cd87f1765',
         },
         firstMessage: greeting,
       }),
