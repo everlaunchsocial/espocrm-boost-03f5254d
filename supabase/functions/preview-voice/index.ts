@@ -63,10 +63,10 @@ serve(async (req) => {
         },
       };
 
-      // Add speed control if provided
+      // Add speed control inside voice object if provided (Cartesia uses __experimental_controls)
       if (speed !== undefined && speed !== null && speed !== 1.0) {
         const cartesiaSpeed = mapSpeedToCartesia(speed);
-        requestBody.experimental_controls = {
+        requestBody.voice.__experimental_controls = {
           speed: cartesiaSpeed
         };
         console.log('Preview with speed:', speed, '-> Cartesia:', cartesiaSpeed);
