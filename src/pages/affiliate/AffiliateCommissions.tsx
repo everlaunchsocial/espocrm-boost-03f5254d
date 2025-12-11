@@ -16,6 +16,7 @@ import {
 } from '@/hooks/useAffiliateCommissions';
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
 import { useAffiliatePayouts, PayoutRow } from '@/hooks/usePayouts';
+import { EarningsDisclaimer } from '@/components/EarningsDisclaimer';
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -388,6 +389,8 @@ export default function AffiliateCommissions() {
         <h1 className="text-3xl font-bold tracking-tight">Your Commissions</h1>
         <p className="text-muted-foreground">Track your earnings from personal and team sales</p>
       </div>
+
+      <EarningsDisclaimer variant="card" />
 
       <SummaryCards />
 
