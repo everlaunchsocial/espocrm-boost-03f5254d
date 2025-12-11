@@ -147,7 +147,7 @@ export function useVoiceSettings() {
     }
   }, [customerId, settings]);
 
-  const previewVoice = useCallback(async (voiceId: string, text: string) => {
+  const previewVoice = useCallback(async (voiceId: string, text: string, speed?: number) => {
     // Stop any currently playing audio first
     if (currentAudio) {
       currentAudio.pause();
@@ -159,7 +159,7 @@ export function useVoiceSettings() {
 
     try {
       const { data, error } = await supabase.functions.invoke('preview-voice', {
-        body: { voice_id: voiceId, text },
+        body: { voice_id: voiceId, text, speed },
       });
 
       if (error) throw error;
