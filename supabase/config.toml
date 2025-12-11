@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.customer-preview-chat]
 verify_jwt = false
+
+[functions.create-lead-and-notify]
+verify_jwt = false

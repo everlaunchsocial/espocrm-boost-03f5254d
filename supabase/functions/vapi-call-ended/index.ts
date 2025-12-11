@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
@@ -7,8 +8,6 @@ const corsHeaders = {
 };
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-// Email address to receive call transcripts
 const TRANSCRIPT_EMAIL = "info@everlaunch.ai";
 
 serve(async (req) => {
@@ -20,7 +19,6 @@ serve(async (req) => {
     const body = await req.json();
     console.log('Vapi call-ended webhook received:', JSON.stringify(body, null, 2));
 
-    // Extract call data from Vapi end-of-call report
     const message = body.message || body;
     const call = message.call || body.call || {};
     const transcript = message.transcript || body.transcript || '';
@@ -29,12 +27,48 @@ serve(async (req) => {
     const callDuration = call.duration || message.duration || 0;
     const callId = call.id || message.callId || 'unknown';
     const endedReason = message.endedReason || call.endedReason || 'unknown';
+    
+    // Extract customer_id from assistant metadata if available
+    const assistantId = call.assistantId || message.assistantId;
+    const customerId = call.metadata?.customer_id || message.metadata?.customer_id;
 
     console.log('Call ID:', callId);
     console.log('Caller phone:', callerPhone);
     console.log('Duration:', callDuration, 'seconds');
-    console.log('Transcript length:', transcript.length);
+    console.log('Customer ID:', customerId);
 
+    // If we have a customer_id, try to create lead and notify
+    if (customerId && callerPhone && callerPhone !== 'Unknown') {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Call create-lead-and-notify
+        const { data, error } = await supabase.functions.invoke('create-lead-and-notify', {
+          body: {
+            customer_id: customerId,
+            lead_data: {
+              first_name: 'Caller',
+              last_name: callerPhone,
+              phone: callerPhone,
+              source: 'voice',
+              message: summary || transcript?.substring(0, 500) || 'Phone call received',
+            },
+          },
+        });
+
+        if (error) {
+          console.error('Error calling create-lead-and-notify:', error);
+        } else {
+          console.log('Lead notification sent:', data);
+        }
+      } catch (leadError) {
+        console.error('Failed to create lead notification:', leadError);
+      }
+    }
+
+    // Still send transcript email to admin
     if (!transcript || transcript.length < 10) {
       console.log('No meaningful transcript to send');
       return new Response(
@@ -43,12 +77,10 @@ serve(async (req) => {
       );
     }
 
-    // Format duration as MM:SS
     const minutes = Math.floor(callDuration / 60);
     const seconds = callDuration % 60;
     const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
-    // Send email with transcript
     const emailResponse = await resend.emails.send({
       from: "EverLaunch AI <info@everlaunch.ai>",
       to: [TRANSCRIPT_EMAIL],
@@ -62,6 +94,7 @@ serve(async (req) => {
             <p style="margin: 5px 0;"><strong>Duration:</strong> ${formattedDuration}</p>
             <p style="margin: 5px 0;"><strong>Call ID:</strong> ${callId}</p>
             <p style="margin: 5px 0;"><strong>Ended:</strong> ${endedReason}</p>
+            ${customerId ? `<p style="margin: 5px 0;"><strong>Customer ID:</strong> ${customerId}</p>` : ''}
           </div>
           
           ${summary ? `
