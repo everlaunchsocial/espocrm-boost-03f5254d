@@ -36,6 +36,18 @@ export default function OnboardingStep1() {
     return url;
   };
 
+  const formatPhoneNumber = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhone(formatted);
+  };
+
   const validatePhone = (phoneNumber: string) => {
     if (!phoneNumber) return true; // Optional field
     const cleaned = phoneNumber.replace(/\D/g, '');
@@ -163,10 +175,11 @@ export default function OnboardingStep1() {
             </Label>
             <Input
               id="phone"
-              placeholder="(555) 123-4567"
+              placeholder="555-555-5555"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={handlePhoneChange}
               onBlur={handleBlur}
+              maxLength={12}
             />
           </div>
 
