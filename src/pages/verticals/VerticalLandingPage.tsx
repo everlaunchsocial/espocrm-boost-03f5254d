@@ -17,8 +17,15 @@ import {
 import { verticalConfig, type VerticalKey } from '@/lib/verticalConfig';
 import everlaunchLogoWhite from '@/assets/everlaunch-logo-white.png';
 
-export default function VerticalLandingPage() {
-  const { username, vertical } = useParams<{ username: string; vertical: string }>();
+interface VerticalLandingPageProps {
+  affiliateUsername?: string;
+  verticalSlug?: string;
+}
+
+export default function VerticalLandingPage({ affiliateUsername, verticalSlug }: VerticalLandingPageProps = {}) {
+  const params = useParams<{ username: string; vertical: string }>();
+  const username = affiliateUsername || params.username;
+  const vertical = verticalSlug || params.vertical;
   const [affiliateId, setAffiliateId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
