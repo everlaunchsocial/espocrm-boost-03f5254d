@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign, Clock, CheckCircle, Users, TrendingUp, AlertCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import {
   useAffiliateCommissions,
   useCommissionSummary,
@@ -113,6 +114,77 @@ function SummaryCards() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function EarningsTrendChart() {
+  const { data: commissions = [], isLoading } = useAffiliateCommissions('all', 'all_time');
+
+  const chartData = useMemo(() => {
+    const months: { month: string; earned: number; pending: number }[] = [];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = subMonths(now, i);
+      const monthStart = startOfMonth(monthDate);
+      const monthEnd = endOfMonth(monthDate);
+      const monthLabel = format(monthDate, 'MMM');
+      
+      const monthCommissions = commissions.filter((c) => {
+        const d = new Date(c.createdAt);
+        return d >= monthStart && d <= monthEnd;
+      });
+      
+      const earned = monthCommissions
+        .filter((c) => c.status === 'paid')
+        .reduce((sum, c) => sum + c.amount, 0);
+      const pending = monthCommissions
+        .filter((c) => c.status === 'pending')
+        .reduce((sum, c) => sum + c.amount, 0);
+      
+      months.push({ month: monthLabel, earned, pending });
+    }
+    
+    return months;
+  }, [commissions]);
+
+  if (isLoading) {
+    return <Skeleton className="h-[200px] w-full" />;
+  }
+
+  const hasData = chartData.some((d) => d.earned > 0 || d.pending > 0);
+
+  if (!hasData) {
+    return (
+      <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
+        No earnings data to display yet
+      </div>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+        <YAxis 
+          tick={{ fontSize: 12 }} 
+          axisLine={false} 
+          tickLine={false}
+          tickFormatter={(v) => `$${v}`}
+        />
+        <Tooltip 
+          formatter={(value: number) => [`$${value.toFixed(2)}`, '']}
+          contentStyle={{ 
+            backgroundColor: 'hsl(var(--popover))', 
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '8px',
+            fontSize: '12px',
+          }}
+        />
+        <Bar dataKey="earned" name="Paid" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="pending" name="Pending" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} opacity={0.5} />
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -393,6 +465,29 @@ export default function AffiliateCommissions() {
       <EarningsDisclaimer variant="card" />
 
       <SummaryCards />
+
+      {/* Earnings Trend Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            6-Month Earnings Trend
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EarningsTrendChart />
+          <div className="flex items-center justify-center gap-6 mt-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-primary" />
+              <span>Paid</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded bg-muted-foreground/50" />
+              <span>Pending</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="personal" className="space-y-4">
         <TabsList>
