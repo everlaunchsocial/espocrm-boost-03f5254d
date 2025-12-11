@@ -186,7 +186,28 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
 
     const phoneData = await phoneResponse.json();
     const phoneNumber = phoneData.number;
+    const phoneNumberId = phoneData.id;
     console.log('Purchased phone number:', phoneNumber);
+
+    // 5b. Clear any inherited server URL from account defaults
+    console.log('Clearing server URL for phone number...');
+    const clearUrlResponse = await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${activeVapiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        serverUrl: null,
+        serverUrlSecret: null,
+      }),
+    });
+
+    if (!clearUrlResponse.ok) {
+      console.error('Warning: Failed to clear server URL:', await clearUrlResponse.text());
+    } else {
+      console.log('Cleared server URL successfully');
+    }
 
     // 6. Save to customer_phone_numbers table
     const { error: insertError } = await supabase
