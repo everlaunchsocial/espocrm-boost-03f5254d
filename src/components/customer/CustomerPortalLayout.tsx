@@ -8,7 +8,8 @@ import {
   HelpCircle,
   LogOut,
   Menu,
-  Eye
+  Eye,
+  Copy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -169,6 +170,19 @@ export function CustomerPortalLayout() {
             <p className="text-xs text-muted-foreground truncate">
               {customerProfile?.contact_name || 'Customer'}
             </p>
+            {customerProfile?.id && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(customerProfile.id);
+                  toast.success('Customer ID copied');
+                }}
+                className="flex items-center gap-1 mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                title="Click to copy full ID"
+              >
+                <span className="font-mono">ID: {customerProfile.id.slice(0, 8)}...</span>
+                <Copy className="h-3 w-3" />
+              </button>
+            )}
           </div>
           <Button 
             variant="outline" 
