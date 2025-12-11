@@ -219,7 +219,7 @@ export default function CustomerLandingPage() {
             {features.map((feature, index) => (
               <Card 
                 key={feature.title} 
-                className="group relative border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10"
+                className="group relative border-white/10 bg-[#111827] backdrop-blur-sm hover:border-blue-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-lg" />
@@ -259,7 +259,7 @@ export default function CustomerLandingPage() {
             {plans.map((plan) => (
               <Card 
                 key={plan.name} 
-                className={`relative border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${
+                className={`relative border-white/10 bg-[#111827] backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${
                   plan.popular 
                     ? "border-blue-500/50 shadow-xl shadow-blue-500/20" 
                     : "hover:border-white/20"
