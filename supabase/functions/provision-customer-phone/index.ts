@@ -204,6 +204,30 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
     
     console.log('Purchased phone number:', phoneNumber, 'ID:', phoneNumberId);
 
+    // 5a. Validate phone number is a real PSTN number before proceeding
+    if (!phoneNumber || !phoneNumber.match(/^\+?\d{10,15}$/)) {
+      console.error('Invalid phone number received:', phoneNumber);
+      
+      // Clean up the assistant and phone endpoint we created
+      await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${activeVapiKey}` },
+      });
+      await fetch(`https://api.vapi.ai/assistant/${assistant.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${activeVapiKey}` },
+      });
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Could not provision a real phone number. Please try a different area code.',
+          suggestedCodes: ['617', '508', '781', '857']
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // 5b. Clear any inherited server URL from account defaults
     console.log('Clearing server URL for phone number...');
     const clearUrlResponse = await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
