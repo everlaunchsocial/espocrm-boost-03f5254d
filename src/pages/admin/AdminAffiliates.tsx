@@ -49,7 +49,20 @@ export default function AdminAffiliates() {
     },
   });
 
-  const handleViewAs = (affiliate: Affiliate) => {
+  const handleViewAs = async (affiliate: Affiliate) => {
+    // Log impersonation start
+    try {
+      await supabase.from('impersonation_logs').insert({
+        admin_user_id: (await supabase.auth.getUser()).data.user?.id,
+        impersonated_affiliate_id: affiliate.id,
+        impersonated_username: affiliate.username,
+        action: 'start',
+        user_agent: navigator.userAgent,
+      });
+    } catch (err) {
+      console.error('Failed to log impersonation start:', err);
+    }
+
     // Store impersonation data in localStorage
     localStorage.setItem('impersonating_affiliate_id', affiliate.id);
     localStorage.setItem('impersonating_affiliate_username', affiliate.username);
