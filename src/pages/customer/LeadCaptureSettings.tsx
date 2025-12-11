@@ -154,9 +154,28 @@ export default function LeadCaptureSettings() {
     setHasChanges(true);
   };
 
-  const handleSourceToggle = (source: keyof LeadSourcesEnabled) => {
-    setLeadSourcesEnabled(prev => ({ ...prev, [source]: !prev[source] }));
-    setHasChanges(true);
+  // Auto-save helper
+  const autoSave = async (updates: Record<string, any>) => {
+    const success = await updateProfile(updates as any);
+    if (success) {
+      toast.success('Settings saved');
+    }
+  };
+
+  const handleSourceToggle = async (source: keyof LeadSourcesEnabled) => {
+    const newSources = { ...leadSourcesEnabled, [source]: !leadSourcesEnabled[source] };
+    setLeadSourcesEnabled(newSources);
+    await autoSave({ lead_sources_enabled: newSources });
+  };
+
+  const handleLeadCaptureToggle = async (checked: boolean) => {
+    setLeadCaptureEnabled(checked);
+    await autoSave({ lead_capture_enabled: checked });
+  };
+
+  const handleSmsToggle = async (checked: boolean) => {
+    setSmsNotificationsEnabled(checked);
+    await autoSave({ sms_notifications_enabled: checked });
   };
 
   const handleBusinessHoursChange = (day: keyof BusinessHours, field: 'enabled' | 'open' | 'close', value: boolean | string) => {
@@ -351,10 +370,7 @@ export default function LeadCaptureSettings() {
                 </div>
                 <Switch
                   checked={leadCaptureEnabled}
-                  onCheckedChange={(checked) => {
-                    setLeadCaptureEnabled(checked);
-                    setHasChanges(true);
-                  }}
+                  onCheckedChange={handleLeadCaptureToggle}
                 />
               </div>
 
@@ -432,10 +448,7 @@ export default function LeadCaptureSettings() {
                         <span className="text-xs text-muted-foreground">Enable SMS</span>
                         <Switch
                           checked={smsNotificationsEnabled}
-                          onCheckedChange={(checked) => {
-                            setSmsNotificationsEnabled(checked);
-                            setHasChanges(true);
-                          }}
+                          onCheckedChange={handleSmsToggle}
                         />
                       </div>
                     </div>

@@ -75,6 +75,15 @@ serve(async (req) => {
       }
     }
 
+    // Map numeric speed (0.5-2.0) to Cartesia string values
+    const mapSpeedToCartesia = (speed: number): string => {
+      if (speed <= 0.6) return 'slowest';
+      if (speed <= 0.85) return 'slow';
+      if (speed <= 1.15) return 'normal';
+      if (speed <= 1.5) return 'fast';
+      return 'fastest';
+    };
+
     // Build update payload
     const updatePayload: any = {};
 
@@ -85,10 +94,13 @@ serve(async (req) => {
         voiceId: voice_id,
       };
       
-      // Add speed if provided (Cartesia supports 0.5 to 2.0)
+      // Add speed using Cartesia's experimental controls format
       if (voice_speed !== undefined && voice_speed !== null) {
-        updatePayload.voice.speed = voice_speed;
-        console.log('Setting voice speed:', voice_speed);
+        const cartesiaSpeed = mapSpeedToCartesia(voice_speed);
+        updatePayload.voice.experimentalControls = {
+          speed: cartesiaSpeed
+        };
+        console.log('Setting voice speed:', voice_speed, '-> Cartesia:', cartesiaSpeed);
       }
       
       console.log('Setting voice to Cartesia voiceId:', voice_id);
