@@ -16,7 +16,8 @@ import {
   Phone,
   Copy,
   CheckCircle,
-  Lightbulb
+  Lightbulb,
+  Mic
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,10 +37,13 @@ export default function AIPreview() {
   const { 
     isLoading, 
     customerProfile, 
-    twilioNumber,
     voiceSettings,
     chatSettings
   } = useCustomerOnboarding();
+
+  // Phone number state - query directly from customer_phone_numbers
+  const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
+  const [phoneLoading, setPhoneLoading] = useState(true);
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -62,22 +66,35 @@ export default function AIPreview() {
   const vapiRef = useRef<Vapi | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch assistant ID for voice calls
+  // Fetch phone number and assistant ID
   useEffect(() => {
-    async function fetchAssistantId() {
+    async function fetchPhoneData() {
       if (!customerProfile?.id) return;
       
-      const { data } = await supabase
-        .from('customer_phone_numbers')
-        .select('vapi_assistant_id')
-        .eq('customer_id', customerProfile.id)
-        .maybeSingle();
-      
-      if (data?.vapi_assistant_id) {
-        setAssistantId(data.vapi_assistant_id);
+      setPhoneLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('customer_phone_numbers')
+          .select('phone_number, vapi_assistant_id')
+          .eq('customer_id', customerProfile.id)
+          .maybeSingle();
+        
+        if (data) {
+          // Check if it's a real phone number (not SIP-only)
+          if (data.phone_number && !data.phone_number.includes('SIP-only')) {
+            setPhoneNumber(data.phone_number);
+          }
+          if (data.vapi_assistant_id) {
+            setAssistantId(data.vapi_assistant_id);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching phone data:', err);
+      } finally {
+        setPhoneLoading(false);
       }
     }
-    fetchAssistantId();
+    fetchPhoneData();
   }, [customerProfile?.id]);
 
   // Fetch mobile screenshot
@@ -185,8 +202,8 @@ Keep responses helpful, concise, and professional.`;
   };
 
   const copyPhoneNumber = () => {
-    if (twilioNumber) {
-      navigator.clipboard.writeText(twilioNumber);
+    if (phoneNumber) {
+      navigator.clipboard.writeText(phoneNumber);
       setCopiedPhone(true);
       toast.success('Phone number copied!');
       setTimeout(() => setCopiedPhone(false), 2000);
@@ -336,42 +353,108 @@ Keep responses helpful, concise, and professional.`;
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content - Two Column Layout */}
       <main className="max-w-7xl mx-auto px-4 py-8 md:py-12 -mt-4">
         <div className="grid lg:grid-cols-5 gap-8">
           
-          {/* Left Column - Voice Card & Mobile Preview */}
+          {/* LEFT COLUMN - Three Ways to Test + Voice Card + Tips */}
           <div className="lg:col-span-2 space-y-6">
+            
+            {/* Three Ways to Test Card */}
+            <Card className="shadow-xl border-0 overflow-hidden">
+              <div className="bg-gradient-to-r from-primary/10 to-primary/5 px-6 py-4 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-primary/20 rounded">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="font-semibold text-primary">Three Ways to Test</span>
+                </div>
+              </div>
+              
+              <CardContent className="p-6 space-y-5">
+                {/* Option 1: AI Chat */}
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
+                    1
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      AI Chat
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Click the chat bubble on the phone preview to test your web chat
+                    </p>
+                  </div>
+                </div>
+
+                {/* Option 2: AI Voice Web */}
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground flex items-center gap-2">
+                      <Mic className="h-4 w-4 text-primary" />
+                      AI Voice Web
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Use the voice card below to talk directly with your AI in the browser
+                    </p>
+                  </div>
+                </div>
+
+                {/* Option 3: Phone Call */}
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
+                    3
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-primary" />
+                      Phone Call
+                    </p>
+                    {phoneLoading ? (
+                      <p className="text-sm text-muted-foreground mt-1">Loading phone number...</p>
+                    ) : phoneNumber ? (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-lg font-semibold text-foreground">{phoneNumber}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={copyPhoneNumber}
+                            className="h-8 px-2"
+                          >
+                            {copiedPhone ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Call this number to test your AI over the phone</p>
+                      </div>
+                    ) : (
+                      <div className="mt-2">
+                        <p className="text-sm text-muted-foreground">No phone number provisioned yet</p>
+                        <Button variant="link" size="sm" className="h-auto p-0 text-primary" asChild>
+                          <a href="/customer/settings/deploy">Get a phone number →</a>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Voice Employee Card */}
             <div className="hidden lg:block">
-              {assistantId ? (
-                <VoiceEmployeeCard
-                  aiPersonaName={customerProfile?.business_name || 'AI Assistant'}
-                  isConnected={isVoiceConnected}
-                  isConnecting={isVoiceConnecting}
-                  isSpeaking={isSpeaking}
-                  onStartCall={startVoiceCall}
-                  onEndCall={endVoiceCall}
-                  callDuration={callDuration}
-                />
-              ) : (
-                <Card className="shadow-xl">
-                  <CardContent className="p-6 text-center space-y-4">
-                    <div className="w-20 h-20 rounded-full bg-muted mx-auto flex items-center justify-center">
-                      <Sparkles className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">Voice Not Available</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Provision a phone number in Deploy Settings to enable voice preview.
-                      </p>
-                    </div>
-                    <Button variant="outline" asChild>
-                      <a href="/customer/settings/deploy">Go to Deploy Settings</a>
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
+              <VoiceEmployeeCard
+                aiPersonaName={customerProfile?.business_name ? `${customerProfile.business_name} AI` : 'AI Assistant'}
+                isConnected={isVoiceConnected}
+                isConnecting={isVoiceConnecting}
+                isSpeaking={isSpeaking}
+                onStartCall={startVoiceCall}
+                onEndCall={endVoiceCall}
+                callDuration={callDuration}
+              />
             </div>
 
             {/* Testing Tips Card */}
@@ -401,7 +484,7 @@ Keep responses helpful, concise, and professional.`;
             </Card>
           </div>
 
-          {/* Right Column - Phone Preview with Chat & Test Options */}
+          {/* RIGHT COLUMN - Mobile Preview with Chat */}
           <div className="lg:col-span-3 space-y-6">
             {/* Mobile Phone Preview Section */}
             <Card className="shadow-xl border-0">
@@ -455,64 +538,66 @@ Keep responses helpful, concise, and professional.`;
                                 <Bot className="h-5 w-5" />
                                 <span className="font-medium text-sm">{customerProfile?.business_name || 'AI Assistant'}</span>
                               </div>
-                              <button 
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => setIsChatOpen(false)}
-                                className="text-primary-foreground/80 hover:text-primary-foreground text-lg font-bold"
+                                className="text-primary-foreground hover:bg-primary-foreground/20 h-8 w-8 p-0"
                               >
                                 ×
-                              </button>
+                              </Button>
                             </div>
                             
-                            {/* Messages */}
+                            {/* Messages Area */}
                             <div 
                               ref={chatContainerRef}
-                              className="flex-1 overflow-y-auto p-3 space-y-2"
+                              className="flex-1 overflow-y-auto p-4 space-y-3"
                             >
                               {messages.map((message, index) => (
                                 <div
                                   key={index}
                                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
-                                  <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs ${
-                                    message.role === 'user'
-                                      ? 'bg-primary text-primary-foreground'
-                                      : 'bg-muted text-foreground'
-                                  }`}>
-                                    {message.content}
+                                  <div
+                                    className={`max-w-[85%] rounded-2xl px-4 py-2 ${
+                                      message.role === 'user'
+                                        ? 'bg-primary text-primary-foreground'
+                                        : 'bg-muted text-foreground'
+                                    }`}
+                                  >
+                                    <p className="text-sm">{message.content}</p>
                                   </div>
                                 </div>
                               ))}
                               {isSending && (
                                 <div className="flex justify-start">
-                                  <div className="bg-muted rounded-xl px-3 py-2">
-                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  <div className="bg-muted rounded-2xl px-4 py-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
                                   </div>
                                 </div>
                               )}
                             </div>
                             
-                            {/* Input */}
-                            <div className="p-2 border-t bg-background flex gap-1">
-                              <Input
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Type a message..."
-                                disabled={isSending}
-                                className="flex-1 text-xs h-8"
-                              />
-                              <Button 
-                                size="sm" 
-                                className="h-8 w-8 p-0"
-                                onClick={handleSendMessage}
-                                disabled={!inputValue.trim() || isSending}
-                              >
-                                {isSending ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <Send className="h-3 w-3" />
-                                )}
-                              </Button>
+                            {/* Input Area */}
+                            <div className="border-t p-3">
+                              <div className="flex gap-2">
+                                <Input
+                                  value={inputValue}
+                                  onChange={(e) => setInputValue(e.target.value)}
+                                  onKeyDown={handleKeyDown}
+                                  placeholder="Type a message..."
+                                  className="flex-1 text-sm"
+                                  disabled={isSending}
+                                />
+                                <Button
+                                  size="icon"
+                                  onClick={handleSendMessage}
+                                  disabled={!inputValue.trim() || isSending}
+                                  className="shrink-0"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -525,153 +610,25 @@ Keep responses helpful, concise, and professional.`;
 
             {/* Voice Card - Visible on mobile/tablet only */}
             <div className="lg:hidden">
-              {assistantId ? (
-                <VoiceEmployeeCard
-                  aiPersonaName={customerProfile?.business_name || 'AI Assistant'}
-                  isConnected={isVoiceConnected}
-                  isConnecting={isVoiceConnecting}
-                  isSpeaking={isSpeaking}
-                  onStartCall={startVoiceCall}
-                  onEndCall={endVoiceCall}
-                  callDuration={callDuration}
-                />
-              ) : (
-                <Card className="shadow-xl">
-                  <CardContent className="p-6 text-center space-y-4">
-                    <div className="w-20 h-20 rounded-full bg-muted mx-auto flex items-center justify-center">
-                      <Sparkles className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">Voice Not Available</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Provision a phone number to enable voice preview.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <VoiceEmployeeCard
+                aiPersonaName={customerProfile?.business_name ? `${customerProfile.business_name} AI` : 'AI Assistant'}
+                isConnected={isVoiceConnected}
+                isConnecting={isVoiceConnecting}
+                isSpeaking={isSpeaking}
+                onStartCall={startVoiceCall}
+                onEndCall={endVoiceCall}
+                callDuration={callDuration}
+              />
             </div>
-
-            {/* Test Options Card */}
-            <Card className="shadow-xl border-0">
-              <CardHeader className="border-b bg-muted/30">
-                <CardTitle className="text-lg">Three Ways to Test</CardTitle>
-                <CardDescription>
-                  Try each method to see how your AI performs
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Option 1 - Chat */}
-                  <div className="flex items-start gap-4 p-4 rounded-lg border bg-muted/20 hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <MessageSquare className="h-4 w-4 text-primary" />
-                        <span className="font-semibold">AI Chat</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Click the chat bubble on the phone preview above to test web chat
-                      </p>
-                      <Button size="sm" variant="outline" onClick={() => setIsChatOpen(true)}>
-                        Open Chat
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Option 2 - Voice Web */}
-                  <div className="flex items-start gap-4 p-4 rounded-lg border bg-muted/20 hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
-                      2
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Sparkles className="h-4 w-4 text-primary" />
-                        <span className="font-semibold">AI Voice Web</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {MAX_VOICE_DURATION_SECONDS}s limit
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Talk to your AI directly in the browser
-                      </p>
-                      <Button 
-                        size="sm" 
-                        onClick={startVoiceCall}
-                        disabled={!assistantId || isVoiceConnecting || isVoiceConnected}
-                      >
-                        {isVoiceConnecting ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Connecting...
-                          </>
-                        ) : isVoiceConnected ? (
-                          'In Call'
-                        ) : (
-                          'Start Voice Call'
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Option 3 - Phone Call */}
-                  <div className="flex items-start gap-4 p-4 rounded-lg border bg-muted/20 hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
-                      3
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Phone className="h-4 w-4 text-primary" />
-                        <span className="font-semibold">Phone Call</span>
-                        <Badge variant="secondary" className="text-xs">No limit</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Call your AI phone number for a full voice test
-                      </p>
-                      {twilioNumber ? (
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-lg font-semibold">{twilioNumber}</span>
-                          <Button size="sm" variant="ghost" onClick={copyPhoneNumber}>
-                            {copiedPhone ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-amber-600">
-                          No phone number provisioned yet.{' '}
-                          <a href="/customer/settings/deploy" className="underline">
-                            Set up in Deploy Settings
-                          </a>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-background/80 backdrop-blur-sm mt-12">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="p-1.5 bg-primary/10 rounded">
-                <Sparkles className="h-4 w-4 text-primary" />
-              </div>
-              <span className="text-sm font-medium">Powered by EverLaunch AI</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              AI that works while you sleep
-            </p>
-          </div>
+      <footer className="py-8 text-center">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <Sparkles className="h-4 w-4" />
+          <span className="text-sm">Powered by EverLaunch AI</span>
         </div>
       </footer>
     </div>
