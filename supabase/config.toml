@@ -69,6 +69,9 @@ verify_jwt = false
 [functions.vapi-create-demo-assistant]
 verify_jwt = false
 
+[functions.vapi-update-assistant]
+verify_jwt = false
+
 [functions.affiliate-checkout]
 verify_jwt = false
 
@@ -91,4 +94,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.provision-customer-phone]
+verify_jwt = false
+
+[functions.vapi-web-session]
 verify_jwt = false

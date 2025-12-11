@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,15 +7,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { 
   MessageSquare, 
   Phone, 
+  PhoneCall,
+  PhoneOff,
   Send, 
   Loader2, 
   Copy, 
   CheckCircle,
   Bot,
-  User
+  User,
+  Mic
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import Vapi from '@vapi-ai/web';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -31,19 +35,45 @@ export default function AIPreview() {
     chatSettings
   } = useCustomerOnboarding();
 
+  // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when messages change
+  // Voice Web state
+  const [isVoiceConnected, setIsVoiceConnected] = useState(false);
+  const [isVoiceConnecting, setIsVoiceConnecting] = useState(false);
+  const [assistantId, setAssistantId] = useState<string | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const vapiRef = useRef<Vapi | null>(null);
+
+  // Fetch assistant ID for voice calls
+  useEffect(() => {
+    async function fetchAssistantId() {
+      if (!customerProfile?.id) return;
+      
+      const { data } = await supabase
+        .from('customer_phone_numbers')
+        .select('vapi_assistant_id')
+        .eq('customer_id', customerProfile.id)
+        .maybeSingle();
+      
+      if (data?.vapi_assistant_id) {
+        setAssistantId(data.vapi_assistant_id);
+      }
+    }
+    fetchAssistantId();
+  }, [customerProfile?.id]);
+
+  // Auto-scroll chat to bottom
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // Add initial greeting when component mounts
+  // Add initial greeting
   useEffect(() => {
     if (chatSettings?.greeting_text && messages.length === 0) {
       setMessages([{ role: 'assistant', content: chatSettings.greeting_text }]);
@@ -55,6 +85,15 @@ export default function AIPreview() {
     }
   }, [chatSettings?.greeting_text, customerProfile?.business_name, messages.length]);
 
+  // Cleanup Vapi on unmount
+  useEffect(() => {
+    return () => {
+      if (vapiRef.current) {
+        vapiRef.current.stop();
+      }
+    };
+  }, []);
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isSending) return;
 
@@ -64,7 +103,6 @@ export default function AIPreview() {
     setIsSending(true);
 
     try {
-      // Build system prompt from customer settings
       const systemPrompt = `You are an AI assistant for ${customerProfile?.business_name || 'a business'}.
 ${voiceSettings?.voice_style ? `Speak in a ${voiceSettings.voice_style} style.` : ''}
 ${chatSettings?.instructions ? `Additional instructions: ${chatSettings.instructions}` : ''}
@@ -85,7 +123,6 @@ Keep responses helpful, concise, and professional.`;
     } catch (error) {
       console.error('Chat error:', error);
       toast.error('Failed to get response. Please try again.');
-      // Add error message to chat
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         content: "I'm sorry, I encountered an error. Please try again." 
@@ -107,6 +144,83 @@ Keep responses helpful, concise, and professional.`;
       navigator.clipboard.writeText(twilioNumber);
       toast.success('Phone number copied!');
     }
+  };
+
+  // Voice Web functions
+  const startVoiceCall = async () => {
+    if (!assistantId) {
+      toast.error('No voice assistant available. Please provision a phone number first.');
+      return;
+    }
+
+    setIsVoiceConnecting(true);
+    setVoiceTranscript('');
+
+    try {
+      // Get Vapi public key from edge function
+      const { data, error } = await supabase.functions.invoke('vapi-web-session', {
+        body: { assistantId }
+      });
+
+      if (error || !data?.publicKey) {
+        throw new Error('Failed to get voice session');
+      }
+
+      // Initialize Vapi client
+      const vapi = new Vapi(data.publicKey);
+      vapiRef.current = vapi;
+
+      // Set up event handlers
+      vapi.on('call-start', () => {
+        setIsVoiceConnected(true);
+        setIsVoiceConnecting(false);
+        toast.success('Voice call connected');
+      });
+
+      vapi.on('call-end', () => {
+        setIsVoiceConnected(false);
+        setIsVoiceConnecting(false);
+      });
+
+      vapi.on('speech-start', () => {
+        // AI is speaking
+      });
+
+      vapi.on('speech-end', () => {
+        // AI finished speaking
+      });
+
+      vapi.on('message', (message: any) => {
+        if (message.type === 'transcript' && message.transcriptType === 'final') {
+          const role = message.role === 'user' ? 'You' : 'AI';
+          setVoiceTranscript(prev => prev + `${role}: ${message.transcript}\n`);
+        }
+      });
+
+      vapi.on('error', (error: any) => {
+        console.error('Vapi error:', error);
+        toast.error('Voice call error');
+        setIsVoiceConnected(false);
+        setIsVoiceConnecting(false);
+      });
+
+      // Start the call
+      await vapi.start(assistantId);
+
+    } catch (error) {
+      console.error('Failed to start voice call:', error);
+      toast.error('Failed to start voice call');
+      setIsVoiceConnecting(false);
+    }
+  };
+
+  const endVoiceCall = () => {
+    if (vapiRef.current) {
+      vapiRef.current.stop();
+      vapiRef.current = null;
+    }
+    setIsVoiceConnected(false);
+    setIsVoiceConnecting(false);
   };
 
   if (isLoading) {
@@ -147,7 +261,6 @@ Keep responses helpful, concise, and professional.`;
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col min-h-0">
-              {/* Messages Container */}
               <div 
                 ref={chatContainerRef}
                 className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2"
@@ -191,7 +304,6 @@ Keep responses helpful, concise, and professional.`;
                 )}
               </div>
 
-              {/* Input */}
               <div className="flex gap-2">
                 <Input
                   value={inputValue}
@@ -217,61 +329,100 @@ Keep responses helpful, concise, and professional.`;
           </Card>
 
           {/* Voice Preview */}
-          <Card className="h-[500px]">
+          <Card className="flex flex-col h-[500px]">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Phone className="h-5 w-5 text-primary" />
+                <Mic className="h-5 w-5 text-primary" />
                 Voice Preview
               </CardTitle>
               <CardDescription>
-                Test the phone call experience
+                Test the voice experience in your browser
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center h-[calc(100%-5rem)]">
-              {twilioNumber ? (
-                <div className="text-center space-y-6">
-                  <div className="p-4 bg-primary/10 rounded-full inline-block">
-                    <Phone className="h-12 w-12 text-primary" />
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Your AI Phone Number</p>
-                    <p className="text-3xl font-mono font-bold text-foreground">
-                      {twilioNumber}
-                    </p>
+            <CardContent className="flex-1 flex flex-col">
+              {assistantId ? (
+                <div className="flex-1 flex flex-col items-center justify-center space-y-4">
+                  {/* Call Button */}
+                  <div className="text-center space-y-4">
+                    {isVoiceConnected ? (
+                      <div className="p-6 bg-destructive/10 rounded-full inline-block animate-pulse">
+                        <PhoneCall className="h-12 w-12 text-destructive" />
+                      </div>
+                    ) : (
+                      <div className="p-6 bg-primary/10 rounded-full inline-block">
+                        <Mic className="h-12 w-12 text-primary" />
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="text-lg font-medium text-foreground">
+                        {isVoiceConnected ? 'Call in Progress' : 'Browser Voice Call'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {isVoiceConnected 
+                          ? 'Speak naturally to test your AI' 
+                          : 'Click to start a voice conversation'}
+                      </p>
+                    </div>
+
+                    <Button
+                      size="lg"
+                      variant={isVoiceConnected ? 'destructive' : 'default'}
+                      onClick={isVoiceConnected ? endVoiceCall : startVoiceCall}
+                      disabled={isVoiceConnecting}
+                      className="gap-2 px-8"
+                    >
+                      {isVoiceConnecting ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          Connecting...
+                        </>
+                      ) : isVoiceConnected ? (
+                        <>
+                          <PhoneOff className="h-5 w-5" />
+                          End Call
+                        </>
+                      ) : (
+                        <>
+                          <PhoneCall className="h-5 w-5" />
+                          Start Voice Call
+                        </>
+                      )}
+                    </Button>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-green-600 dark:text-green-400">Active</span>
-                  </div>
+                  {/* Transcript */}
+                  {voiceTranscript && (
+                    <div className="w-full mt-4 p-3 bg-muted/50 rounded-lg text-sm max-h-32 overflow-y-auto">
+                      <p className="text-xs text-muted-foreground mb-1">Transcript:</p>
+                      <pre className="whitespace-pre-wrap text-foreground font-sans">{voiceTranscript}</pre>
+                    </div>
+                  )}
 
-                  <Button onClick={copyPhoneNumber} variant="outline" className="gap-2">
-                    <Copy className="h-4 w-4" />
-                    Copy Number
-                  </Button>
-
-                  <div className="bg-muted/50 rounded-lg p-4 text-left max-w-xs">
-                    <p className="text-sm font-medium text-foreground mb-2">
-                      Test Instructions:
-                    </p>
-                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                      <li>Call the number above</li>
-                      <li>Speak naturally as a customer would</li>
-                      <li>Test different scenarios</li>
-                      <li>Check how the AI handles your questions</li>
-                    </ol>
-                  </div>
+                  {/* Phone number section */}
+                  {twilioNumber && (
+                    <div className="w-full pt-4 border-t border-border mt-auto">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Or call directly:</p>
+                          <p className="font-mono font-medium text-foreground">{twilioNumber}</p>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={copyPhoneNumber}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="text-center space-y-4">
-                  <div className="p-4 bg-muted rounded-full inline-block">
+                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
+                  <div className="p-4 bg-muted rounded-full">
                     <Phone className="h-12 w-12 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-foreground font-medium">No Phone Number Yet</p>
+                    <p className="text-foreground font-medium">No Voice Assistant Yet</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Provision a phone number in the Deploy settings to test voice calls.
+                      Provision a phone number in Deploy settings to enable voice testing.
                     </p>
                   </div>
                   <Button variant="outline" asChild>

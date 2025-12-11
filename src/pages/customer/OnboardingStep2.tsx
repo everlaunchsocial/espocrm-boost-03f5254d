@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ArrowLeft, ArrowRight, Mic, MessageCircle, Sparkles, Gauge } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Mic, MessageCircle, Sparkles, Gauge, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { AVATAR_OPTIONS } from '@/components/demos/AvatarSelector';
 
 export default function OnboardingStep2() {
   const navigate = useNavigate();
@@ -92,6 +93,10 @@ export default function OnboardingStep2() {
     navigate('/customer/onboarding/wizard/1');
   };
 
+  // Get avatar for gender
+  const femaleAvatar = AVATAR_OPTIONS.find(a => a.gender === 'female');
+  const maleAvatar = AVATAR_OPTIONS.find(a => a.gender === 'male');
+
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4">
@@ -110,36 +115,75 @@ export default function OnboardingStep2() {
             Voice & Personality
           </CardTitle>
           <CardDescription>
-            Customize how your AI assistant sounds and interacts with customers.
+            Choose your AI assistant's voice. You can customize more options in Settings later.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
-          {/* Voice Gender */}
+          {/* Voice Gender with Avatar Photos */}
           <div className="space-y-3">
             <Label className="flex items-center gap-2">
               <Mic className="h-4 w-4 text-muted-foreground" />
-              Voice Gender
+              Select Voice
             </Label>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { value: 'female', label: 'Female Voice', icon: '👩' },
-                { value: 'male', label: 'Male Voice', icon: '👨' }
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => { setVoiceGender(option.value); handleSave(false, { voiceGender: option.value }); }}
-                  className={cn(
-                    "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
-                    voiceGender === option.value
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
+            <div className="flex justify-center gap-6">
+              {/* Female Voice */}
+              <button
+                onClick={() => { setVoiceGender('female'); handleSave(false, { voiceGender: 'female' }); }}
+                className={cn(
+                  "flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all",
+                  voiceGender === 'female'
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/50 hover:bg-muted/50"
+                )}
+              >
+                <div className="relative">
+                  <img
+                    src={femaleAvatar?.imageUrl}
+                    alt="Female Voice"
+                    className="w-20 h-20 rounded-full object-cover"
+                  />
+                  {voiceGender === 'female' && (
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
                   )}
-                >
-                  <span className="text-2xl">{option.icon}</span>
-                  <span className="font-medium">{option.label}</span>
-                </button>
-              ))}
+                </div>
+                <span className="font-medium">Female Voice</span>
+              </button>
+
+              {/* Male Voice */}
+              <button
+                onClick={() => { setVoiceGender('male'); handleSave(false, { voiceGender: 'male' }); }}
+                className={cn(
+                  "flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all",
+                  voiceGender === 'male'
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/50 hover:bg-muted/50"
+                )}
+              >
+                <div className="relative">
+                  <img
+                    src={maleAvatar?.imageUrl}
+                    alt="Male Voice"
+                    className="w-20 h-20 rounded-full object-cover"
+                  />
+                  {voiceGender === 'male' && (
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <span className="font-medium">Male Voice</span>
+              </button>
             </div>
+            <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
+              <Settings className="h-3 w-3" />
+              You can change your voice and hear samples in Settings later
+            </p>
           </div>
 
           {/* Voice Style */}

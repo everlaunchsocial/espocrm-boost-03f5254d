@@ -163,6 +163,26 @@ export function useVoiceSettings() {
         console.warn('Failed to update chat_settings:', chatError);
       }
 
+      // Sync voice settings to Vapi assistant (if one exists)
+      if (newSettings.voice_gender || newSettings.greeting_text) {
+        try {
+          const { error: vapiError } = await supabase.functions.invoke('vapi-update-assistant', {
+            body: {
+              customer_id: customerId,
+              voice_gender: updatedSettings.voice_gender,
+              greeting_text: updatedSettings.greeting_text,
+              voice_style: updatedSettings.voice_style,
+            }
+          });
+          
+          if (vapiError) {
+            console.warn('Failed to sync to Vapi:', vapiError);
+          }
+        } catch (vapiErr) {
+          console.warn('Vapi sync error:', vapiErr);
+        }
+      }
+
       toast.success('Settings saved');
     } catch (error) {
       console.error('Error saving voice settings:', error);
