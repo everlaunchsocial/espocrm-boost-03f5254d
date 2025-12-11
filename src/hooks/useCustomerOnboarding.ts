@@ -150,15 +150,27 @@ export function useCustomerOnboarding() {
       
       setKnowledgeSources((sources || []) as unknown as KnowledgeSource[]);
 
-      // Fetch Twilio number
-      const { data: twilio } = await supabase
-        .from('twilio_numbers')
-        .select('twilio_number')
+      // Fetch phone number from customer_phone_numbers (Vapi) or fallback to twilio_numbers
+      const { data: vapiPhone } = await supabase
+        .from('customer_phone_numbers')
+        .select('phone_number')
         .eq('customer_id', profile.id)
         .eq('status', 'active')
         .maybeSingle();
       
-      setTwilioNumber(twilio?.twilio_number || null);
+      if (vapiPhone?.phone_number) {
+        setTwilioNumber(vapiPhone.phone_number);
+      } else {
+        // Fallback to legacy twilio_numbers table
+        const { data: twilio } = await supabase
+          .from('twilio_numbers')
+          .select('twilio_number')
+          .eq('customer_id', profile.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        
+        setTwilioNumber(twilio?.twilio_number || null);
+      }
 
     } catch (error) {
       console.error('Error fetching customer data:', error);
@@ -359,6 +371,33 @@ export function useCustomerOnboarding() {
 
   const isOnboardingComplete = customerProfile?.onboarding_stage === 'wizard_complete';
 
+  const provisionPhoneNumber = useCallback(async (areaCode?: string): Promise<{ success: boolean; phoneNumber?: string; error?: string }> => {
+    if (!customerProfile) {
+      return { success: false, error: 'No customer profile found' };
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('provision-customer-phone', {
+        body: { customer_id: customerProfile.id, area_code: areaCode }
+      });
+
+      if (error) {
+        console.error('Error calling provision-customer-phone:', error);
+        return { success: false, error: error.message || 'Failed to provision phone number' };
+      }
+
+      if (data?.success && data?.phoneNumber) {
+        setTwilioNumber(data.phoneNumber);
+        return { success: true, phoneNumber: data.phoneNumber };
+      }
+
+      return { success: false, error: data?.error || 'Failed to provision phone number' };
+    } catch (error: any) {
+      console.error('Exception in provisionPhoneNumber:', error);
+      return { success: false, error: error.message || 'Unexpected error' };
+    }
+  }, [customerProfile]);
+
   return {
     isLoading,
     customerProfile,
@@ -376,6 +415,7 @@ export function useCustomerOnboarding() {
     goToStep,
     completeOnboarding,
     isOnboardingComplete,
+    provisionPhoneNumber,
     refetch: fetchCustomerData
   };
 }
