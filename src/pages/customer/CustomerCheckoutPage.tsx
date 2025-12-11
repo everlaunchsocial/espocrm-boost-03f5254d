@@ -75,6 +75,7 @@ export default function CustomerCheckoutPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [businessName, setBusinessName] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
 
@@ -154,6 +155,7 @@ export default function CustomerCheckoutPage() {
             customerEmail: email,
             customerName: contactName,
             businessName: businessName,
+            websiteUrl: websiteUrl,
             successUrl: `${window.location.origin}/customer/buy-success?session_id={CHECKOUT_SESSION_ID}`,
             cancelUrl: `${window.location.origin}/buy?plan=${selectedPlan}`,
           },
@@ -289,6 +291,17 @@ export default function CustomerCheckoutPage() {
                     onChange={(e) => setBusinessName(e.target.value)}
                     placeholder="Your Business Name"
                     required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="websiteUrl">Business Website</Label>
+                  <Input
+                    id="websiteUrl"
+                    type="url"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://yourbusiness.com"
                   />
                 </div>
                 

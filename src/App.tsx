@@ -80,6 +80,7 @@ import DeploySettings from "./pages/customer/DeploySettings";
 import CustomerLeads from "./pages/customer/CustomerLeads";
 import CustomerBilling from "./pages/customer/CustomerBilling";
 import CustomerSupport from "./pages/customer/CustomerSupport";
+import AIPreview from "./pages/customer/AIPreview";
 
 // Customer Onboarding pages
 import OnboardingStep1 from "./pages/customer/OnboardingStep1";
@@ -170,6 +171,7 @@ const App = () => (
             <Route path="/customer/leads" element={<CustomerLeads />} />
             <Route path="/customer/billing" element={<CustomerBilling />} />
             <Route path="/customer/support" element={<CustomerSupport />} />
+            <Route path="/customer/preview" element={<AIPreview />} />
           </Route>
           
           {/* Affiliate routes - inside AffiliateLayout */}
