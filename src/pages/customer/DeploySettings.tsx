@@ -10,14 +10,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
 
-const popularAreaCodes = [
-  { code: '212', label: 'New York, NY' },
-  { code: '310', label: 'Los Angeles, CA' },
-  { code: '312', label: 'Chicago, IL' },
-  { code: '305', label: 'Miami, FL' },
-  { code: '415', label: 'San Francisco, CA' },
-  { code: '214', label: 'Dallas, TX' },
-];
+// Removed hardcoded popular area codes - availability varies dynamically
 
 export default function DeploySettings() {
   const navigate = useNavigate();
@@ -32,9 +25,9 @@ export default function DeploySettings() {
 
   const [savingEmbed, setSavingEmbed] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
-  const [selectedAreaCode, setSelectedAreaCode] = useState<string | null>(null);
   const [customAreaCode, setCustomAreaCode] = useState('');
   const [isProvisioning, setIsProvisioning] = useState(false);
+  const [suggestedCodes, setSuggestedCodes] = useState<string[]>([]);
 
   // Redirect if onboarding not complete
   useEffect(() => {
@@ -99,34 +92,35 @@ Thanks!`);
     return phone;
   };
 
-  const handleAreaCodeSelect = (code: string) => {
-    if (selectedAreaCode === code) {
-      setSelectedAreaCode(null);
-    } else {
-      setSelectedAreaCode(code);
-      setCustomAreaCode('');
-    }
-  };
-
   const handleCustomAreaCodeChange = (value: string) => {
     const cleaned = value.replace(/\D/g, '').slice(0, 3);
     setCustomAreaCode(cleaned);
+    // Clear suggestions when user types a new code
     if (cleaned.length > 0) {
-      setSelectedAreaCode(null);
+      setSuggestedCodes([]);
     }
   };
 
-  const handleProvisionPhone = async () => {
-    const areaCode = selectedAreaCode || (customAreaCode.length === 3 ? customAreaCode : undefined);
+  const handleProvisionPhone = async (areaCodeOverride?: string) => {
+    const areaCode = areaCodeOverride || (customAreaCode.length === 3 ? customAreaCode : undefined);
     
     setIsProvisioning(true);
+    setSuggestedCodes([]); // Clear previous suggestions
+    
     const result = await provisionPhoneNumber(areaCode);
     setIsProvisioning(false);
 
     if (result.success) {
       toast.success('Your AI phone number has been provisioned!');
+      setSuggestedCodes([]);
     } else {
-      toast.error(result.error || 'Failed to provision phone number');
+      // Check if result contains suggested codes from API
+      if (result.suggestedCodes && result.suggestedCodes.length > 0) {
+        setSuggestedCodes(result.suggestedCodes);
+        toast.error(result.error || 'Area code not available. See suggestions below.');
+      } else {
+        toast.error(result.error || 'Failed to provision phone number');
+      }
     }
   };
 
@@ -326,61 +320,75 @@ Thanks!`);
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Get a dedicated AI phone number for your business. Optionally select or enter a 3-digit area code to request a specific region.
+                  Get a dedicated AI phone number for your business. Enter a 3-digit area code to request a specific region.
                 </p>
 
-                {/* Popular Area Code Buttons */}
+                {/* Area Code Input */}
                 <div className="space-y-3">
-                  <p className="text-sm font-medium">Popular area codes:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {popularAreaCodes.map((ac) => (
-                      <Button
-                        key={ac.code}
-                        variant={selectedAreaCode === ac.code ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => handleAreaCodeSelect(ac.code)}
-                        disabled={isProvisioning}
-                      >
-                        {ac.code} - {ac.label}
-                      </Button>
-                    ))}
+                  <div className="flex items-center gap-3">
+                    <Input
+                      className="w-48"
+                      placeholder="Enter area code (e.g. 702)"
+                      value={customAreaCode}
+                      onChange={(e) => handleCustomAreaCodeChange(e.target.value)}
+                      disabled={isProvisioning}
+                      maxLength={3}
+                    />
+                    <Button
+                      onClick={() => handleProvisionPhone()}
+                      disabled={isProvisioning || customAreaCode.length !== 3}
+                      className="gap-2"
+                    >
+                      {isProvisioning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Provisioning...
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="h-4 w-4" />
+                          Get Phone Number
+                        </>
+                      )}
+                    </Button>
                   </div>
-                </div>
 
-                {/* Custom Area Code Input */}
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground">Or enter custom:</span>
-                  <Input
-                    className="w-40"
-                    placeholder="Area code (e.g. 702)"
-                    value={customAreaCode}
-                    onChange={(e) => handleCustomAreaCodeChange(e.target.value)}
+                  {/* Or get any available number */}
+                  <Button
+                    variant="outline"
+                    onClick={() => handleProvisionPhone()}
                     disabled={isProvisioning}
-                    maxLength={3}
-                  />
+                    className="gap-2"
+                  >
+                    <Phone className="h-4 w-4" />
+                    Get Any Available Number
+                  </Button>
                 </div>
 
-                {/* Provision Button */}
-                <Button
-                  onClick={handleProvisionPhone}
-                  disabled={isProvisioning}
-                  className="gap-2"
-                >
-                  {isProvisioning ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Provisioning...
-                    </>
-                  ) : (
-                    <>
-                      <Phone className="h-4 w-4" />
-                      Get My AI Phone Number
-                    </>
-                  )}
-                </Button>
+                {/* Suggested Area Codes from API */}
+                {suggestedCodes.length > 0 && (
+                  <div className="space-y-3 p-4 rounded-lg border border-yellow-500/50 bg-yellow-500/10">
+                    <p className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
+                      That area code isn't available. Try one of these:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedCodes.map((code) => (
+                        <Button
+                          key={code}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleProvisionPhone(code)}
+                          disabled={isProvisioning}
+                        >
+                          {code}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <p className="text-xs text-muted-foreground">
-                  Note: Area code availability varies by region. If your requested area code is unavailable, we'll assign the nearest available number.
+                  Note: Area code availability varies. If unavailable, we'll suggest alternatives.
                 </p>
               </>
             )}

@@ -154,16 +154,33 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
     });
 
     if (!phoneResponse.ok) {
-      const errorText = await phoneResponse.text();
-      console.error('Failed to purchase phone number:', errorText);
+      const errorData = await phoneResponse.json().catch(() => ({ message: 'Unknown error' }));
+      console.error('Failed to purchase phone number:', JSON.stringify(errorData));
+      
       // Clean up the assistant we created
       await fetch(`https://api.vapi.ai/assistant/${assistant.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${activeVapiKey}` },
       });
+      
+      // Extract suggested area codes from Vapi error
+      let userMessage = 'Failed to provision phone number.';
+      let suggestedCodes: string[] = [];
+      
+      const errorMsg = errorData.message || '';
+      if (errorMsg.includes('area code is currently not available') || errorMsg.includes('not available')) {
+        const hintMatch = errorMsg.match(/Hint: Try one of (.+)\.?$/);
+        if (hintMatch) {
+          suggestedCodes = hintMatch[1].split(',').map((c: string) => c.trim());
+          userMessage = `Area code ${area_code || 'requested'} is not available.`;
+        } else {
+          userMessage = 'That area code is not available. Please try a different one.';
+        }
+      }
+      
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to provision phone number. The requested area code may not be available.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: userMessage, suggestedCodes }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
