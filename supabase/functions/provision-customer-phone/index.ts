@@ -56,9 +56,14 @@ serve(async (req) => {
       );
     }
 
-    // Use the account's API key if found, otherwise use the default VAPI_API_KEY
-    const activeVapiKey = vapiAccount?.api_key || vapiApiKey;
-    const vapiAccountId = vapiAccount?.id;
+    // Use the account's API key if found and valid, otherwise use the default VAPI_API_KEY
+    // Skip placeholder keys or keys that don't look like valid Vapi keys
+    const dbApiKey = vapiAccount?.api_key;
+    const isValidDbKey = dbApiKey && dbApiKey.length > 20 && !dbApiKey.includes('STORED') && !dbApiKey.includes('PLACEHOLDER');
+    const activeVapiKey = isValidDbKey ? dbApiKey : vapiApiKey;
+    const vapiAccountId = isValidDbKey ? vapiAccount?.id : null;
+    
+    console.log(`Using ${isValidDbKey ? 'database' : 'environment'} API key for Vapi`);
 
     // 2. Fetch customer profile for business info
     const { data: customerProfile, error: profileError } = await supabase
