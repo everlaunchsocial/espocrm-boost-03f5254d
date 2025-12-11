@@ -54,8 +54,8 @@ export default function VoiceSettings() {
 
   const handlePreviewVoice = async (voiceId: string) => {
     setPreviewingVoiceId(voiceId);
-    // Pass the current speed setting so preview reflects the selected speed
-    await previewVoice(voiceId, "Hi there! I'm your AI assistant. How can I help you today?", localSettings?.voiceSpeed);
+    const textToPreview = localSettings?.greetingText || "Hi there! Thanks for calling. How can I help you today?";
+    await previewVoice(voiceId, textToPreview, localSettings?.voiceSpeed);
     setPreviewingVoiceId(null);
   };
 
