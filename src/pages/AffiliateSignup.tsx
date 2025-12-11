@@ -301,7 +301,7 @@ export default function AffiliateSignup() {
       {/* Header */}
       <header className="relative z-10 border-b border-white/5 bg-[#0A0F1C]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <img src={logo} alt="EverLaunch" className="h-10" />
+          <img src={logo} alt="EverLaunch" className="h-10 brightness-0 invert" />
           <Button 
             variant="ghost" 
             onClick={() => navigate('/auth')}
