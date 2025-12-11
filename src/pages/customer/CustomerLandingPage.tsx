@@ -173,9 +173,8 @@ export default function CustomerLandingPage() {
               </Button>
               <Button 
                 size="lg" 
-                variant="outline" 
                 onClick={() => navigate("/demo-request")}
-                className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white text-lg h-14"
+                className="bg-white text-slate-900 hover:bg-white/90 text-lg h-14 font-semibold"
               >
                 Try Demo First
               </Button>
