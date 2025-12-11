@@ -104,7 +104,7 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: `${businessName} AI Assistant`,
+        name: `${businessName.slice(0, 26)} AI Assistant`.slice(0, 40),
         model: {
           provider: 'openai',
           model: 'gpt-4o-mini',
