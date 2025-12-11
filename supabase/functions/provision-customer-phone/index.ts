@@ -7,18 +7,15 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // EARLY LOGGING - First thing in the function
   console.log('=== provision-customer-phone function called ===');
   console.log('Request method:', req.method);
 
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     console.log('Handling CORS preflight');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Check environment variables FIRST
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const vapiApiKeyFromEnv = Deno.env.get('VAPI_API_KEY');
@@ -45,7 +42,6 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body
     let requestBody;
     try {
       requestBody = await req.json();
@@ -70,10 +66,8 @@ serve(async (req) => {
 
     console.log(`Provisioning phone for customer: ${customerId}, area code: ${areaCode || 'any'}`);
 
-    // Create Supabase client with service role for admin access
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if customer already has a phone number
     const { data: existingPhone } = await supabase
       .from('customer_phone_numbers')
       .select('*')
@@ -92,7 +86,6 @@ serve(async (req) => {
       );
     }
 
-    // Fetch customer data for assistant configuration
     const { data: customerProfile, error: profileError } = await supabase
       .from('customer_profiles')
       .select('*')
@@ -103,26 +96,22 @@ serve(async (req) => {
       throw new Error(`Customer not found: ${profileError?.message || 'No profile'}`);
     }
 
-    // Fetch voice settings
     const { data: voiceSettings } = await supabase
       .from('voice_settings')
       .select('*')
       .eq('customer_id', customerId)
       .maybeSingle();
 
-    // Fetch chat settings
     const { data: chatSettings } = await supabase
       .from('chat_settings')
       .select('*')
       .eq('customer_id', customerId)
       .maybeSingle();
 
-    // Get Vapi API key from secrets (primary) or fall back to vapi_accounts table
     let vapiApiKey = vapiApiKeyFromEnv;
     let vapiAccount: { id: string; name: string; numbers_provisioned: number; max_numbers: number } | null = null;
 
     if (vapiApiKey) {
-      // Use secret key - find or create a "Primary" account record for tracking
       const { data: primaryAccount } = await supabase
         .from('vapi_accounts')
         .select('*')
@@ -133,7 +122,6 @@ serve(async (req) => {
         vapiAccount = primaryAccount;
         console.log(`Using Primary Vapi Account from secrets (${primaryAccount.numbers_provisioned}/${primaryAccount.max_numbers})`);
       } else {
-        // Create tracking record for the secret-based account
         const { data: newAccount, error: createError } = await supabase
           .from('vapi_accounts')
           .insert({
@@ -153,7 +141,6 @@ serve(async (req) => {
         console.log('Created Primary Vapi Account tracking record');
       }
     } else {
-      // Fall back to vapi_accounts table for multi-account rotation
       const { data: account, error: accountError } = await supabase
         .from('vapi_accounts')
         .select('*')
@@ -178,7 +165,6 @@ serve(async (req) => {
       throw new Error('Vapi API key not configured. Please contact support.');
     }
 
-    // Build assistant system prompt
     const businessName = customerProfile.business_name || 'our company';
     const greeting = voiceSettings?.greeting_text || chatSettings?.greeting_text || 
       `Hello! Thank you for calling ${businessName}. How can I help you today?`;
@@ -201,7 +187,6 @@ Business: ${businessName}
 ${customerProfile.website_url ? `Website: ${customerProfile.website_url}` : ''}
 ${customerProfile.business_type ? `Industry: ${customerProfile.business_type}` : ''}`;
 
-    // Step 1: Create Vapi Assistant
     console.log('Creating Vapi assistant...');
     const assistantResponse = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
@@ -224,7 +209,7 @@ ${customerProfile.business_type ? `Industry: ${customerProfile.business_type}` :
         endCallMessage: 'Thank you for calling! Have a great day!',
         recordingEnabled: true,
         silenceTimeoutSeconds: 30,
-        maxDurationSeconds: 600, // 10 minutes max
+        maxDurationSeconds: 600,
       }),
     });
 
@@ -237,14 +222,12 @@ ${customerProfile.business_type ? `Industry: ${customerProfile.business_type}` :
     const assistant = await assistantResponse.json();
     console.log('Created assistant:', assistant.id);
 
-    // Step 2: Purchase phone number
     console.log('Purchasing phone number...');
     const phoneBody: Record<string, unknown> = {
       provider: 'vapi',
       assistantId: assistant.id,
     };
 
-    // Add area code filter if specified
     if (areaCode && areaCode.length === 3) {
       phoneBody.numberDesiredAreaCode = areaCode;
     }
@@ -262,7 +245,6 @@ ${customerProfile.business_type ? `Industry: ${customerProfile.business_type}` :
       const errorText = await phoneResponse.text();
       console.error('Phone purchase failed:', errorText);
       
-      // Try to delete the assistant we just created
       await fetch(`https://api.vapi.ai/assistant/${assistant.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${vapiApiKey}` },
@@ -274,7 +256,6 @@ ${customerProfile.business_type ? `Industry: ${customerProfile.business_type}` :
     const phoneData = await phoneResponse.json();
     console.log('Purchased phone number:', phoneData.number);
 
-    // Step 3: Save to database
     const { error: insertError } = await supabase
       .from('customer_phone_numbers')
       .insert({
@@ -292,7 +273,6 @@ ${customerProfile.business_type ? `Industry: ${customerProfile.business_type}` :
       throw new Error(`Failed to save phone number: ${insertError.message}`);
     }
 
-    // Step 4: Increment numbers_provisioned on vapi_account
     const { error: updateError } = await supabase
       .from('vapi_accounts')
       .update({ 
@@ -303,7 +283,6 @@ ${customerProfile.business_type ? `Industry: ${customerProfile.business_type}` :
 
     if (updateError) {
       console.error('Failed to update vapi_account count:', updateError);
-      // Non-fatal, continue
     }
 
     console.log(`Successfully provisioned ${phoneData.number} for customer ${customerId}`);
