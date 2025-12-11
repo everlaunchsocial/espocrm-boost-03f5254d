@@ -15,7 +15,9 @@ interface SubdomainRouterProps {
 const RESERVED_PATHS = [
   'auth', 'affiliate', 'affiliate-signup', 'admin', 'customer', 
   'buy', 'demo-request', 'checkout', 'product', 'biz', 'sales',
-  'demo', 'demos', 'api', 'reset-password', 'unauthorized', 'partner', 'rep'
+  'demo', 'demos', 'api', 'reset-password', 'unauthorized', 'partner', 'rep',
+  'dashboard', 'calendar', 'email', 'contacts', 'accounts', 'leads', 'deals',
+  'estimates', 'invoices', 'tasks', 'media-library', 'voice-demo'
 ];
 
 // Supported vertical landing page slugs

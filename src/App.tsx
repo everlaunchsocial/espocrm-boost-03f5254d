@@ -206,6 +206,7 @@ const App = () => (
           {/* CRM routes - inside CRM layout (for admins/super_admins) */}
           <Route element={<CRMLayout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/comp-plans" element={<AdminCompPlans />} />
