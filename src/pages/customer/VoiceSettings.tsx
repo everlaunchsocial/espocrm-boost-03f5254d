@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Mic, Volume2, Save, Loader2 } from 'lucide-react';
+import { Mic, Volume2, Save, Loader2, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AVATAR_OPTIONS } from '@/components/demos/AvatarSelector';
 
 export default function VoiceSettings() {
   const { isLoading, isSaving, settings, businessName, updateSettings, validateSettings, getDefaultGreeting } = useVoiceSettings();
@@ -88,23 +89,41 @@ export default function VoiceSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Voice Gender */}
+            {/* Voice Gender - Avatar Selection */}
             <div className="space-y-3">
-              <Label className="text-base font-medium">Voice Gender</Label>
-              <RadioGroup
-                value={localSettings.voice_gender}
-                onValueChange={(value) => handleChange('voice_gender', value as VoiceGender)}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="female" id="female" />
-                  <Label htmlFor="female" className="cursor-pointer">Female</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="male" id="male" />
-                  <Label htmlFor="male" className="cursor-pointer">Male</Label>
-                </div>
-              </RadioGroup>
+              <Label className="text-base font-medium">Choose Your AI Voice</Label>
+              <div className="flex gap-6">
+                {AVATAR_OPTIONS.filter(a => ['jenna', 'james'].includes(a.id)).map((avatar) => {
+                  const isSelected = localSettings.voice_gender === avatar.gender;
+                  return (
+                    <button
+                      key={avatar.id}
+                      type="button"
+                      onClick={() => handleChange('voice_gender', avatar.gender as VoiceGender)}
+                      className={`relative flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
+                        isSelected 
+                          ? 'border-primary bg-primary/5 shadow-md' 
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="relative">
+                        <img 
+                          src={avatar.imageUrl} 
+                          alt={avatar.name}
+                          className="w-24 h-24 rounded-full object-cover"
+                        />
+                        {isSelected && (
+                          <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1">
+                            <Check className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="mt-3 font-medium text-foreground">{avatar.name}</span>
+                      <span className="text-xs text-muted-foreground capitalize">{avatar.gender} voice</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Voice Style */}
