@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getDefaultVoiceId } from '@/lib/cartesiaVoices';
 
 export type VoiceGender = 'male' | 'female';
 export type VoiceStyle = 'friendly' | 'professional' | 'high_energy';
 export type ResponsePace = 'quick' | 'balanced' | 'thoughtful';
 
 export interface VoiceSettingsData {
+  voice_id: string;
   voice_gender: VoiceGender;
   voice_style: VoiceStyle;
   greeting_text: string;
@@ -15,6 +17,7 @@ export interface VoiceSettingsData {
 }
 
 const DEFAULT_SETTINGS: VoiceSettingsData = {
+  voice_id: getDefaultVoiceId(),
   voice_gender: 'female',
   voice_style: 'friendly',
   greeting_text: '',
@@ -25,6 +28,7 @@ const DEFAULT_SETTINGS: VoiceSettingsData = {
 export function useVoiceSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string>('');
   const [settings, setSettings] = useState<VoiceSettingsData>(DEFAULT_SETTINGS);
@@ -64,6 +68,7 @@ export function useVoiceSettings() {
 
         if (voiceSettings) {
           setSettings({
+            voice_id: voiceSettings.voice_id || getDefaultVoiceId(),
             voice_gender: (voiceSettings.voice_gender as VoiceGender) || 'female',
             voice_style: (voiceSettings.voice_style as VoiceStyle) || 'friendly',
             greeting_text: voiceSettings.greeting_text || getDefaultGreeting(profile.business_name || ''),
@@ -73,8 +78,10 @@ export function useVoiceSettings() {
         } else {
           // Create default voice settings row
           const defaultGreeting = getDefaultGreeting(profile.business_name || '');
+          const defaultVoiceId = getDefaultVoiceId();
           const newSettings = {
             customer_id: profile.id,
+            voice_id: defaultVoiceId,
             voice_gender: 'female',
             voice_style: 'friendly',
             greeting_text: defaultGreeting,
@@ -101,6 +108,7 @@ export function useVoiceSettings() {
 
           setSettings({
             ...DEFAULT_SETTINGS,
+            voice_id: defaultVoiceId,
             greeting_text: defaultGreeting,
           });
         }
@@ -132,6 +140,7 @@ export function useVoiceSettings() {
       const { error: voiceError } = await supabase
         .from('voice_settings')
         .update({
+          voice_id: updatedSettings.voice_id,
           voice_gender: updatedSettings.voice_gender,
           voice_style: updatedSettings.voice_style,
           greeting_text: updatedSettings.greeting_text,
@@ -164,12 +173,12 @@ export function useVoiceSettings() {
       }
 
       // Sync voice settings to Vapi assistant (if one exists)
-      if (newSettings.voice_gender || newSettings.greeting_text) {
+      if (newSettings.voice_id || newSettings.greeting_text) {
         try {
           const { error: vapiError } = await supabase.functions.invoke('vapi-update-assistant', {
             body: {
               customer_id: customerId,
-              voice_gender: updatedSettings.voice_gender,
+              voice_id: updatedSettings.voice_id,
               greeting_text: updatedSettings.greeting_text,
               voice_style: updatedSettings.voice_style,
             }
@@ -192,6 +201,34 @@ export function useVoiceSettings() {
     }
   }, [customerId, settings]);
 
+  const previewVoice = useCallback(async (voiceId: string) => {
+    setIsPreviewing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('preview-voice', {
+        body: { voice_id: voiceId }
+      });
+
+      if (error) throw error;
+
+      if (data?.audio) {
+        // Play audio
+        const audioBlob = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
+        const blob = new Blob([audioBlob], { type: 'audio/mp3' });
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.onended = () => URL.revokeObjectURL(url);
+        await audio.play();
+      } else if (data?.message) {
+        toast.info(data.message);
+      }
+    } catch (error) {
+      console.error('Error previewing voice:', error);
+      toast.error('Voice preview not available yet');
+    } finally {
+      setIsPreviewing(false);
+    }
+  }, []);
+
   const validateSettings = (data: VoiceSettingsData): string | null => {
     if (!data.greeting_text || data.greeting_text.length < 5) {
       return 'Greeting text must be at least 5 characters';
@@ -199,8 +236,8 @@ export function useVoiceSettings() {
     if (data.greeting_text.length > 300) {
       return 'Greeting text must be less than 300 characters';
     }
-    if (!['male', 'female'].includes(data.voice_gender)) {
-      return 'Invalid voice gender';
+    if (!data.voice_id) {
+      return 'Please select a voice';
     }
     if (!['friendly', 'professional', 'high_energy'].includes(data.voice_style)) {
       return 'Invalid voice style';
@@ -214,10 +251,12 @@ export function useVoiceSettings() {
   return {
     isLoading,
     isSaving,
+    isPreviewing,
     settings,
     businessName,
     updateSettings,
     validateSettings,
     getDefaultGreeting,
+    previewVoice,
   };
 }

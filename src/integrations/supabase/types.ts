@@ -2136,6 +2136,7 @@ export type Database = {
           response_pace: string | null
           updated_at: string
           voice_gender: string | null
+          voice_id: string | null
           voice_pitch: number | null
           voice_speed: number | null
           voice_style: string | null
@@ -2148,6 +2149,7 @@ export type Database = {
           response_pace?: string | null
           updated_at?: string
           voice_gender?: string | null
+          voice_id?: string | null
           voice_pitch?: number | null
           voice_speed?: number | null
           voice_style?: string | null
@@ -2160,6 +2162,7 @@ export type Database = {
           response_pace?: string | null
           updated_at?: string
           voice_gender?: string | null
+          voice_id?: string | null
           voice_pitch?: number | null
           voice_speed?: number | null
           voice_style?: string | null
