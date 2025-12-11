@@ -66,7 +66,6 @@ const adminNavigation = [
   { name: 'Payouts', href: '/admin/payouts', icon: DollarSign },
   { name: 'Customer Usage', href: '/admin/customer-usage', icon: BarChart3 },
   { name: 'Signup Analytics', href: '/admin/signup-analytics', icon: UserPlus },
-  { name: 'Phone Numbers', href: '/admin/phone-numbers', icon: Phone },
   { name: 'Comp Plans', href: '/admin/comp-plans', icon: Percent },
   { name: 'Genealogy', href: '/admin/genealogy', icon: Network, superAdminOnly: true },
 ];

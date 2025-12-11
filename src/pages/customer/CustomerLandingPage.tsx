@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Phone, Calendar, Users, Clock, MessageSquare, Shield, Check, Zap, UserCheck } from "lucide-react";
+import { Phone, Calendar, Users, Clock, MessageSquare, Shield, Check, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getAffiliateUsernameFromPath } from "@/utils/subdomainRouting";
 import { useAffiliateContext } from "@/hooks/useAffiliateContext";
@@ -94,11 +94,6 @@ export default function CustomerLandingPage() {
   const affiliateUsername = getAffiliateUsernameFromPath(window.location.pathname);
   const { affiliate } = useAffiliateContext(affiliateUsername || undefined);
 
-  // Set page title
-  useEffect(() => {
-    document.title = "EverLaunch AI - Never Miss Another Call";
-  }, []);
-
   // Store affiliate attribution when page loads
   useEffect(() => {
     if (affiliate?.id) {
@@ -129,14 +124,6 @@ export default function CustomerLandingPage() {
               Your AI receptionist answers every call, books appointments, and captures leads 24/7. 
               Stop losing business to missed calls and voicemail.
             </p>
-            {affiliateUsername && (
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/20 px-4 py-2">
-                <UserCheck className="h-4 w-4 text-primary" />
-                <span className="text-sm text-foreground">
-                  Referred by <strong className="text-primary capitalize">{affiliateUsername}</strong>
-                </span>
-              </div>
-            )}
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button size="lg" onClick={() => handlePlanSelect("growth")} className="px-8">
                 Get Started Now

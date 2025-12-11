@@ -1,24 +1,13 @@
-// Force rebuild - Dec 10 2025
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { ArrowLeft, Code, Phone, Copy, Mail, PhoneCall, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
-
-const POPULAR_AREA_CODES = [
-  { code: '212', city: 'New York, NY' },
-  { code: '310', city: 'Los Angeles, CA' },
-  { code: '312', city: 'Chicago, IL' },
-  { code: '305', city: 'Miami, FL' },
-  { code: '415', city: 'San Francisco, CA' },
-  { code: '214', city: 'Dallas, TX' },
-];
 
 export default function DeploySettings() {
   const navigate = useNavigate();
@@ -28,31 +17,10 @@ export default function DeploySettings() {
     twilioNumber,
     isLoading,
     updateProfile,
-    provisionPhoneNumber,
   } = useCustomerOnboarding();
 
   const [savingEmbed, setSavingEmbed] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
-  const [isProvisioning, setIsProvisioning] = useState(false);
-  const [areaCode, setAreaCode] = useState('');
-
-  const handleProvisionPhone = async () => {
-    if (isProvisioning) return;
-    setIsProvisioning(true);
-    try {
-      const result = await provisionPhoneNumber(areaCode || undefined);
-      if (result.success && result.phoneNumber) {
-        toast.success(`Phone number provisioned: ${result.phoneNumber}`);
-      } else {
-        toast.error(result.error || 'Failed to provision phone number');
-      }
-    } catch (error) {
-      console.error('Error provisioning phone:', error);
-      toast.error('Failed to provision phone number');
-    } finally {
-      setIsProvisioning(false);
-    }
-  };
 
   // Redirect if onboarding not complete
   useEffect(() => {
@@ -237,7 +205,7 @@ Thanks!`);
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-primary" />
-              Your GREAT AI phone number
+              Your AI phone number
             </CardTitle>
             <CardDescription>
               Customers can call this number to speak with your AI assistant
@@ -312,51 +280,12 @@ Thanks!`);
                 </div>
               </>
             ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
+              <Alert>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <AlertDescription>
                   We haven't assigned a phone number to your account yet. This usually happens within a few minutes after onboarding. If this persists, please contact support.
-                </p>
-                
-                <div className="flex flex-wrap gap-2">
-                  {POPULAR_AREA_CODES.map((ac) => (
-                    <Button
-                      key={ac.code}
-                      variant={areaCode === ac.code ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setAreaCode(areaCode === ac.code ? '' : ac.code)}
-                    >
-                      {ac.code} - {ac.city}
-                    </Button>
-                  ))}
-                </div>
-
-                <div className="flex gap-3">
-                  <Input
-                    placeholder="Area code (optional)"
-                    value={areaCode}
-                    onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                    className="w-40"
-                    maxLength={3}
-                  />
-                  <Button
-                    onClick={handleProvisionPhone}
-                    disabled={isProvisioning}
-                    className="gap-2"
-                  >
-                    {isProvisioning ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Provisioning...
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="h-4 w-4" />
-                        Get My AI Phone Number
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
+                </AlertDescription>
+              </Alert>
             )}
           </CardContent>
         </Card>

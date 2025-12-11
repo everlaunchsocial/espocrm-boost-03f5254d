@@ -1,5 +1,3 @@
-// Rebuild trigger
-// App rebuild trigger
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -70,7 +68,6 @@ import AdminCompPlans from "./pages/admin/AdminCompPlans";
 import AdminAffiliates from "./pages/admin/AdminAffiliates";
 import SignupAnalytics from "./pages/admin/SignupAnalytics";
 import AdminGenealogy from "./pages/admin/AdminGenealogy";
-import AdminPhoneNumbers from "./pages/admin/AdminPhoneNumbers";
 
 // Customer Portal pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -83,7 +80,6 @@ import DeploySettings from "./pages/customer/DeploySettings";
 import CustomerLeads from "./pages/customer/CustomerLeads";
 import CustomerBilling from "./pages/customer/CustomerBilling";
 import CustomerSupport from "./pages/customer/CustomerSupport";
-import CustomerPreview from "./pages/customer/CustomerPreview";
 
 // Customer Onboarding pages
 import OnboardingStep1 from "./pages/customer/OnboardingStep1";
@@ -165,7 +161,6 @@ const App = () => (
           <Route element={<CustomerPortalLayout />}>
             <Route path="/customer" element={<CustomerDashboard />} />
             <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-            <Route path="/customer/preview" element={<CustomerPreview />} />
             <Route path="/customer/settings" element={<CustomerSettings />} />
             <Route path="/customer/settings/voice" element={<VoiceSettings />} />
             <Route path="/customer/settings/knowledge" element={<KnowledgeSettings />} />
@@ -202,7 +197,6 @@ const App = () => (
             <Route path="/admin/comp-plans" element={<AdminCompPlans />} />
             <Route path="/admin/affiliates" element={<AdminAffiliates />} />
             <Route path="/admin/genealogy" element={<AdminGenealogy />} />
-            <Route path="/admin/phone-numbers" element={<AdminPhoneNumbers />} />
             <Route path="/admin/payouts" element={<AdminPayouts />} />
             <Route path="/admin/customer-usage" element={<AdminCustomerUsage />} />
             <Route path="/admin/signup-analytics" element={<SignupAnalytics />} />

@@ -88,16 +88,16 @@ export function useCustomerOnboarding() {
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
   const [twilioNumber, setTwilioNumber] = useState<string | null>(null);
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-
   const fetchCustomerData = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        // No user - they need to buy/signup first
         navigate('/buy');
         return;
       }
 
+      // Fetch customer profile
       const { data: profile, error: profileError } = await supabase
         .from('customer_profiles')
         .select('*')
@@ -107,12 +107,14 @@ export function useCustomerOnboarding() {
       if (profileError) throw profileError;
       
       if (!profile) {
+        // No customer profile - redirect to purchase
         navigate('/buy');
         return;
       }
 
       setCustomerProfile(profile as unknown as CustomerProfile);
 
+      // Fetch voice settings
       const { data: voice } = await supabase
         .from('voice_settings')
         .select('*')
@@ -121,6 +123,7 @@ export function useCustomerOnboarding() {
       
       setVoiceSettings(voice as unknown as VoiceSettings);
 
+      // Fetch chat settings
       const { data: chat } = await supabase
         .from('chat_settings')
         .select('*')
@@ -129,6 +132,7 @@ export function useCustomerOnboarding() {
       
       setChatSettings(chat as unknown as ChatSettings);
 
+      // Fetch calendar integration
       const { data: calendar } = await supabase
         .from('calendar_integrations')
         .select('*')
@@ -137,6 +141,7 @@ export function useCustomerOnboarding() {
       
       setCalendarIntegration(calendar as unknown as CalendarIntegration);
 
+      // Fetch knowledge sources
       const { data: sources } = await supabase
         .from('customer_knowledge_sources')
         .select('*')
@@ -145,14 +150,15 @@ export function useCustomerOnboarding() {
       
       setKnowledgeSources((sources || []) as unknown as KnowledgeSource[]);
 
-      const { data: phoneNumber } = await supabase
-        .from('customer_phone_numbers')
-        .select('phone_number')
+      // Fetch Twilio number
+      const { data: twilio } = await supabase
+        .from('twilio_numbers')
+        .select('twilio_number')
         .eq('customer_id', profile.id)
         .eq('status', 'active')
         .maybeSingle();
       
-      setTwilioNumber(phoneNumber?.phone_number || null);
+      setTwilioNumber(twilio?.twilio_number || null);
 
     } catch (error) {
       console.error('Error fetching customer data:', error);
@@ -170,6 +176,7 @@ export function useCustomerOnboarding() {
     if (!customerProfile) return false;
     
     try {
+      // Use user_id for update since RLS policy checks user_id = auth.uid()
       const { error } = await supabase
         .from('customer_profiles')
         .update(updates as Record<string, unknown>)
@@ -352,37 +359,6 @@ export function useCustomerOnboarding() {
 
   const isOnboardingComplete = customerProfile?.onboarding_stage === 'wizard_complete';
 
-  const provisionPhoneNumber = useCallback(async (areaCode?: string): Promise<{ success: boolean; phoneNumber?: string; error?: string }> => {
-    if (!customerProfile) {
-      return { success: false, error: 'Customer profile not loaded' };
-    }
-
-    try {
-      const { data, error } = await supabase.functions.invoke('provision-customer-phone', {
-        body: {
-          customerId: customerProfile.id,
-          areaCode: areaCode || null,
-        },
-      });
-
-      if (error) {
-        console.error('Provisioning failed:', error);
-        return { success: false, error: error.message || 'Failed to provision phone number' };
-      }
-
-      if (!data?.success) {
-        console.error('Provisioning failed:', data);
-        return { success: false, error: data?.error || 'Failed to provision phone number' };
-      }
-
-      setTwilioNumber(data.phoneNumber);
-      return { success: true, phoneNumber: data.phoneNumber };
-    } catch (error) {
-      console.error('Provisioning error:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-    }
-  }, [customerProfile]);
-
   return {
     isLoading,
     customerProfile,
@@ -399,7 +375,6 @@ export function useCustomerOnboarding() {
     removeKnowledgeSource,
     goToStep,
     completeOnboarding,
-    provisionPhoneNumber,
     isOnboardingComplete,
     refetch: fetchCustomerData
   };
