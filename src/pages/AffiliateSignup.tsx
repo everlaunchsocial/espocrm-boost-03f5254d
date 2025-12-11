@@ -351,7 +351,7 @@ export default function AffiliateSignup() {
             ].map((stat, index) => (
               <div 
                 key={index}
-                className="text-center p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm"
+                className="text-center p-4 rounded-2xl bg-[#111827] border border-white/10 backdrop-blur-sm"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary/20 text-primary mb-3">
@@ -364,7 +364,7 @@ export default function AffiliateSignup() {
           </div>
 
           {/* Account Creation Form */}
-          <Card className="max-w-xl mx-auto mb-12 bg-white/5 border-white/10 backdrop-blur-xl shadow-2xl shadow-primary/5">
+          <Card className="max-w-xl mx-auto mb-12 bg-[#111827] border-white/10 backdrop-blur-xl shadow-2xl shadow-primary/5">
             <CardHeader className="border-b border-white/10">
               <CardTitle className="text-center text-white">Create Your Partner Account</CardTitle>
             </CardHeader>
@@ -478,7 +478,7 @@ export default function AffiliateSignup() {
             {plans.map((plan, index) => (
               <Card 
                 key={plan.id} 
-                className={`relative transition-all duration-300 hover:scale-[1.02] bg-white/5 border-white/10 backdrop-blur-xl ${
+                className={`relative transition-all duration-300 hover:scale-[1.02] bg-[#111827] border-white/10 backdrop-blur-xl ${
                   plan.code === 'pro' ? 'ring-2 ring-primary shadow-xl shadow-primary/20' : ''
                 }`}
                 style={{ animationDelay: `${index * 100}ms` }}
@@ -503,7 +503,7 @@ export default function AffiliateSignup() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="text-center py-2 px-3 bg-white/5 rounded-xl border border-white/10">
+                  <div className="text-center py-2 px-3 bg-[#1E293B] rounded-xl border border-white/10">
                     <span className="font-medium text-white/80">{formatCredits(plan.demo_credits_per_month)}</span>
                   </div>
                   <ul className="space-y-2">
