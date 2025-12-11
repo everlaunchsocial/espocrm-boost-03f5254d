@@ -71,19 +71,24 @@ export default function CustomerDashboard() {
     ? format(new Date(billing.billing_cycle_end), 'MMM d, yyyy')
     : 'Not set';
 
-  // Calculate checklist completion status
-  const voiceComplete = !!(voiceSettings?.greeting_text && voiceSettings.greeting_text.length >= 20);
+  // Calculate checklist completion status - less strict requirements
+  // Voice: Complete if they set voice_gender OR voice_style (configured voice personality)
+  const voiceComplete = !!(voiceSettings?.voice_gender || voiceSettings?.voice_style);
   
-  const hasWebsiteKnowledge = !!(customerProfile?.website_url && chatSettings?.use_website_knowledge);
-  const hasDocumentKnowledge = knowledgeSources.some(s => s.source_type === 'document' && s.status === 'processed');
+  // Knowledge: Complete if website URL exists OR has document knowledge
+  const hasWebsiteKnowledge = !!customerProfile?.website_url;
+  const hasDocumentKnowledge = knowledgeSources.some(s => s.source_type === 'document');
   const knowledgeComplete = hasWebsiteKnowledge || hasDocumentKnowledge;
   
-  const leadsComplete = !!(customerProfile?.lead_capture_enabled && (customerProfile?.lead_email || customerProfile?.lead_sms_number));
+  // Leads: Complete if lead_capture_enabled OR has notification configured (optional feature)
+  const leadsComplete = !!(customerProfile?.lead_capture_enabled || customerProfile?.lead_email || customerProfile?.lead_sms_number);
   
-  const calendarOptional = !calendarIntegration?.appointments_enabled;
-  const calendarComplete = !!(calendarIntegration?.appointments_enabled && calendarIntegration?.provider);
+  // Calendar: Optional - complete if provider is set OR marked as disabled intentionally
+  const calendarOptional = true; // Calendar is always optional
+  const calendarComplete = !!(calendarIntegration?.provider || calendarIntegration?.appointments_enabled === false);
   
-  const deployComplete = !!(customerProfile?.embed_installed_at && customerProfile?.phone_tested_at);
+  // Deploy: Complete if either embed installed OR phone provisioned (one is enough)
+  const deployComplete = !!(customerProfile?.embed_installed_at || twilioNumber);
 
   return (
     <div className="p-6 md:p-8">
