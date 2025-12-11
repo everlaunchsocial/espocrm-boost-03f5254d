@@ -255,7 +255,7 @@ export default function CustomerBuy() {
         {currentStep === 'plan' && (
           <div>
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
+              <h1 className="text-3xl font-bold mb-2">Choose Your Plan!!!</h1>
               <p className="text-muted-foreground">
                 Select the plan that fits your business needs.
               </p>
