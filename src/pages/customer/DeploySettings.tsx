@@ -4,10 +4,20 @@ import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { ArrowLeft, Code, Phone, Copy, Mail, PhoneCall, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
+
+const popularAreaCodes = [
+  { code: '212', label: 'New York, NY' },
+  { code: '310', label: 'Los Angeles, CA' },
+  { code: '312', label: 'Chicago, IL' },
+  { code: '305', label: 'Miami, FL' },
+  { code: '415', label: 'San Francisco, CA' },
+  { code: '214', label: 'Dallas, TX' },
+];
 
 export default function DeploySettings() {
   const navigate = useNavigate();
@@ -17,10 +27,14 @@ export default function DeploySettings() {
     twilioNumber,
     isLoading,
     updateProfile,
+    provisionPhoneNumber,
   } = useCustomerOnboarding();
 
   const [savingEmbed, setSavingEmbed] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
+  const [selectedAreaCode, setSelectedAreaCode] = useState<string | null>(null);
+  const [customAreaCode, setCustomAreaCode] = useState('');
+  const [isProvisioning, setIsProvisioning] = useState(false);
 
   // Redirect if onboarding not complete
   useEffect(() => {
@@ -30,7 +44,7 @@ export default function DeploySettings() {
   }, [customerProfile, isLoading, navigate]);
 
   const accountId = customerProfile?.id || '';
-  const widgetId = 'default'; // Could be from chat_settings if that field exists
+  const widgetId = 'default';
 
   const embedCode = `<script src="https://cdn.everlaunch.ai/embed.js"></script>
 <script>
@@ -76,7 +90,6 @@ Thanks!`);
   };
 
   const formatPhoneNumber = (phone: string) => {
-    // Simple US phone formatting
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 10) {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
@@ -84,6 +97,37 @@ Thanks!`);
       return `(${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
     }
     return phone;
+  };
+
+  const handleAreaCodeSelect = (code: string) => {
+    if (selectedAreaCode === code) {
+      setSelectedAreaCode(null);
+    } else {
+      setSelectedAreaCode(code);
+      setCustomAreaCode('');
+    }
+  };
+
+  const handleCustomAreaCodeChange = (value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 3);
+    setCustomAreaCode(cleaned);
+    if (cleaned.length > 0) {
+      setSelectedAreaCode(null);
+    }
+  };
+
+  const handleProvisionPhone = async () => {
+    const areaCode = selectedAreaCode || (customAreaCode.length === 3 ? customAreaCode : undefined);
+    
+    setIsProvisioning(true);
+    const result = await provisionPhoneNumber(areaCode);
+    setIsProvisioning(false);
+
+    if (result.success) {
+      toast.success('Your AI phone number has been provisioned!');
+    } else {
+      toast.error(result.error || 'Failed to provision phone number');
+    }
   };
 
   if (isLoading) {
@@ -223,7 +267,7 @@ Thanks!`);
                       <p className="text-2xl font-bold font-mono">
                         {formatPhoneNumber(twilioNumber)}
                       </p>
-                      <div className="flex items-center gap-1.5 text-sm text-success">
+                      <div className="flex items-center gap-1.5 text-sm text-green-600">
                         <CheckCircle className="h-3.5 w-3.5" />
                         <span>Status: Active</span>
                       </div>
@@ -280,12 +324,65 @@ Thanks!`);
                 </div>
               </>
             ) : (
-              <Alert>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <AlertDescription>
-                  We haven't assigned a phone number to your account yet. This usually happens within a few minutes after onboarding. If this persists, please contact support.
-                </AlertDescription>
-              </Alert>
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Get a dedicated AI phone number for your business. Optionally select or enter a 3-digit area code to request a specific region.
+                </p>
+
+                {/* Popular Area Code Buttons */}
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Popular area codes:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {popularAreaCodes.map((ac) => (
+                      <Button
+                        key={ac.code}
+                        variant={selectedAreaCode === ac.code ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleAreaCodeSelect(ac.code)}
+                        disabled={isProvisioning}
+                      >
+                        {ac.code} - {ac.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Area Code Input */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">Or enter custom:</span>
+                  <Input
+                    className="w-40"
+                    placeholder="Area code (e.g. 702)"
+                    value={customAreaCode}
+                    onChange={(e) => handleCustomAreaCodeChange(e.target.value)}
+                    disabled={isProvisioning}
+                    maxLength={3}
+                  />
+                </div>
+
+                {/* Provision Button */}
+                <Button
+                  onClick={handleProvisionPhone}
+                  disabled={isProvisioning}
+                  className="gap-2"
+                >
+                  {isProvisioning ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Provisioning...
+                    </>
+                  ) : (
+                    <>
+                      <Phone className="h-4 w-4" />
+                      Get My AI Phone Number
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-xs text-muted-foreground">
+                  Note: Area code availability varies by region. If your requested area code is unavailable, we'll assign the nearest available number.
+                </p>
+              </>
             )}
           </CardContent>
         </Card>
