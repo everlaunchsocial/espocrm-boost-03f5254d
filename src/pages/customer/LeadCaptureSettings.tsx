@@ -78,8 +78,6 @@ export default function LeadCaptureSettings() {
   const [afterHoursBehavior, setAfterHoursBehavior] = useState('notify');
   
   // UI state
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -114,7 +112,7 @@ export default function LeadCaptureSettings() {
     return cleaned.length >= 10 && cleaned.length <= 15;
   };
 
-  const handleAddEmail = () => {
+  const handleAddEmail = async () => {
     if (!newEmail.trim()) return;
     if (!validateEmail(newEmail)) {
       toast.error('Please enter a valid email address');
@@ -124,17 +122,19 @@ export default function LeadCaptureSettings() {
       toast.error('This email is already added');
       return;
     }
-    setAdditionalEmails([...additionalEmails, newEmail.trim()]);
+    const newList = [...additionalEmails, newEmail.trim()];
+    setAdditionalEmails(newList);
     setNewEmail('');
-    setHasChanges(true);
+    await autoSave({ additional_notification_emails: newList });
   };
 
-  const handleRemoveEmail = (email: string) => {
-    setAdditionalEmails(additionalEmails.filter(e => e !== email));
-    setHasChanges(true);
+  const handleRemoveEmail = async (email: string) => {
+    const newList = additionalEmails.filter(e => e !== email);
+    setAdditionalEmails(newList);
+    await autoSave({ additional_notification_emails: newList });
   };
 
-  const handleAddPhone = () => {
+  const handleAddPhone = async () => {
     if (!newPhone.trim()) return;
     if (!validatePhone(newPhone)) {
       toast.error('Please enter a valid phone number');
@@ -144,14 +144,16 @@ export default function LeadCaptureSettings() {
       toast.error('This phone number is already added');
       return;
     }
-    setAdditionalPhones([...additionalPhones, newPhone.trim()]);
+    const newList = [...additionalPhones, newPhone.trim()];
+    setAdditionalPhones(newList);
     setNewPhone('');
-    setHasChanges(true);
+    await autoSave({ additional_notification_phones: newList });
   };
 
-  const handleRemovePhone = (phone: string) => {
-    setAdditionalPhones(additionalPhones.filter(p => p !== phone));
-    setHasChanges(true);
+  const handleRemovePhone = async (phone: string) => {
+    const newList = additionalPhones.filter(p => p !== phone);
+    setAdditionalPhones(newList);
+    await autoSave({ additional_notification_phones: newList });
   };
 
   // Auto-save helper
@@ -160,6 +162,23 @@ export default function LeadCaptureSettings() {
     if (success) {
       toast.success('Settings saved');
     }
+  };
+
+  // Auto-save on blur for text fields
+  const handleEmailBlur = async () => {
+    if (leadEmail && !validateEmail(leadEmail)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    await autoSave({ lead_email: leadEmail || null });
+  };
+
+  const handlePhoneBlur = async () => {
+    if (leadSmsNumber && !validatePhone(leadSmsNumber)) {
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+    await autoSave({ lead_sms_number: leadSmsNumber || null });
   };
 
   const handleSourceToggle = async (source: keyof LeadSourcesEnabled) => {
@@ -178,50 +197,23 @@ export default function LeadCaptureSettings() {
     await autoSave({ sms_notifications_enabled: checked });
   };
 
-  const handleBusinessHoursChange = (day: keyof BusinessHours, field: 'enabled' | 'open' | 'close', value: boolean | string) => {
-    setBusinessHours(prev => ({
-      ...prev,
-      [day]: { ...prev[day], [field]: value }
-    }));
-    setHasChanges(true);
+  const handleBusinessHoursChange = async (day: keyof BusinessHours, field: 'enabled' | 'open' | 'close', value: boolean | string) => {
+    const newHours = {
+      ...businessHours,
+      [day]: { ...businessHours[day], [field]: value }
+    };
+    setBusinessHours(newHours);
+    await autoSave({ business_hours: newHours });
   };
 
-  const handleSave = async () => {
-    // Validation
-    if (leadCaptureEnabled) {
-      if (!leadEmail && !leadSmsNumber) {
-        toast.error('Please provide at least an email or phone number for lead notifications');
-        return;
-      }
-      if (leadEmail && !validateEmail(leadEmail)) {
-        toast.error('Please enter a valid email address');
-        return;
-      }
-      if (leadSmsNumber && !validatePhone(leadSmsNumber)) {
-        toast.error('Please enter a valid phone number');
-        return;
-      }
-    }
+  const handleTimezoneChange = async (value: string) => {
+    setTimezone(value);
+    await autoSave({ customer_timezone: value });
+  };
 
-    setIsSaving(true);
-    const success = await updateProfile({
-      lead_capture_enabled: leadCaptureEnabled,
-      lead_email: leadEmail || null,
-      lead_sms_number: leadSmsNumber || null,
-      additional_notification_emails: additionalEmails,
-      additional_notification_phones: additionalPhones,
-      sms_notifications_enabled: smsNotificationsEnabled,
-      business_hours: businessHours,
-      customer_timezone: timezone,
-      after_hours_behavior: afterHoursBehavior,
-      lead_sources_enabled: leadSourcesEnabled,
-    } as any);
-    setIsSaving(false);
-
-    if (success) {
-      setHasChanges(false);
-      toast.success('Lead routing settings saved');
-    }
+  const handleAfterHoursBehaviorChange = async (value: string) => {
+    setAfterHoursBehavior(value);
+    await autoSave({ after_hours_behavior: value });
   };
 
   const handleTestNotification = async () => {
@@ -396,10 +388,8 @@ export default function LeadCaptureSettings() {
                         type="email"
                         placeholder="Primary email address"
                         value={leadEmail}
-                        onChange={(e) => {
-                          setLeadEmail(e.target.value);
-                          setHasChanges(true);
-                        }}
+                        onChange={(e) => setLeadEmail(e.target.value)}
+                        onBlur={handleEmailBlur}
                       />
                       {/* Additional emails */}
                       {additionalEmails.map((email, idx) => (
@@ -458,10 +448,8 @@ export default function LeadCaptureSettings() {
                           type="tel"
                           placeholder="Primary phone number"
                           value={leadSmsNumber}
-                          onChange={(e) => {
-                            setLeadSmsNumber(e.target.value);
-                            setHasChanges(true);
-                          }}
+                          onChange={(e) => setLeadSmsNumber(e.target.value)}
+                          onBlur={handlePhoneBlur}
                         />
                         {/* Additional phones */}
                         {additionalPhones.map((phone, idx) => (
@@ -551,7 +539,7 @@ export default function LeadCaptureSettings() {
               {/* Timezone */}
               <div className="space-y-2">
                 <Label>Timezone</Label>
-                <Select value={timezone} onValueChange={(v) => { setTimezone(v); setHasChanges(true); }}>
+                <Select value={timezone} onValueChange={handleTimezoneChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select timezone" />
                   </SelectTrigger>
@@ -605,7 +593,7 @@ export default function LeadCaptureSettings() {
               {/* After hours behavior */}
               <div className="space-y-2">
                 <Label>After Hours Behavior</Label>
-                <Select value={afterHoursBehavior} onValueChange={(v) => { setAfterHoursBehavior(v); setHasChanges(true); }}>
+                <Select value={afterHoursBehavior} onValueChange={handleAfterHoursBehaviorChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -660,16 +648,6 @@ export default function LeadCaptureSettings() {
             </CardContent>
           </Card>
 
-          {/* Save Button */}
-          <div className="flex justify-end gap-3">
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving || showRoutingError}
-              className="min-w-[120px]"
-            >
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
         </div>
       </div>
     </div>
