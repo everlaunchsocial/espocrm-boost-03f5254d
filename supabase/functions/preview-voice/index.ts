@@ -5,13 +5,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Map numeric speed (0.5-2.0) to Cartesia string values
+const mapSpeedToCartesia = (speed: number): string => {
+  if (speed <= 0.6) return 'slowest';
+  if (speed <= 0.85) return 'slow';
+  if (speed <= 1.15) return 'normal';
+  if (speed <= 1.5) return 'fast';
+  return 'fastest';
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { voice_id, text } = await req.json();
+    const { voice_id, text, speed } = await req.json();
 
     if (!voice_id) {
       return new Response(
@@ -39,6 +48,30 @@ serve(async (req) => {
     if (cartesiaApiKey) {
       console.log('Using Cartesia API for voice preview');
       
+      // Build request body with optional speed
+      const requestBody: any = {
+        model_id: 'sonic-english',
+        transcript: sampleText,
+        voice: {
+          mode: 'id',
+          id: voice_id,
+        },
+        output_format: {
+          container: 'mp3',
+          encoding: 'mp3',
+          sample_rate: 44100,
+        },
+      };
+
+      // Add speed control if provided
+      if (speed !== undefined && speed !== null && speed !== 1.0) {
+        const cartesiaSpeed = mapSpeedToCartesia(speed);
+        requestBody.experimental_controls = {
+          speed: cartesiaSpeed
+        };
+        console.log('Preview with speed:', speed, '-> Cartesia:', cartesiaSpeed);
+      }
+
       const response = await fetch('https://api.cartesia.ai/tts/bytes', {
         method: 'POST',
         headers: {
@@ -46,19 +79,7 @@ serve(async (req) => {
           'X-API-Key': cartesiaApiKey,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model_id: 'sonic-english',
-          transcript: sampleText,
-          voice: {
-            mode: 'id',
-            id: voice_id,
-          },
-          output_format: {
-            container: 'mp3',
-            encoding: 'mp3',
-            sample_rate: 44100,
-          },
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
