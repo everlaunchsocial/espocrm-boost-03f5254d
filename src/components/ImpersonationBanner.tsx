@@ -3,19 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUserRole } from '@/hooks/useUserRole';
+import { supabase } from '@/integrations/supabase/client';
 
 export function ImpersonationBanner() {
   const navigate = useNavigate();
   const { role } = useUserRole();
   const [impersonatingUsername, setImpersonatingUsername] = useState<string | null>(null);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
 
   useEffect(() => {
     const username = localStorage.getItem('impersonating_affiliate_username');
+    const id = localStorage.getItem('impersonating_affiliate_id');
     setImpersonatingUsername(username);
+    setImpersonatingId(id);
 
     // Listen for storage changes (in case it's cleared elsewhere)
     const handleStorageChange = () => {
       setImpersonatingUsername(localStorage.getItem('impersonating_affiliate_username'));
+      setImpersonatingId(localStorage.getItem('impersonating_affiliate_id'));
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -27,10 +32,27 @@ export function ImpersonationBanner() {
     return null;
   }
 
-  const handleExitView = () => {
+  const handleExitView = async () => {
+    // Log impersonation end
+    if (impersonatingId && impersonatingUsername) {
+      try {
+        const user = (await supabase.auth.getUser()).data.user;
+        await supabase.from('impersonation_logs').insert({
+          admin_user_id: user?.id,
+          impersonated_affiliate_id: impersonatingId,
+          impersonated_username: impersonatingUsername,
+          action: 'end',
+          user_agent: navigator.userAgent,
+        });
+      } catch (err) {
+        console.error('Failed to log impersonation end:', err);
+      }
+    }
+
     localStorage.removeItem('impersonating_affiliate_id');
     localStorage.removeItem('impersonating_affiliate_username');
     setImpersonatingUsername(null);
+    setImpersonatingId(null);
     navigate('/admin/affiliates');
   };
 
