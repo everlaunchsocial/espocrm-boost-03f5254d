@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.vapi-web-session]
 verify_jwt = false
+
+[functions.preview-voice]
+verify_jwt = false

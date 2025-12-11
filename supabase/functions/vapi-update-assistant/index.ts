@@ -7,19 +7,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Cartesia voice IDs
-const CARTESIA_VOICES = {
-  female: '2b568345-1d48-4f7e-9571-7d4cd87f1765', // Kira
-  male: 'ee7ea9f8-c0c1-498c-9f62-5c57f8f1f7d8',   // Leo
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { customer_id, voice_gender, greeting_text, voice_style } = await req.json();
+    const { customer_id, voice_id, greeting_text, voice_style } = await req.json();
 
     if (!customer_id) {
       return new Response(
@@ -84,12 +78,13 @@ serve(async (req) => {
     // Build update payload
     const updatePayload: any = {};
 
-    // Update voice if gender provided
-    if (voice_gender) {
+    // Update voice if voice_id provided (use exact Cartesia voice ID)
+    if (voice_id) {
       updatePayload.voice = {
         provider: 'cartesia',
-        voiceId: voice_gender === 'male' ? CARTESIA_VOICES.male : CARTESIA_VOICES.female,
+        voiceId: voice_id,
       };
+      console.log('Setting voice to Cartesia voiceId:', voice_id);
     }
 
     // Update greeting if provided

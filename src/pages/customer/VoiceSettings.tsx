@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useVoiceSettings, VoiceGender, VoiceStyle, ResponsePace } from '@/hooks/useVoiceSettings';
+import { useVoiceSettings, VoiceStyle, ResponsePace } from '@/hooks/useVoiceSettings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Mic, Volume2, Save, Loader2, Check } from 'lucide-react';
+import { Mic, Volume2, Save, Loader2, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { AVATAR_OPTIONS } from '@/components/demos/AvatarSelector';
+import { FEMALE_VOICES, MALE_VOICES, getVoiceById } from '@/lib/cartesiaVoices';
 
 export default function VoiceSettings() {
-  const { isLoading, isSaving, settings, businessName, updateSettings, validateSettings, getDefaultGreeting } = useVoiceSettings();
+  const { isLoading, isSaving, isPreviewing, settings, businessName, updateSettings, validateSettings, getDefaultGreeting, previewVoice } = useVoiceSettings();
   const [localSettings, setLocalSettings] = useState(settings);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -29,6 +29,16 @@ export default function VoiceSettings() {
     setHasChanges(true);
   };
 
+  const handleVoiceChange = (voiceId: string) => {
+    const voice = getVoiceById(voiceId);
+    setLocalSettings(prev => ({
+      ...prev,
+      voice_id: voiceId,
+      voice_gender: voice?.gender || prev.voice_gender,
+    }));
+    setHasChanges(true);
+  };
+
   const handleSave = async () => {
     const error = validateSettings(localSettings);
     if (error) {
@@ -40,14 +50,17 @@ export default function VoiceSettings() {
   };
 
   const handlePreviewVoice = () => {
-    // For now, show a toast - actual voice preview would require API integration
-    toast.info('Voice preview coming soon! Your AI will use these settings when handling calls.');
+    if (localSettings.voice_id) {
+      previewVoice(localSettings.voice_id);
+    }
   };
 
   const handleResetGreeting = () => {
     const defaultGreeting = getDefaultGreeting(businessName);
     handleChange('greeting_text', defaultGreeting);
   };
+
+  const selectedVoice = getVoiceById(localSettings.voice_id);
 
   if (isLoading) {
     return (
@@ -77,58 +90,86 @@ export default function VoiceSettings() {
           </Link>
         </div>
 
-        {/* Voice Gender & Style */}
+        {/* Voice Selection */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Mic className="h-5 w-5 text-primary" />
-              Voice Options
+              Voice Selection
             </CardTitle>
             <CardDescription>
-              Choose the voice characteristics for your AI
+              Choose a voice for your AI assistant
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <Label className="text-base font-medium mb-2 block">Select Voice</Label>
+                <Select value={localSettings.voice_id} onValueChange={handleVoiceChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a voice">
+                      {selectedVoice ? `${selectedVoice.name} (${selectedVoice.gender})` : 'Choose a voice'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Female Voices</SelectLabel>
+                      {FEMALE_VOICES.map((voice) => (
+                        <SelectItem key={voice.id} value={voice.id}>
+                          {voice.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Male Voices</SelectLabel>
+                      {MALE_VOICES.map((voice) => (
+                        <SelectItem key={voice.id} value={voice.id}>
+                          {voice.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button 
+                  variant="outline" 
+                  onClick={handlePreviewVoice}
+                  disabled={isPreviewing || !localSettings.voice_id}
+                  className="w-full sm:w-auto"
+                >
+                  {isPreviewing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-2" />
+                  )}
+                  Preview
+                </Button>
+              </div>
+            </div>
+            {selectedVoice && (
+              <p className="text-sm text-muted-foreground">
+                Selected: <span className="font-medium text-foreground">{selectedVoice.name}</span> ({selectedVoice.gender} voice)
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Voice Style & Pace */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Volume2 className="h-5 w-5 text-primary" />
+              Voice Style
+            </CardTitle>
+            <CardDescription>
+              Set the personality and pacing of your AI
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Voice Gender - Avatar Selection */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Choose Your AI Voice</Label>
-              <div className="flex gap-6">
-                {AVATAR_OPTIONS.filter(a => ['jenna', 'james'].includes(a.id)).map((avatar) => {
-                  const isSelected = localSettings.voice_gender === avatar.gender;
-                  return (
-                    <button
-                      key={avatar.id}
-                      type="button"
-                      onClick={() => handleChange('voice_gender', avatar.gender as VoiceGender)}
-                      className={`relative flex flex-col items-center p-4 rounded-xl border-2 transition-all ${
-                        isSelected 
-                          ? 'border-primary bg-primary/5 shadow-md' 
-                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                      }`}
-                    >
-                      <div className="relative">
-                        <img 
-                          src={avatar.imageUrl} 
-                          alt={avatar.name}
-                          className="w-24 h-24 rounded-full object-cover"
-                        />
-                        {isSelected && (
-                          <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-1">
-                            <Check className="h-4 w-4" />
-                          </div>
-                        )}
-                      </div>
-                      <span className="mt-3 font-medium text-foreground">{avatar.name}</span>
-                      <span className="text-xs text-muted-foreground capitalize">{avatar.gender} voice</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Voice Style */}
             <div className="space-y-3">
-              <Label className="text-base font-medium">Voice Style</Label>
+              <Label className="text-base font-medium">Personality Style</Label>
               <RadioGroup
                 value={localSettings.voice_style}
                 onValueChange={(value) => handleChange('voice_style', value as VoiceStyle)}
@@ -267,11 +308,7 @@ export default function VoiceSettings() {
         </Card>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-4">
-          <Button variant="outline" onClick={handlePreviewVoice}>
-            <Volume2 className="h-4 w-4 mr-2" />
-            Preview Voice
-          </Button>
+        <div className="flex items-center justify-end pt-4">
           <Button onClick={handleSave} disabled={isSaving || !hasChanges}>
             {isSaving ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
