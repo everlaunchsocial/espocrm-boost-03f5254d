@@ -858,67 +858,6 @@ export type Database = {
           },
         ]
       }
-      customer_phone_numbers: {
-        Row: {
-          area_code: string | null
-          created_at: string
-          customer_id: string
-          id: string
-          phone_number: string
-          status: string
-          updated_at: string
-          vapi_account_id: string
-          vapi_assistant_id: string | null
-          vapi_phone_id: string | null
-        }
-        Insert: {
-          area_code?: string | null
-          created_at?: string
-          customer_id: string
-          id?: string
-          phone_number: string
-          status?: string
-          updated_at?: string
-          vapi_account_id: string
-          vapi_assistant_id?: string | null
-          vapi_phone_id?: string | null
-        }
-        Update: {
-          area_code?: string | null
-          created_at?: string
-          customer_id?: string
-          id?: string
-          phone_number?: string
-          status?: string
-          updated_at?: string
-          vapi_account_id?: string
-          vapi_assistant_id?: string | null
-          vapi_phone_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_phone_numbers_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: true
-            referencedRelation: "customer_minutes_summary"
-            referencedColumns: ["customer_id"]
-          },
-          {
-            foreignKeyName: "customer_phone_numbers_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: true
-            referencedRelation: "customer_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_phone_numbers_vapi_account_id_fkey"
-            columns: ["vapi_account_id"]
-            isOneToOne: false
-            referencedRelation: "vapi_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       customer_plans: {
         Row: {
           code: string
@@ -2093,39 +2032,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      vapi_accounts: {
-        Row: {
-          api_key: string
-          created_at: string
-          id: string
-          is_active: boolean
-          max_numbers: number
-          name: string
-          numbers_provisioned: number
-          updated_at: string
-        }
-        Insert: {
-          api_key: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          max_numbers?: number
-          name: string
-          numbers_provisioned?: number
-          updated_at?: string
-        }
-        Update: {
-          api_key?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          max_numbers?: number
-          name?: string
-          numbers_provisioned?: number
-          updated_at?: string
-        }
-        Relationships: []
       }
       voice_settings: {
         Row: {
