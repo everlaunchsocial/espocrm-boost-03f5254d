@@ -28,6 +28,7 @@ import {
   Settings,
   User,
   LogOut,
+  GraduationCap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,6 +67,7 @@ const adminNavigation = [
   { name: 'Payouts', href: '/admin/payouts', icon: DollarSign },
   { name: 'Customer Usage', href: '/admin/customer-usage', icon: BarChart3 },
   { name: 'Signup Analytics', href: '/admin/signup-analytics', icon: UserPlus },
+  { name: 'Training', href: '/admin/training', icon: GraduationCap },
   { name: 'Comp Plans', href: '/admin/comp-plans', icon: Percent },
   { name: 'Genealogy', href: '/admin/genealogy', icon: Network, superAdminOnly: true },
 ];
