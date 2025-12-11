@@ -371,7 +371,7 @@ export function useCustomerOnboarding() {
 
   const isOnboardingComplete = customerProfile?.onboarding_stage === 'wizard_complete';
 
-  const provisionPhoneNumber = useCallback(async (areaCode?: string): Promise<{ success: boolean; phoneNumber?: string; error?: string }> => {
+  const provisionPhoneNumber = useCallback(async (areaCode?: string): Promise<{ success: boolean; phoneNumber?: string; error?: string; suggestedCodes?: string[] }> => {
     if (!customerProfile) {
       return { success: false, error: 'No customer profile found' };
     }
@@ -391,7 +391,12 @@ export function useCustomerOnboarding() {
         return { success: true, phoneNumber: data.phoneNumber };
       }
 
-      return { success: false, error: data?.error || 'Failed to provision phone number' };
+      // Return suggested codes if available from the API response
+      return { 
+        success: false, 
+        error: data?.error || 'Failed to provision phone number',
+        suggestedCodes: data?.suggestedCodes || []
+      };
     } catch (error: any) {
       console.error('Exception in provisionPhoneNumber:', error);
       return { success: false, error: error.message || 'Unexpected error' };
