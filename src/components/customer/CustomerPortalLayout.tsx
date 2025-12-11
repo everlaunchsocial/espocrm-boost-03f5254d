@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
+import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { 
   LayoutDashboard, 
   Settings, 
@@ -234,6 +235,9 @@ export function CustomerPortalLayout() {
       <main className="flex-1 md:ml-0 mt-14 md:mt-0">
         <Outlet />
       </main>
+
+      {/* Support Chat Widget */}
+      <SupportChatWidget userRole="customer" />
     </div>
   );
 }
