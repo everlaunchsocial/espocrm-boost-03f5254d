@@ -237,7 +237,7 @@ Thanks!`);
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-primary" />
-              Your AI phone number
+              Your GREAT AI phone number
             </CardTitle>
             <CardDescription>
               Customers can call this number to speak with your AI assistant
@@ -314,7 +314,7 @@ Thanks!`);
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Get a dedicated AI phone number for your business. Optionally enter a 3-digit area code to request a specific region.
+                  We haven't assigned a phone number to your account yet. This usually happens within a few minutes after onboarding. If this persists, please contact support.
                 </p>
                 
                 <div className="flex flex-wrap gap-2">
