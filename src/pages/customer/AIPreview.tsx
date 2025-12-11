@@ -121,7 +121,7 @@ ${chatSettings?.tone ? `Speak in a ${chatSettings.tone} tone.` : ''}
 ${chatSettings?.instructions ? `Additional instructions: ${chatSettings.instructions}` : ''}
 Keep responses helpful, concise, and professional.`;
 
-      const { data, error } = await supabase.functions.invoke('demo-chat', {
+      const { data, error } = await supabase.functions.invoke('customer-preview-chat', {
         body: {
           messages: [...messages, { role: 'user', content: userMessage }],
           systemPrompt,
