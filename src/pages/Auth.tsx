@@ -31,7 +31,7 @@ export default function Auth() {
         const role = profile?.global_role || 'customer';
 
         if (role === 'super_admin' || role === 'admin') {
-          navigate('/');
+          navigate('/dashboard');
         } else if (role === 'affiliate') {
           // Check if affiliate record actually exists
           const { data: affiliate } = await supabase
@@ -76,7 +76,7 @@ export default function Auth() {
           const role = profile?.global_role || 'customer';
 
           if (role === 'super_admin' || role === 'admin') {
-            navigate('/');
+            navigate('/dashboard');
           } else if (role === 'affiliate') {
             // Check if affiliate record actually exists
             const { data: affiliate } = await supabase
