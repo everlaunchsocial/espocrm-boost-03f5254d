@@ -101,3 +101,6 @@ verify_jwt = false
 
 [functions.preview-voice]
 verify_jwt = false
+
+[functions.customer-preview-chat]
+verify_jwt = false
