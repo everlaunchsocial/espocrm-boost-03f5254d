@@ -107,3 +107,9 @@ verify_jwt = false
 
 [functions.create-lead-and-notify]
 verify_jwt = false
+
+[functions.sync-vapi-phone]
+verify_jwt = false
+
+[functions.list-vapi-phones]
+verify_jwt = false
