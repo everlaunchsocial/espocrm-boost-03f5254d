@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -435,6 +436,9 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
           {children ?? <Outlet />}
         </main>
       </div>
+
+      {/* Support Chat Widget */}
+      <SupportChatWidget userRole="affiliate" />
     </div>
     </>
   );

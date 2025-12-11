@@ -113,3 +113,6 @@ verify_jwt = false
 
 [functions.list-vapi-phones]
 verify_jwt = false
+
+[functions.support-chat]
+verify_jwt = false
