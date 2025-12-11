@@ -963,19 +963,25 @@ export type Database = {
       }
       customer_profiles: {
         Row: {
+          additional_notification_emails: string[] | null
+          additional_notification_phones: string[] | null
           affiliate_id: string | null
+          after_hours_behavior: string | null
           billing_cycle_end: string | null
           billing_cycle_start: string | null
+          business_hours: Json | null
           business_name: string | null
           business_type: string | null
           contact_name: string | null
           created_at: string
           customer_plan_id: string | null
+          customer_timezone: string | null
           embed_installed_at: string | null
           id: string
           lead_capture_enabled: boolean | null
           lead_email: string | null
           lead_sms_number: string | null
+          lead_sources_enabled: Json | null
           minutes_included: number
           minutes_used: number
           onboarding_completed_at: string | null
@@ -985,23 +991,30 @@ export type Database = {
           phone: string | null
           phone_tested_at: string | null
           plan_name: string | null
+          sms_notifications_enabled: boolean | null
           user_id: string
           website_url: string | null
         }
         Insert: {
+          additional_notification_emails?: string[] | null
+          additional_notification_phones?: string[] | null
           affiliate_id?: string | null
+          after_hours_behavior?: string | null
           billing_cycle_end?: string | null
           billing_cycle_start?: string | null
+          business_hours?: Json | null
           business_name?: string | null
           business_type?: string | null
           contact_name?: string | null
           created_at?: string
           customer_plan_id?: string | null
+          customer_timezone?: string | null
           embed_installed_at?: string | null
           id?: string
           lead_capture_enabled?: boolean | null
           lead_email?: string | null
           lead_sms_number?: string | null
+          lead_sources_enabled?: Json | null
           minutes_included?: number
           minutes_used?: number
           onboarding_completed_at?: string | null
@@ -1011,23 +1024,30 @@ export type Database = {
           phone?: string | null
           phone_tested_at?: string | null
           plan_name?: string | null
+          sms_notifications_enabled?: boolean | null
           user_id: string
           website_url?: string | null
         }
         Update: {
+          additional_notification_emails?: string[] | null
+          additional_notification_phones?: string[] | null
           affiliate_id?: string | null
+          after_hours_behavior?: string | null
           billing_cycle_end?: string | null
           billing_cycle_start?: string | null
+          business_hours?: Json | null
           business_name?: string | null
           business_type?: string | null
           contact_name?: string | null
           created_at?: string
           customer_plan_id?: string | null
+          customer_timezone?: string | null
           embed_installed_at?: string | null
           id?: string
           lead_capture_enabled?: boolean | null
           lead_email?: string | null
           lead_sms_number?: string | null
+          lead_sources_enabled?: Json | null
           minutes_included?: number
           minutes_used?: number
           onboarding_completed_at?: string | null
@@ -1037,6 +1057,7 @@ export type Database = {
           phone?: string | null
           phone_tested_at?: string | null
           plan_name?: string | null
+          sms_notifications_enabled?: boolean | null
           user_id?: string
           website_url?: string | null
         }
