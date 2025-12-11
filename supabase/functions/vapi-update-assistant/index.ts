@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { customer_id, voice_id, greeting_text, voice_style } = await req.json();
+    const { customer_id, voice_id, voice_speed, greeting_text } = await req.json();
 
     if (!customer_id) {
       return new Response(
@@ -84,6 +84,13 @@ serve(async (req) => {
         provider: 'cartesia',
         voiceId: voice_id,
       };
+      
+      // Add speed if provided (Cartesia supports 0.5 to 2.0)
+      if (voice_speed !== undefined && voice_speed !== null) {
+        updatePayload.voice.speed = voice_speed;
+        console.log('Setting voice speed:', voice_speed);
+      }
+      
       console.log('Setting voice to Cartesia voiceId:', voice_id);
     }
 

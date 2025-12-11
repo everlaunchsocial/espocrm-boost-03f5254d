@@ -3,40 +3,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { getDefaultVoiceId } from '@/lib/cartesiaVoices';
 
-export type VoiceGender = 'male' | 'female';
-export type VoiceStyle = 'friendly' | 'professional' | 'high_energy';
-export type ResponsePace = 'quick' | 'balanced' | 'thoughtful';
-
-export interface VoiceSettingsData {
-  voice_id: string;
-  voice_gender: VoiceGender;
-  voice_style: VoiceStyle;
-  greeting_text: string;
-  response_pace: ResponsePace;
-  language_code: string;
-}
+export type VoiceSettingsData = {
+  voiceId: string;
+  voiceSpeed: number;
+  greetingText: string;
+};
 
 const DEFAULT_SETTINGS: VoiceSettingsData = {
-  voice_id: getDefaultVoiceId(),
-  voice_gender: 'female',
-  voice_style: 'friendly',
-  greeting_text: '',
-  response_pace: 'balanced',
-  language_code: 'en',
+  voiceId: getDefaultVoiceId(),
+  voiceSpeed: 1.0,
+  greetingText: "Hi there! Thanks for calling. How can I help you today?",
 };
 
 export function useVoiceSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [settings, setSettings] = useState<VoiceSettingsData | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
-  const [businessName, setBusinessName] = useState<string>('');
-  const [settings, setSettings] = useState<VoiceSettingsData>(DEFAULT_SETTINGS);
 
-  // Fetch voice settings on mount
   useEffect(() => {
     async function fetchSettings() {
-      setIsLoading(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -47,9 +34,9 @@ export function useVoiceSettings() {
         // Get customer profile
         const { data: profile } = await supabase
           .from('customer_profiles')
-          .select('id, business_name')
+          .select('id')
           .eq('user_id', user.id)
-          .maybeSingle();
+          .single();
 
         if (!profile) {
           setIsLoading(false);
@@ -57,64 +44,43 @@ export function useVoiceSettings() {
         }
 
         setCustomerId(profile.id);
-        setBusinessName(profile.business_name || '');
 
         // Get voice settings
-        const { data: voiceSettings } = await supabase
+        const { data: voiceSettings, error } = await supabase
           .from('voice_settings')
-          .select('*')
+          .select('voice_id, voice_speed, greeting_text')
           .eq('customer_id', profile.id)
-          .maybeSingle();
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching voice settings:', error);
+        }
 
         if (voiceSettings) {
           setSettings({
-            voice_id: voiceSettings.voice_id || getDefaultVoiceId(),
-            voice_gender: (voiceSettings.voice_gender as VoiceGender) || 'female',
-            voice_style: (voiceSettings.voice_style as VoiceStyle) || 'friendly',
-            greeting_text: voiceSettings.greeting_text || getDefaultGreeting(profile.business_name || ''),
-            response_pace: (voiceSettings.response_pace as ResponsePace) || 'balanced',
-            language_code: voiceSettings.language_code || 'en',
+            voiceId: voiceSettings.voice_id || DEFAULT_SETTINGS.voiceId,
+            voiceSpeed: Number(voiceSettings.voice_speed) || DEFAULT_SETTINGS.voiceSpeed,
+            greetingText: voiceSettings.greeting_text || DEFAULT_SETTINGS.greetingText,
           });
         } else {
-          // Create default voice settings row
-          const defaultGreeting = getDefaultGreeting(profile.business_name || '');
-          const defaultVoiceId = getDefaultVoiceId();
-          const newSettings = {
-            customer_id: profile.id,
-            voice_id: defaultVoiceId,
-            voice_gender: 'female',
-            voice_style: 'friendly',
-            greeting_text: defaultGreeting,
-            response_pace: 'balanced',
-            language_code: 'en',
-          };
-
-          await supabase.from('voice_settings').insert(newSettings);
-
-          // Also ensure chat_settings exists
-          const { data: chatSettings } = await supabase
-            .from('chat_settings')
-            .select('id')
-            .eq('customer_id', profile.id)
-            .maybeSingle();
-
-          if (!chatSettings) {
-            await supabase.from('chat_settings').insert({
+          // Create default settings
+          const { error: insertError } = await supabase
+            .from('voice_settings')
+            .insert({
               customer_id: profile.id,
-              greeting_text: defaultGreeting,
-              tone: 'friendly',
+              voice_id: DEFAULT_SETTINGS.voiceId,
+              voice_speed: DEFAULT_SETTINGS.voiceSpeed,
+              greeting_text: DEFAULT_SETTINGS.greetingText,
             });
+
+          if (insertError) {
+            console.error('Error creating default voice settings:', insertError);
           }
 
-          setSettings({
-            ...DEFAULT_SETTINGS,
-            voice_id: defaultVoiceId,
-            greeting_text: defaultGreeting,
-          });
+          setSettings(DEFAULT_SETTINGS);
         }
       } catch (error) {
-        console.error('Error fetching voice settings:', error);
-        toast.error('Failed to load voice settings');
+        console.error('Error in fetchSettings:', error);
       } finally {
         setIsLoading(false);
       }
@@ -123,140 +89,91 @@ export function useVoiceSettings() {
     fetchSettings();
   }, []);
 
-  const getDefaultGreeting = (businessName: string) => {
-    const name = businessName || 'our business';
-    return `Hello, thanks for calling ${name}. How can I help you today?`;
-  };
-
   const updateSettings = useCallback(async (newSettings: Partial<VoiceSettingsData>) => {
-    if (!customerId) return;
+    if (!customerId) {
+      toast.error('No customer profile found');
+      return;
+    }
 
-    const updatedSettings = { ...settings, ...newSettings };
-    setSettings(updatedSettings);
     setIsSaving(true);
 
     try {
-      // Update voice_settings
-      const { error: voiceError } = await supabase
+      const updateData: Record<string, unknown> = {};
+      
+      if (newSettings.voiceId !== undefined) {
+        updateData.voice_id = newSettings.voiceId;
+      }
+      if (newSettings.voiceSpeed !== undefined) {
+        updateData.voice_speed = newSettings.voiceSpeed;
+      }
+      if (newSettings.greetingText !== undefined) {
+        updateData.greeting_text = newSettings.greetingText;
+      }
+
+      const { error } = await supabase
         .from('voice_settings')
-        .update({
-          voice_id: updatedSettings.voice_id,
-          voice_gender: updatedSettings.voice_gender,
-          voice_style: updatedSettings.voice_style,
-          greeting_text: updatedSettings.greeting_text,
-          response_pace: updatedSettings.response_pace,
-          language_code: updatedSettings.language_code,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('customer_id', customerId);
 
-      if (voiceError) throw voiceError;
+      if (error) throw error;
 
-      // Also update chat_settings greeting_text and tone
-      const toneMap: Record<VoiceStyle, string> = {
-        friendly: 'friendly',
-        professional: 'professional',
-        high_energy: 'casual',
-      };
+      // Update local state
+      setSettings(prev => prev ? { ...prev, ...newSettings } : null);
 
-      const { error: chatError } = await supabase
-        .from('chat_settings')
-        .update({
-          greeting_text: updatedSettings.greeting_text,
-          tone: toneMap[updatedSettings.voice_style],
-          updated_at: new Date().toISOString(),
-        })
-        .eq('customer_id', customerId);
+      // Sync with Vapi
+      const { error: vapiError } = await supabase.functions.invoke('vapi-update-assistant', {
+        body: {
+          customer_id: customerId,
+          voice_id: newSettings.voiceId || settings?.voiceId,
+          voice_speed: newSettings.voiceSpeed || settings?.voiceSpeed,
+          greeting_text: newSettings.greetingText || settings?.greetingText,
+        },
+      });
 
-      if (chatError) {
-        console.warn('Failed to update chat_settings:', chatError);
+      if (vapiError) {
+        console.error('Error syncing with Vapi:', vapiError);
+        toast.warning('Settings saved but voice sync failed');
+      } else {
+        toast.success('Voice settings saved');
       }
-
-      // Sync voice settings to Vapi assistant (if one exists)
-      if (newSettings.voice_id || newSettings.greeting_text) {
-        try {
-          const { error: vapiError } = await supabase.functions.invoke('vapi-update-assistant', {
-            body: {
-              customer_id: customerId,
-              voice_id: updatedSettings.voice_id,
-              greeting_text: updatedSettings.greeting_text,
-              voice_style: updatedSettings.voice_style,
-            }
-          });
-          
-          if (vapiError) {
-            console.warn('Failed to sync to Vapi:', vapiError);
-          }
-        } catch (vapiErr) {
-          console.warn('Vapi sync error:', vapiErr);
-        }
-      }
-
-      toast.success('Settings saved');
     } catch (error) {
-      console.error('Error saving voice settings:', error);
+      console.error('Error updating settings:', error);
       toast.error('Failed to save settings');
     } finally {
       setIsSaving(false);
     }
   }, [customerId, settings]);
 
-  const previewVoice = useCallback(async (voiceId: string) => {
-    setIsPreviewing(true);
+  const previewVoice = useCallback(async (voiceId: string, text: string) => {
+    setIsPreviewLoading(true);
+
     try {
       const { data, error } = await supabase.functions.invoke('preview-voice', {
-        body: { voice_id: voiceId }
+        body: { voice_id: voiceId, text },
       });
 
       if (error) throw error;
 
-      if (data?.audio) {
-        // Play audio
-        const audioBlob = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
-        const blob = new Blob([audioBlob], { type: 'audio/mp3' });
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.onended = () => URL.revokeObjectURL(url);
+      if (data?.audio_base64) {
+        const audio = new Audio(`data:audio/mp3;base64,${data.audio_base64}`);
         await audio.play();
       } else if (data?.message) {
         toast.info(data.message);
       }
     } catch (error) {
       console.error('Error previewing voice:', error);
-      toast.error('Voice preview not available yet');
+      toast.error('Failed to preview voice');
     } finally {
-      setIsPreviewing(false);
+      setIsPreviewLoading(false);
     }
   }, []);
 
-  const validateSettings = (data: VoiceSettingsData): string | null => {
-    if (!data.greeting_text || data.greeting_text.length < 5) {
-      return 'Greeting text must be at least 5 characters';
-    }
-    if (data.greeting_text.length > 300) {
-      return 'Greeting text must be less than 300 characters';
-    }
-    if (!data.voice_id) {
-      return 'Please select a voice';
-    }
-    if (!['friendly', 'professional', 'high_energy'].includes(data.voice_style)) {
-      return 'Invalid voice style';
-    }
-    if (!['quick', 'balanced', 'thoughtful'].includes(data.response_pace)) {
-      return 'Invalid response pace';
-    }
-    return null;
-  };
-
   return {
+    settings,
     isLoading,
     isSaving,
-    isPreviewing,
-    settings,
-    businessName,
+    isPreviewLoading,
     updateSettings,
-    validateSettings,
-    getDefaultGreeting,
     previewVoice,
   };
 }
