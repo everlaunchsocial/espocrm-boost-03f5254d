@@ -7,6 +7,66 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Build industry-aware system prompt from vertical template
+function buildSystemPrompt(
+  businessName: string,
+  websiteUrl: string | null,
+  verticalTemplate: any | null,
+  voiceInstructions: string | null
+): string {
+  // Start with vertical template if available
+  let prompt = '';
+  
+  if (verticalTemplate) {
+    // Use the template's prompt, replacing {business_name} placeholder
+    prompt = verticalTemplate.prompt_template.replace('{business_name}', businessName);
+    
+    // Add vocabulary preferences
+    const vocab = verticalTemplate.vocabulary_preferences || {};
+    if (vocab.use?.length) {
+      prompt += `\n\nPreferred terminology: ${vocab.use.join(', ')}.`;
+    }
+    if (vocab.avoid?.length) {
+      prompt += ` Avoid using: ${vocab.avoid.join(', ')}.`;
+    }
+    
+    // Add do list
+    const doList = verticalTemplate.do_list || [];
+    if (doList.length) {
+      prompt += '\n\nGuidelines - Always do:\n' + doList.map((item: string) => `• ${item}`).join('\n');
+    }
+    
+    // Add don't list
+    const dontList = verticalTemplate.dont_list || [];
+    if (dontList.length) {
+      prompt += '\n\nGuidelines - Never do:\n' + dontList.map((item: string) => `• ${item}`).join('\n');
+    }
+    
+    // Add typical goals context
+    const goals = verticalTemplate.typical_goals || [];
+    if (goals.length) {
+      prompt += `\n\nYour primary goals are to: ${goals.join(', ')}.`;
+    }
+  } else {
+    // Fallback generic prompt
+    prompt = `You are a friendly and professional AI phone assistant for ${businessName}. 
+Your job is to answer calls, help customers with their questions, and provide excellent service.
+Always be helpful, courteous, and concise. If you don't know something, offer to take a message or transfer to a human.`;
+  }
+  
+  // Add website context
+  if (websiteUrl) {
+    prompt += `\n\nThe business website is ${websiteUrl}.`;
+  }
+  
+  // Add custom voice instructions overlay
+  if (voiceInstructions) {
+    prompt += `\n\nAdditional instructions: ${voiceInstructions}`;
+  }
+  
+  return prompt;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -57,7 +117,6 @@ serve(async (req) => {
     }
 
     // Use the account's API key if found and valid, otherwise use the default VAPI_API_KEY
-    // Skip placeholder keys or keys that don't look like valid Vapi keys
     const dbApiKey = vapiAccount?.api_key;
     const isValidDbKey = dbApiKey && dbApiKey.length > 20 && !dbApiKey.includes('STORED') && !dbApiKey.includes('PLACEHOLDER');
     const activeVapiKey = isValidDbKey ? dbApiKey : vapiApiKey;
@@ -68,7 +127,7 @@ serve(async (req) => {
     // 2. Fetch customer profile for business info
     const { data: customerProfile, error: profileError } = await supabase
       .from('customer_profiles')
-      .select('id, business_name, website_url, contact_name')
+      .select('id, business_name, website_url, contact_name, business_type')
       .eq('id', customer_id)
       .single();
 
@@ -83,20 +142,38 @@ serve(async (req) => {
     // 3. Fetch voice settings for personalization
     const { data: voiceSettings } = await supabase
       .from('voice_settings')
-      .select('greeting_text, voice_gender, voice_style')
+      .select('greeting_text, voice_gender, voice_style, instructions')
       .eq('customer_id', customer_id)
       .maybeSingle();
+
+    // 4. Fetch vertical template if customer has a business_type
+    let verticalTemplate = null;
+    if (customerProfile.business_type) {
+      const { data: template } = await supabase
+        .from('vertical_templates')
+        .select('*')
+        .eq('vertical_key', customerProfile.business_type)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (template) {
+        verticalTemplate = template;
+        console.log(`Using vertical template: ${template.name}`);
+      }
+    }
 
     const businessName = customerProfile.business_name || 'the business';
     const greeting = voiceSettings?.greeting_text || `Thank you for calling ${businessName}. How can I help you today?`;
 
-    // 4. Create Vapi assistant
-    const systemPrompt = `You are a friendly and professional AI phone assistant for ${businessName}. 
-Your job is to answer calls, help customers with their questions, and provide excellent service.
-${customerProfile.website_url ? `The business website is ${customerProfile.website_url}.` : ''}
-Always be helpful, courteous, and concise. If you don't know something, offer to take a message or transfer to a human.`;
+    // 5. Build industry-aware system prompt
+    const systemPrompt = buildSystemPrompt(
+      businessName,
+      customerProfile.website_url,
+      verticalTemplate,
+      voiceSettings?.instructions || null
+    );
 
-    console.log('Creating Vapi assistant...');
+    console.log('Creating Vapi assistant with industry-aware prompt...');
     const assistantResponse = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
       headers: {
@@ -114,7 +191,7 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
         },
         voice: {
           provider: 'cartesia',
-          voiceId: voiceSettings?.voice_gender === 'male' ? 'd46abd1d-2d02-43e8-819f-51fb652c1c61' : 'a0e99841-438c-4a64-b679-ae501e7d6091', // Grant (male) / Jacqueline (female)
+          voiceId: voiceSettings?.voice_gender === 'male' ? 'd46abd1d-2d02-43e8-819f-51fb652c1c61' : 'a0e99841-438c-4a64-b679-ae501e7d6091',
         },
         transcriber: {
           provider: 'deepgram',
@@ -137,14 +214,13 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
     const assistant = await assistantResponse.json();
     console.log('Created assistant:', assistant.id);
 
-    // 5. Purchase phone number via Vapi
+    // 6. Purchase phone number via Vapi
     console.log('Purchasing phone number...');
     const phonePayload: any = {
       provider: 'vapi',
       assistantId: assistant.id,
     };
 
-    // Add area code if provided
     if (area_code && /^\d{3}$/.test(area_code)) {
       phonePayload.numberDesiredAreaCode = area_code;
     }
@@ -168,7 +244,6 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
         headers: { 'Authorization': `Bearer ${activeVapiKey}` },
       });
       
-      // Extract suggested area codes from Vapi error
       let userMessage = 'Failed to provision phone number.';
       let suggestedCodes: string[] = [];
       
@@ -193,7 +268,6 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
     console.log('Phone response data:', JSON.stringify(phoneData));
     const phoneNumberId = phoneData.id;
     
-    // Fetch phone number details to get the actual number
     let phoneNumber = phoneData.number || phoneData.phoneNumber;
     if (!phoneNumber && phoneNumberId) {
       console.log('Fetching phone number details...');
@@ -209,11 +283,9 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
     
     console.log('Purchased phone number:', phoneNumber, 'ID:', phoneNumberId);
 
-    // 5a. Validate phone number is a real PSTN number before proceeding
     if (!phoneNumber || !phoneNumber.match(/^\+?\d{10,15}$/)) {
       console.error('Invalid phone number received:', phoneNumber);
       
-      // Clean up the assistant and phone endpoint we created
       await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${activeVapiKey}` },
@@ -233,7 +305,7 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
       );
     }
 
-    // 5b. Clear any inherited server URL from account defaults
+    // Clear any inherited server URL
     console.log('Clearing server URL for phone number...');
     const clearUrlResponse = await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
       method: 'PATCH',
@@ -249,12 +321,9 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
 
     if (!clearUrlResponse.ok) {
       console.error('Warning: Failed to clear server URL:', await clearUrlResponse.text());
-    } else {
-      console.log('Cleared server URL successfully');
     }
 
-    // 6. Save to customer_phone_numbers table - THIS IS BLOCKING
-    // If we can't save to database, we must rollback the Vapi resources
+    // 7. Save to customer_phone_numbers table
     const insertPayload: any = {
       customer_id,
       phone_number: phoneNumber,
@@ -264,7 +333,6 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
       status: 'active',
     };
 
-    // Only include vapi_account_id if we have a valid one from the database
     if (vapiAccountId) {
       insertPayload.vapi_account_id = vapiAccountId;
     }
@@ -278,16 +346,14 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
 
     if (insertError) {
       console.error('CRITICAL: Failed to save phone number record:', insertError);
-      console.error('Insert payload was:', JSON.stringify(insertPayload));
       
-      // ROLLBACK: Delete the phone number and assistant from Vapi
+      // ROLLBACK
       console.log('Rolling back Vapi resources...');
       try {
         await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${activeVapiKey}` },
         });
-        console.log('Deleted Vapi phone number');
       } catch (e) {
         console.error('Failed to delete Vapi phone number during rollback:', e);
       }
@@ -297,7 +363,6 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${activeVapiKey}` },
         });
-        console.log('Deleted Vapi assistant');
       } catch (e) {
         console.error('Failed to delete Vapi assistant during rollback:', e);
       }
@@ -314,7 +379,7 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
 
     console.log('Phone number saved to database:', insertedRecord.id);
 
-    // 7. Increment numbers_provisioned on the Vapi account (non-blocking)
+    // 8. Increment numbers_provisioned on the Vapi account
     if (vapiAccountId) {
       const { error: updateError } = await supabase
         .from('vapi_accounts')
@@ -323,7 +388,6 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
       
       if (updateError) {
         console.error('Warning: Failed to increment numbers_provisioned:', updateError);
-        // Don't fail the request for this - just log it
       }
     }
 
