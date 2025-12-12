@@ -87,6 +87,7 @@ import CustomerSupport from "./pages/customer/CustomerSupport";
 import AIPreview from "./pages/customer/AIPreview";
 import CustomerTraining from "./pages/customer/CustomerTraining";
 import CustomerAffiliate from "./pages/customer/CustomerAffiliate";
+import CustomerInsights from "./pages/customer/CustomerInsights";
 
 // Customer Onboarding pages
 import OnboardingStep1 from "./pages/customer/OnboardingStep1";
@@ -181,6 +182,7 @@ const App = () => (
             <Route path="/customer/preview" element={<AIPreview />} />
             <Route path="/customer/calendar" element={<Calendar />} />
             <Route path="/customer/training" element={<CustomerTraining />} />
+            <Route path="/customer/insights" element={<CustomerInsights />} />
             <Route path="/customer/affiliate" element={<CustomerAffiliate />} />
           </Route>
           
