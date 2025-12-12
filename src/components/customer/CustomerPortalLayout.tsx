@@ -83,12 +83,15 @@ export function CustomerPortalLayout() {
     navigate('/auth');
   };
 
+  // Allow super_admin/admin to bypass customer check
+  const canAccessCustomerPortal = isCustomer || role === 'super_admin' || role === 'admin';
+
   // Redirect logic
   useEffect(() => {
     if (isLoading) return;
 
-    // Non-customers cannot access customer portal
-    if (!isCustomer) {
+    // Non-customers cannot access customer portal (unless admin)
+    if (!canAccessCustomerPortal) {
       return; // Will show "no access" message
     }
 
@@ -125,8 +128,8 @@ export function CustomerPortalLayout() {
     );
   }
 
-  // Non-customer access denied
-  if (!isCustomer) {
+  // Non-customer access denied (unless admin)
+  if (!canAccessCustomerPortal) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">

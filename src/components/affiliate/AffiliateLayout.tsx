@@ -213,13 +213,10 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
     );
   }
 
-  // Allow access if user is affiliate OR if super_admin is impersonating
-  const canAccess = role === 'affiliate' || (role === 'super_admin' && isImpersonating);
+  // Super admins can access everything without impersonation
+  const canAccess = role === 'affiliate' || role === 'super_admin' || role === 'admin';
 
   if (!canAccess) {
-    if (role === 'super_admin' || role === 'admin') {
-      return <Navigate to="/" replace />;
-    }
     return <Navigate to="/unauthorized" replace />;
   }
 
