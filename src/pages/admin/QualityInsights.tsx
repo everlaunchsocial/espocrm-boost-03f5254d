@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, TrendingUp, TrendingDown, Phone, AlertTriangle, Target, BarChart3, Eye, Download } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { PatternInsights } from "@/components/admin/quality/PatternInsights";
+import { CategoryBreakdown } from "@/components/admin/quality/CategoryBreakdown";
 
 interface CallAnalysis {
   id: string;
@@ -367,6 +369,16 @@ export default function QualityInsights() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Pattern Detection & Auto-Suggestions */}
+        {analyses && analyses.length > 0 && (
+          <PatternInsights analyses={analyses} />
+        )}
+
+        {/* Category Breakdown */}
+        {analyses && analyses.length > 0 && (
+          <CategoryBreakdown analyses={analyses} />
+        )}
 
         {/* Recent Calls Table */}
         <Card>
