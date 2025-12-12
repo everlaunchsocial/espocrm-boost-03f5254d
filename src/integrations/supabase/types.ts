@@ -867,7 +867,7 @@ export type Database = {
           phone_number: string
           status: string
           updated_at: string
-          vapi_account_id: string
+          vapi_account_id: string | null
           vapi_assistant_id: string | null
           vapi_phone_id: string | null
         }
@@ -879,7 +879,7 @@ export type Database = {
           phone_number: string
           status?: string
           updated_at?: string
-          vapi_account_id: string
+          vapi_account_id?: string | null
           vapi_assistant_id?: string | null
           vapi_phone_id?: string | null
         }
@@ -891,7 +891,7 @@ export type Database = {
           phone_number?: string
           status?: string
           updated_at?: string
-          vapi_account_id?: string
+          vapi_account_id?: string | null
           vapi_assistant_id?: string | null
           vapi_phone_id?: string | null
         }
