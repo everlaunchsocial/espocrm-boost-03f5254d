@@ -2489,6 +2489,51 @@ export type Database = {
           },
         ]
       }
+      vertical_templates: {
+        Row: {
+          created_at: string | null
+          do_list: Json | null
+          dont_list: Json | null
+          id: string
+          industry: string
+          is_active: boolean | null
+          name: string
+          prompt_template: string
+          typical_goals: Json | null
+          updated_at: string | null
+          vertical_key: string
+          vocabulary_preferences: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          do_list?: Json | null
+          dont_list?: Json | null
+          id?: string
+          industry: string
+          is_active?: boolean | null
+          name: string
+          prompt_template: string
+          typical_goals?: Json | null
+          updated_at?: string | null
+          vertical_key: string
+          vocabulary_preferences?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          do_list?: Json | null
+          dont_list?: Json | null
+          id?: string
+          industry?: string
+          is_active?: boolean | null
+          name?: string
+          prompt_template?: string
+          typical_goals?: Json | null
+          updated_at?: string | null
+          vertical_key?: string
+          vocabulary_preferences?: Json | null
+        }
+        Relationships: []
+      }
       voice_settings: {
         Row: {
           customer_id: string

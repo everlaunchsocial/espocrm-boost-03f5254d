@@ -5,13 +5,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRight, Building2, Globe, User, Phone } from 'lucide-react';
+import { ArrowRight, Building2, Globe, User, Phone, Stethoscope, Hammer, Thermometer, Scale, Home, Bug, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+const VERTICALS = [
+  { key: 'dentist', name: 'Dental Practice', icon: Stethoscope },
+  { key: 'home-improvement', name: 'Home Improvement', icon: Hammer },
+  { key: 'hvac', name: 'HVAC Services', icon: Thermometer },
+  { key: 'legal', name: 'Legal Services', icon: Scale },
+  { key: 'real-estate', name: 'Real Estate', icon: Home },
+  { key: 'pest-control', name: 'Pest Control', icon: Bug },
+  { key: 'network-marketing', name: 'Network Marketing', icon: Users },
+];
 
 export default function OnboardingStep1() {
   const navigate = useNavigate();
   const { customerProfile, updateProfile, isLoading } = useCustomerOnboarding();
   
+  const [businessType, setBusinessType] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [contactName, setContactName] = useState('');
@@ -20,6 +32,7 @@ export default function OnboardingStep1() {
 
   useEffect(() => {
     if (customerProfile) {
+      setBusinessType(customerProfile.business_type || '');
       setBusinessName(customerProfile.business_name || '');
       setWebsiteUrl(customerProfile.website_url || '');
       setContactName(customerProfile.contact_name || '');
@@ -54,10 +67,21 @@ export default function OnboardingStep1() {
     return cleaned.length >= 10 && cleaned.length <= 15;
   };
 
+  const handleVerticalSelect = async (verticalKey: string) => {
+    setBusinessType(verticalKey);
+    await updateProfile({
+      business_type: verticalKey,
+      onboarding_stage: 'wizard_step_1',
+      onboarding_current_step: 1
+    });
+    toast.success('Industry selected');
+  };
+
   const handleSave = async (showToast = false) => {
     const formattedWebsite = formatWebsiteUrl(websiteUrl);
     
     const success = await updateProfile({
+      business_type: businessType,
       business_name: businessName,
       website_url: formattedWebsite,
       contact_name: contactName,
@@ -78,6 +102,11 @@ export default function OnboardingStep1() {
   };
 
   const handleNext = async () => {
+    if (!businessType) {
+      toast.error('Please select your industry');
+      return;
+    }
+
     if (!businessName.trim()) {
       toast.error('Business name is required');
       return;
@@ -112,11 +141,58 @@ export default function OnboardingStep1() {
   }
 
   return (
-    <Card className="animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
+      {/* Industry Selection */}
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
-            Business Profile
+            Select Your Industry
+          </CardTitle>
+          <CardDescription>
+            Choose your business type so we can customize your AI assistant with industry-specific knowledge and terminology.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {VERTICALS.map((vertical) => {
+              const Icon = vertical.icon;
+              const isSelected = businessType === vertical.key;
+              return (
+                <button
+                  key={vertical.key}
+                  onClick={() => handleVerticalSelect(vertical.key)}
+                  className={cn(
+                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all duration-200",
+                    "hover:border-primary/50 hover:bg-primary/5",
+                    isSelected 
+                      ? "border-primary bg-primary/10 text-primary" 
+                      : "border-border bg-card text-muted-foreground"
+                  )}
+                >
+                  <Icon className={cn(
+                    "h-8 w-8 transition-colors",
+                    isSelected ? "text-primary" : "text-muted-foreground"
+                  )} />
+                  <span className={cn(
+                    "text-sm font-medium text-center",
+                    isSelected ? "text-primary" : "text-foreground"
+                  )}>
+                    {vertical.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Business Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            Business Details
           </CardTitle>
           <CardDescription>
             Tell us about your business so we can personalize your AI assistant.
@@ -183,18 +259,6 @@ export default function OnboardingStep1() {
             />
           </div>
 
-          {customerProfile?.business_type && (
-            <div className="space-y-2">
-              <Label className="text-muted-foreground">Business Type</Label>
-              <div className="px-3 py-2 bg-muted rounded-md text-muted-foreground">
-                {customerProfile.business_type}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                This was set during signup and cannot be changed.
-              </p>
-            </div>
-          )}
-
           <div className="flex justify-end pt-4">
             <Button onClick={handleNext} disabled={isSaving} className="gap-2">
               {isSaving ? 'Saving...' : 'Next: Voice & Personality'}
@@ -203,5 +267,6 @@ export default function OnboardingStep1() {
           </div>
         </CardContent>
       </Card>
+    </div>
   );
 }
