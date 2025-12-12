@@ -27,8 +27,6 @@ serve(async (req) => {
     const callDuration = call.duration || message.duration || 0;
     const callId = call.id || message.callId || 'unknown';
     const endedReason = message.endedReason || call.endedReason || 'unknown';
-    
-    // Extract customer_id from assistant metadata if available
     const assistantId = call.assistantId || message.assistantId;
     const customerId = call.metadata?.customer_id || message.metadata?.customer_id;
 
@@ -37,14 +35,53 @@ serve(async (req) => {
     console.log('Duration:', callDuration, 'seconds');
     console.log('Customer ID:', customerId);
 
-    // If we have a customer_id, try to create lead and notify
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Save call to vapi_calls table for quality analysis
+    let savedCallId: string | null = null;
+    if (transcript && transcript.length >= 10) {
+      try {
+        const { data: savedCall, error: saveError } = await supabase
+          .from('vapi_calls')
+          .insert({
+            vapi_call_id: callId !== 'unknown' ? callId : null,
+            customer_id: customerId || null,
+            caller_phone: callerPhone,
+            transcript: transcript,
+            summary: summary || null,
+            duration_seconds: callDuration,
+            ended_reason: endedReason,
+            assistant_id: assistantId || null,
+            call_metadata: { original_body: body },
+          })
+          .select('id')
+          .single();
+
+        if (saveError) {
+          console.error('Error saving call to vapi_calls:', saveError);
+        } else {
+          savedCallId = savedCall?.id;
+          console.log('Call saved to vapi_calls:', savedCallId);
+
+          // Trigger async quality analysis (non-blocking)
+          supabase.functions.invoke('analyze-call-quality', {
+            body: { call_id: savedCallId },
+          }).then(result => {
+            console.log('Quality analysis triggered:', result.data);
+          }).catch(err => {
+            console.error('Quality analysis failed:', err);
+          });
+        }
+      } catch (saveErr) {
+        console.error('Failed to save call:', saveErr);
+      }
+    }
+
+    // If we have a customer_id, create lead and notify
     if (customerId && callerPhone && callerPhone !== 'Unknown') {
       try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-        // Call create-lead-and-notify
         const { data, error } = await supabase.functions.invoke('create-lead-and-notify', {
           body: {
             customer_id: customerId,
@@ -95,6 +132,7 @@ serve(async (req) => {
             <p style="margin: 5px 0;"><strong>Call ID:</strong> ${callId}</p>
             <p style="margin: 5px 0;"><strong>Ended:</strong> ${endedReason}</p>
             ${customerId ? `<p style="margin: 5px 0;"><strong>Customer ID:</strong> ${customerId}</p>` : ''}
+            ${savedCallId ? `<p style="margin: 5px 0;"><strong>DB Record:</strong> ${savedCallId}</p>` : ''}
           </div>
           
           ${summary ? `
@@ -121,7 +159,7 @@ ${transcript}
     console.log('Transcript email sent:', emailResponse);
 
     return new Response(
-      JSON.stringify({ success: true, emailSent: true }),
+      JSON.stringify({ success: true, emailSent: true, callSaved: !!savedCallId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
