@@ -248,37 +248,84 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
       console.log('Cleared server URL successfully');
     }
 
-    // 6. Save to customer_phone_numbers table
-    const { error: insertError } = await supabase
-      .from('customer_phone_numbers')
-      .insert({
-        customer_id,
-        phone_number: phoneNumber,
-        vapi_account_id: vapiAccountId || '00000000-0000-0000-0000-000000000000', // Fallback UUID
-        vapi_assistant_id: assistant.id,
-        vapi_phone_id: phoneData.id,
-        area_code: area_code || null,
-        status: 'active',
-      });
+    // 6. Save to customer_phone_numbers table - THIS IS BLOCKING
+    // If we can't save to database, we must rollback the Vapi resources
+    const insertPayload: any = {
+      customer_id,
+      phone_number: phoneNumber,
+      vapi_assistant_id: assistant.id,
+      vapi_phone_id: phoneData.id,
+      area_code: area_code || null,
+      status: 'active',
+    };
 
-    if (insertError) {
-      console.error('Failed to save phone number record:', insertError);
-      // Number was purchased but we couldn't save it - still return success
-      // but log for manual cleanup
+    // Only include vapi_account_id if we have a valid one from the database
+    if (vapiAccountId) {
+      insertPayload.vapi_account_id = vapiAccountId;
     }
 
-    // 7. Increment numbers_provisioned on the Vapi account
+    console.log('Saving phone number to database...');
+    const { data: insertedRecord, error: insertError } = await supabase
+      .from('customer_phone_numbers')
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('CRITICAL: Failed to save phone number record:', insertError);
+      console.error('Insert payload was:', JSON.stringify(insertPayload));
+      
+      // ROLLBACK: Delete the phone number and assistant from Vapi
+      console.log('Rolling back Vapi resources...');
+      try {
+        await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${activeVapiKey}` },
+        });
+        console.log('Deleted Vapi phone number');
+      } catch (e) {
+        console.error('Failed to delete Vapi phone number during rollback:', e);
+      }
+      
+      try {
+        await fetch(`https://api.vapi.ai/assistant/${assistant.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${activeVapiKey}` },
+        });
+        console.log('Deleted Vapi assistant');
+      } catch (e) {
+        console.error('Failed to delete Vapi assistant during rollback:', e);
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Failed to save phone number to database. Please try again.',
+          details: insertError.message 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Phone number saved to database:', insertedRecord.id);
+
+    // 7. Increment numbers_provisioned on the Vapi account (non-blocking)
     if (vapiAccountId) {
-      await supabase
+      const { error: updateError } = await supabase
         .from('vapi_accounts')
         .update({ numbers_provisioned: (vapiAccount?.numbers_provisioned || 0) + 1 })
         .eq('id', vapiAccountId);
+      
+      if (updateError) {
+        console.error('Warning: Failed to increment numbers_provisioned:', updateError);
+        // Don't fail the request for this - just log it
+      }
     }
 
     console.log('Phone provisioning complete:', phoneNumber);
 
     return new Response(
-      JSON.stringify({ success: true, phoneNumber }),
+      JSON.stringify({ success: true, phoneNumber, phoneId: insertedRecord.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
