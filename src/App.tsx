@@ -70,6 +70,7 @@ import AdminAffiliates from "./pages/admin/AdminAffiliates";
 import SignupAnalytics from "./pages/admin/SignupAnalytics";
 import AdminGenealogy from "./pages/admin/AdminGenealogy";
 import AdminTraining from "./pages/admin/AdminTraining";
+import TestAnalyzer from "./pages/admin/TestAnalyzer";
 
 // Customer Portal pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -216,6 +217,7 @@ const App = () => (
             <Route path="/admin/customer-usage" element={<AdminCustomerUsage />} />
             <Route path="/admin/signup-analytics" element={<SignupAnalytics />} />
             <Route path="/admin/training" element={<AdminTraining />} />
+            <Route path="/admin/test-analyzer" element={<TestAnalyzer />} />
             <Route path="/customer/usage" element={<CustomerUsage />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/email" element={<Email />} />

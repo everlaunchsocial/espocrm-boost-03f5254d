@@ -606,6 +606,106 @@ export type Database = {
           },
         ]
       }
+      call_analysis: {
+        Row: {
+          analysis_cost: number | null
+          analyzed_at: string
+          analyzer_model: string | null
+          call_category: string | null
+          call_id: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          insights: Json | null
+          overall_score: number | null
+          score_accuracy: number | null
+          score_booking_success: number | null
+          score_call_duration: number | null
+          score_clarity: number | null
+          score_completeness: number | null
+          score_lead_quality: number | null
+          score_objection_handling: number | null
+          score_outcome_quality: number | null
+          score_speed: number | null
+          score_tone: number | null
+          sentiment: string | null
+          suggestions: Json | null
+          transcript_summary: string | null
+        }
+        Insert: {
+          analysis_cost?: number | null
+          analyzed_at?: string
+          analyzer_model?: string | null
+          call_category?: string | null
+          call_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          insights?: Json | null
+          overall_score?: number | null
+          score_accuracy?: number | null
+          score_booking_success?: number | null
+          score_call_duration?: number | null
+          score_clarity?: number | null
+          score_completeness?: number | null
+          score_lead_quality?: number | null
+          score_objection_handling?: number | null
+          score_outcome_quality?: number | null
+          score_speed?: number | null
+          score_tone?: number | null
+          sentiment?: string | null
+          suggestions?: Json | null
+          transcript_summary?: string | null
+        }
+        Update: {
+          analysis_cost?: number | null
+          analyzed_at?: string
+          analyzer_model?: string | null
+          call_category?: string | null
+          call_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          insights?: Json | null
+          overall_score?: number | null
+          score_accuracy?: number | null
+          score_booking_success?: number | null
+          score_call_duration?: number | null
+          score_clarity?: number | null
+          score_completeness?: number | null
+          score_lead_quality?: number | null
+          score_objection_handling?: number | null
+          score_outcome_quality?: number | null
+          score_speed?: number | null
+          score_tone?: number | null
+          sentiment?: string | null
+          suggestions?: Json | null
+          transcript_summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_analysis_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "vapi_calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_analysis_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "call_analysis_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_logs: {
         Row: {
           action_items: Json | null
@@ -2331,6 +2431,63 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      vapi_calls: {
+        Row: {
+          assistant_id: string | null
+          call_metadata: Json | null
+          caller_phone: string | null
+          created_at: string
+          customer_id: string | null
+          duration_seconds: number | null
+          ended_reason: string | null
+          id: string
+          summary: string | null
+          transcript: string | null
+          vapi_call_id: string | null
+        }
+        Insert: {
+          assistant_id?: string | null
+          call_metadata?: Json | null
+          caller_phone?: string | null
+          created_at?: string
+          customer_id?: string | null
+          duration_seconds?: number | null
+          ended_reason?: string | null
+          id?: string
+          summary?: string | null
+          transcript?: string | null
+          vapi_call_id?: string | null
+        }
+        Update: {
+          assistant_id?: string | null
+          call_metadata?: Json | null
+          caller_phone?: string | null
+          created_at?: string
+          customer_id?: string | null
+          duration_seconds?: number | null
+          ended_reason?: string | null
+          id?: string
+          summary?: string | null
+          transcript?: string | null
+          vapi_call_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vapi_calls_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "vapi_calls_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       voice_settings: {
         Row: {
