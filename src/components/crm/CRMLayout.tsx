@@ -103,15 +103,7 @@ export function CRMLayout({ children }: CRMLayoutProps) {
     }
   }, [role, isLoading, userId, navigate]);
 
-  // Show loading state while auth is being determined
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
+  // Fetch user details
   useEffect(() => {
     async function fetchUser() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -153,6 +145,15 @@ export function CRMLayout({ children }: CRMLayoutProps) {
     if (item.superAdminOnly && role !== 'super_admin') return false;
     return true;
   });
+
+  // Show loading state while auth is being determined
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
