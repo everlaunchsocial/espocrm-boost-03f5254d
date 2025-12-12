@@ -41,11 +41,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 interface CRMLayoutProps {
   children?: ReactNode;
 }
-
 const crmNavigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Calendar', href: '/calendar', icon: CalendarDays },
@@ -81,20 +81,36 @@ export function CRMLayout({ children }: CRMLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { role, isLoading, isAdmin } = useUserRole();
+  const { role, isLoading, isAdmin, userId } = useUserRole();
   const [userEmail, setUserEmail] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
 
-  // Role-based redirect: customers and affiliates should not access CRM
+  // Auth and role-based redirect
   useEffect(() => {
-    if (!isLoading && role) {
-      if (role === 'customer') {
-        navigate('/customer', { replace: true });
-      } else if (role === 'affiliate') {
-        navigate('/affiliate', { replace: true });
-      }
+    if (isLoading) return;
+    
+    // If not authenticated, redirect to /auth
+    if (!userId) {
+      navigate('/auth', { replace: true });
+      return;
     }
-  }, [role, isLoading, navigate]);
+    
+    // Role-based redirect: customers and affiliates should not access CRM
+    if (role === 'customer') {
+      navigate('/customer', { replace: true });
+    } else if (role === 'affiliate') {
+      navigate('/affiliate', { replace: true });
+    }
+  }, [role, isLoading, userId, navigate]);
+
+  // Show loading state while auth is being determined
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   useEffect(() => {
     async function fetchUser() {
