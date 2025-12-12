@@ -106,15 +106,20 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
       body: JSON.stringify({
         name: `${businessName.slice(0, 26)} AI Assistant`.slice(0, 40),
         model: {
-          provider: 'openai',
-          model: 'gpt-4o-mini',
+          provider: 'deep-seek',
+          model: 'deepseek-chat',
           messages: [
             { role: 'system', content: systemPrompt }
           ],
         },
         voice: {
           provider: 'cartesia',
-          voiceId: voiceSettings?.voice_gender === 'male' ? 'd46abd1d-2d02-43e8-819f-51fb652c1c61' : '9626c31c-bec5-4cca-baa8-f8ba9e84c8bc', // Grant (male) / Jacqueline (female)
+          voiceId: voiceSettings?.voice_gender === 'male' ? 'd46abd1d-2d02-43e8-819f-51fb652c1c61' : 'a0e99841-438c-4a64-b679-ae501e7d6091', // Grant (male) / Jacqueline (female)
+        },
+        transcriber: {
+          provider: 'deepgram',
+          model: 'nova-2',
+          language: 'en',
         },
         firstMessage: greeting,
       }),

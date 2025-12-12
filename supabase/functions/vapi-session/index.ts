@@ -94,8 +94,8 @@ IMPORTANT:
     const assistantPayload = {
       name: `Demo Assistant - ${businessName}`,
       model: {
-        provider: "openai",
-        model: "gpt-4o",
+        provider: "deep-seek",
+        model: "deepseek-chat",
         messages: [
           {
             role: "system",
@@ -104,8 +104,8 @@ IMPORTANT:
         ]
       },
       voice: {
-        provider: "11labs",
-        voiceId: "EXAVITQu4vr4xnSDxMaL" // Sarah - professional female voice
+        provider: "cartesia",
+        voiceId: "a0e99841-438c-4a64-b679-ae501e7d6091" // Jacqueline - professional female voice
       },
       firstMessage: firstMessage,
       transcriber: {

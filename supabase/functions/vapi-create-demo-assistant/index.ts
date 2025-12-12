@@ -92,8 +92,8 @@ This demo was created for ${businessName}, which offers ${services}. But the cal
       body: JSON.stringify({
         name: `EverLaunch Demo - ${businessName}`,
         model: {
-          provider: 'openai',
-          model: 'gpt-4o',
+          provider: 'deep-seek',
+          model: 'deepseek-chat',
           messages: [
             {
               role: 'system',
@@ -102,9 +102,8 @@ This demo was created for ${businessName}, which offers ${services}. But the cal
           ],
         },
         voice: {
-          provider: '11labs',
-          voiceId: 'cgSgspJ2msm6clMCkdW9', // Jessica - American, confident female salesperson voice
-          speed: 0.9,
+          provider: 'cartesia',
+          voiceId: 'a0e99841-438c-4a64-b679-ae501e7d6091', // Jacqueline - professional female voice
         },
         firstMessage: firstMessage,
         transcriber: {
