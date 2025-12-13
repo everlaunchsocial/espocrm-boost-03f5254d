@@ -104,7 +104,7 @@ cheap, affordable, quick fix, miracle, anti-aging, guaranteed results, pain, saf
         },
         voice: {
           provider: 'cartesia',
-          voiceId: 'a0e99841-438c-4a64-b679-ae501e7d6091', // Jacqueline - professional female voice
+          voiceId: 'a8136a0c-9642-497a-882d-8d591bdcb2fa', // Diane - warm, clinical female voice
         },
         firstMessage: firstMessage,
         transcriber: {
