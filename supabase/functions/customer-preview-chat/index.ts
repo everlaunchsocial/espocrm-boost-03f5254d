@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,9 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, systemPrompt, businessName } = await req.json();
+    const { messages, systemPrompt, businessName, customerId } = await req.json();
 
-    console.log('Customer preview chat request:', { businessName, messageCount: messages?.length });
+    console.log('Customer preview chat request:', { businessName, customerId, messageCount: messages?.length });
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(
@@ -86,6 +87,42 @@ serve(async (req) => {
     const reply = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't generate a response.";
 
     console.log('AI response received successfully');
+
+    // Log usage to service_usage table if customerId is provided (fire and forget)
+    if (customerId) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+      const inputTokens = data.usage?.prompt_tokens || 0;
+      const outputTokens = data.usage?.completion_tokens || 0;
+      const totalTokens = inputTokens + outputTokens;
+      
+      // Estimate cost: Gemini Flash is ~$0.075 per 1M input tokens, ~$0.30 per 1M output tokens
+      const estimatedCost = (inputTokens * 0.000000075) + (outputTokens * 0.0000003);
+
+      supabase.from('service_usage').insert({
+        customer_id: customerId,
+        usage_type: 'customer_chat',
+        provider: 'lovable_ai',
+        model: 'google/gemini-2.5-flash',
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_tokens: totalTokens,
+        cost_usd: estimatedCost,
+        metadata: {
+          business_name: businessName,
+          message_count: messages.length,
+          is_preview: true
+        }
+      }).then(({ error }) => {
+        if (error) {
+          console.error('Error logging customer preview chat usage:', error);
+        } else {
+          console.log('Customer preview chat usage logged successfully');
+        }
+      });
+    }
 
     return new Response(
       JSON.stringify({ reply }),

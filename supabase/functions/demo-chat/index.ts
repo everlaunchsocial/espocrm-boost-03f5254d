@@ -39,10 +39,10 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch the demo to get business context
+    // Fetch the demo to get business context and affiliate_id
     const { data: demo, error: demoError } = await supabase
       .from('demos')
-      .select('business_name, website_url, ai_prompt, ai_persona_name')
+      .select('business_name, website_url, ai_prompt, ai_persona_name, affiliate_id')
       .eq('id', demoId)
       .single();
 
@@ -160,6 +160,38 @@ IMPORTANT RULES:
     const reply = data.choices?.[0]?.message?.content || 'I apologize, I was unable to generate a response.';
 
     console.log(`Demo chat response for ${demo.business_name}:`, reply.substring(0, 100));
+
+    // Log usage to service_usage table (fire and forget - don't block response)
+    if (demo.affiliate_id) {
+      const inputTokens = data.usage?.prompt_tokens || 0;
+      const outputTokens = data.usage?.completion_tokens || 0;
+      const totalTokens = inputTokens + outputTokens;
+      
+      // Estimate cost: Gemini Flash is ~$0.075 per 1M input tokens, ~$0.30 per 1M output tokens
+      const estimatedCost = (inputTokens * 0.000000075) + (outputTokens * 0.0000003);
+
+      supabase.from('service_usage').insert({
+        affiliate_id: demo.affiliate_id,
+        usage_type: 'demo_chat',
+        provider: 'lovable_ai',
+        model: 'google/gemini-2.5-flash',
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_tokens: totalTokens,
+        cost_usd: estimatedCost,
+        metadata: {
+          demo_id: demoId,
+          business_name: demo.business_name,
+          message_count: messages.length
+        }
+      }).then(({ error }) => {
+        if (error) {
+          console.error('Error logging demo chat usage:', error);
+        } else {
+          console.log('Demo chat usage logged successfully');
+        }
+      });
+    }
 
     return new Response(
       JSON.stringify({ reply }),
