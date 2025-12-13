@@ -175,9 +175,8 @@ IMPORTANT RULES:
         usage_type: 'demo_chat',
         provider: 'lovable_ai',
         model: 'google/gemini-2.5-flash',
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        total_tokens: totalTokens,
+        tokens_in: inputTokens,
+        tokens_out: outputTokens,
         cost_usd: estimatedCost,
         metadata: {
           demo_id: demoId,

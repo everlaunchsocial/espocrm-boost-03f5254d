@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { PipelineStatusBadge } from '@/components/crm/PipelineStatusBadge';
 import { SetupChecklist } from '@/components/customer/SetupChecklist';
+import { UsageUpgradePrompt } from '@/components/customer/UsageUpgradePrompt';
 import { 
   Phone, 
   MessageSquare, 
@@ -112,6 +113,15 @@ export default function CustomerDashboard() {
           calendarOptional={calendarOptional}
           deployComplete={deployComplete}
         />
+
+        {/* Usage Upgrade Prompt */}
+        {billing && (
+          <UsageUpgradePrompt
+            minutesUsed={minutesUsed}
+            minutesIncluded={minutesIncluded}
+            planName={billing.plan_name || 'Starter'}
+          />
+        )}
 
         {/* Top Row: Plan & Usage + Activity Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

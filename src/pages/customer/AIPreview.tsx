@@ -25,6 +25,7 @@ import Vapi from '@vapi-ai/web';
 import { VoiceEmployeeCard } from '@/components/demos/VoiceEmployeeCard';
 import { MobileDeviceMockup } from '@/components/demos/MobileDeviceMockup';
 import { ChatButtonOverlay } from '@/components/demos/ChatButtonOverlay';
+import { PreviewUsageWarning } from '@/components/customer/PreviewUsageWarning';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -50,6 +51,7 @@ export default function AIPreview() {
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [previewCount, setPreviewCount] = useState(0);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Screenshot state
@@ -182,6 +184,7 @@ Keep responses helpful, concise, and professional.`;
 
       const assistantMessage = data?.reply || data?.message || "I'm sorry, I couldn't process that request.";
       setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
+      setPreviewCount(prev => prev + 1);
     } catch (error) {
       console.error('Chat error:', error);
       toast.error('Failed to get response. Please try again.');
@@ -482,6 +485,12 @@ Keep responses helpful, concise, and professional.`;
                 </div>
               </CardContent>
             </Card>
+
+            {/* Preview Usage Warning */}
+            <PreviewUsageWarning
+              previewCount={previewCount}
+              onContactSupport={() => window.location.href = '/customer/support'}
+            />
           </div>
 
           {/* RIGHT COLUMN - Mobile Preview with Chat */}
