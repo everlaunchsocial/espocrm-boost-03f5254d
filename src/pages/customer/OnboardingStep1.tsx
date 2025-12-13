@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRight, Building2, Globe, User, Phone, Stethoscope, Hammer, Thermometer, Scale, Home, Bug, Users } from 'lucide-react';
+import { ArrowRight, Building2, Globe, User, Phone, Stethoscope, Hammer, Thermometer, Scale, Home, Bug, Users, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ const VERTICALS = [
   { key: 'real-estate', name: 'Real Estate', icon: Home },
   { key: 'pest-control', name: 'Pest Control', icon: Bug },
   { key: 'network-marketing', name: 'Network Marketing', icon: Users },
+  { key: 'med-spa', name: 'Medical Spa', icon: Sparkles },
 ];
 
 export default function OnboardingStep1() {
