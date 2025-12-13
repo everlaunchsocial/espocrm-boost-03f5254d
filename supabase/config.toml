@@ -116,3 +116,12 @@ verify_jwt = false
 
 [functions.support-chat]
 verify_jwt = false
+
+[functions.log-web-chat-usage]
+verify_jwt = false
+
+[functions.log-openai-realtime-usage]
+verify_jwt = false
+
+[functions.check-affiliate-spam]
+verify_jwt = false
