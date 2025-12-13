@@ -99,6 +99,16 @@ export default function CustomerCheckoutPage() {
   // Get the selected plan details
   const currentPlan = plans.find(p => p.id === selectedPlan);
 
+  // Normalize URL to always have https://
+  const normalizeUrl = (url: string): string => {
+    if (!url) return '';
+    let normalized = url.trim();
+    // Remove any existing protocol
+    normalized = normalized.replace(/^(https?:\/\/)/i, '');
+    // Add https:// prefix
+    return `https://${normalized}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -155,7 +165,7 @@ export default function CustomerCheckoutPage() {
             customerEmail: email,
             customerName: contactName,
             businessName: businessName,
-            websiteUrl: websiteUrl,
+            websiteUrl: websiteUrl ? normalizeUrl(websiteUrl) : undefined,
             successUrl: `${window.location.origin}/customer/buy-success?session_id={CHECKOUT_SESSION_ID}`,
             cancelUrl: `${window.location.origin}/buy?plan=${selectedPlan}`,
           },
@@ -298,10 +308,10 @@ export default function CustomerCheckoutPage() {
                   <Label htmlFor="websiteUrl">Business Website</Label>
                   <Input
                     id="websiteUrl"
-                    type="url"
+                    type="text"
                     value={websiteUrl}
                     onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="https://yourbusiness.com"
+                    placeholder="yourbusiness.com"
                   />
                 </div>
                 
