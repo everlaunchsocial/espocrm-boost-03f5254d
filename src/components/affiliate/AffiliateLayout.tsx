@@ -396,13 +396,37 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
 
           {/* RIGHT SIDE OF HEADER */}
           <div className="flex items-center gap-3">
-            {/* Bell Icon */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
-                2
-              </span>
-            </Button>
+            {/* Notification Bell Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
+                    2
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 bg-popover">
+                <div className="px-3 py-2 border-b border-border">
+                  <p className="font-semibold text-sm">Notifications</p>
+                </div>
+                <DropdownMenuItem className="flex flex-col items-start p-3 cursor-pointer">
+                  <p className="font-medium text-sm">Complete Your Profile</p>
+                  <p className="text-xs text-muted-foreground">Add your payment info to start earning commissions</p>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex flex-col items-start p-3 cursor-pointer">
+                  <p className="font-medium text-sm">New Training Available</p>
+                  <p className="text-xs text-muted-foreground">Check out the latest sales techniques in How-To</p>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="justify-center text-sm text-primary cursor-pointer"
+                  onClick={() => navigate('/affiliate/settings')}
+                >
+                  View All Notifications
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Separator */}
             <div className="hidden sm:block h-6 w-px bg-border" />
