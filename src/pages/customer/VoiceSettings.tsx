@@ -5,7 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Volume2, RotateCcw, Check } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Volume2, RotateCcw, Check, User } from "lucide-react";
 import { useVoiceSettings } from "@/hooks/useVoiceSettings";
 import { CUSTOMER_FEMALE_VOICES, CUSTOMER_MALE_VOICES, CartesiaVoice } from "@/lib/cartesiaVoices";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,8 @@ export default function VoiceSettings() {
       const changed = 
         settings.voiceId !== localSettings.voiceId ||
         settings.voiceSpeed !== localSettings.voiceSpeed ||
-        settings.greetingText !== localSettings.greetingText;
+        settings.greetingText !== localSettings.greetingText ||
+        settings.aiName !== localSettings.aiName;
       setHasChanges(changed);
     }
   }, [settings, localSettings]);
@@ -52,6 +54,10 @@ export default function VoiceSettings() {
     setLocalSettings(prev => prev ? { ...prev, greetingText: value } : prev);
   };
 
+  const handleAiNameChange = (value: string) => {
+    setLocalSettings(prev => prev ? { ...prev, aiName: value } : prev);
+  };
+
   const handlePreviewVoice = async (voiceId: string) => {
     setPreviewingVoiceId(voiceId);
     const textToPreview = localSettings?.greetingText || "Hi there! Thanks for calling. How can I help you today?";
@@ -65,6 +71,7 @@ export default function VoiceSettings() {
         voiceId: localSettings.voiceId,
         voiceSpeed: localSettings.voiceSpeed,
         greetingText: localSettings.greetingText,
+        aiName: localSettings.aiName,
       });
       setHasChanges(false);
     }
@@ -173,6 +180,32 @@ export default function VoiceSettings() {
                   ))}
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* AI Name */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              AI Assistant Name
+            </CardTitle>
+            <CardDescription>What should your AI receptionist introduce themselves as?</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="aiName">Name</Label>
+              <Input
+                id="aiName"
+                placeholder="Ashley"
+                value={localSettings?.aiName || ""}
+                onChange={(e) => handleAiNameChange(e.target.value)}
+                maxLength={30}
+              />
+              <p className="text-xs text-muted-foreground">
+                Your AI will say "Hi, I'm {localSettings?.aiName || 'Ashley'}..." when greeting callers.
+              </p>
             </div>
           </CardContent>
         </Card>

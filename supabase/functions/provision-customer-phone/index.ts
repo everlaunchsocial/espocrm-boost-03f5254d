@@ -12,7 +12,8 @@ function buildSystemPrompt(
   businessName: string,
   websiteUrl: string | null,
   verticalTemplate: any | null,
-  voiceInstructions: string | null
+  voiceInstructions: string | null,
+  aiName: string
 ): string {
   // Start with vertical template if available
   let prompt = '';
@@ -49,9 +50,14 @@ function buildSystemPrompt(
     }
   } else {
     // Fallback generic prompt
-    prompt = `You are a friendly and professional AI phone assistant for ${businessName}. 
+    prompt = `You are ${aiName}, a friendly and professional AI phone assistant for ${businessName}. 
 Your job is to answer calls, help customers with their questions, and provide excellent service.
 Always be helpful, courteous, and concise. If you don't know something, offer to take a message or transfer to a human.`;
+  }
+  
+  // Add AI name context if using vertical template
+  if (verticalTemplate) {
+    prompt = `You are ${aiName}, the AI receptionist. ` + prompt;
   }
   
   // Add website context
@@ -142,9 +148,11 @@ serve(async (req) => {
     // 3. Fetch voice settings for personalization
     const { data: voiceSettings } = await supabase
       .from('voice_settings')
-      .select('greeting_text, voice_gender, voice_style, instructions')
+      .select('greeting_text, voice_gender, voice_style, instructions, ai_name')
       .eq('customer_id', customer_id)
       .maybeSingle();
+
+    const aiName = voiceSettings?.ai_name || (voiceSettings?.voice_gender === 'male' ? 'Alex' : 'Ashley');
 
     // 4. Fetch vertical template if customer has a business_type
     let verticalTemplate = null;
@@ -163,14 +171,15 @@ serve(async (req) => {
     }
 
     const businessName = customerProfile.business_name || 'the business';
-    const greeting = voiceSettings?.greeting_text || `Thank you for calling ${businessName}. How can I help you today?`;
+    const greeting = voiceSettings?.greeting_text || `Hello, thank you for calling ${businessName}. My name is ${aiName}, how can I help you today?`;
 
     // 5. Build industry-aware system prompt
     const systemPrompt = buildSystemPrompt(
       businessName,
       customerProfile.website_url,
       verticalTemplate,
-      voiceSettings?.instructions || null
+      voiceSettings?.instructions || null,
+      aiName
     );
 
     console.log('Creating Vapi assistant with industry-aware prompt...');
