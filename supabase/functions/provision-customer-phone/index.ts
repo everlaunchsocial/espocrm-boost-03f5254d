@@ -305,22 +305,25 @@ serve(async (req) => {
       );
     }
 
-    // Clear any inherited server URL
-    console.log('Clearing server URL for phone number...');
-    const clearUrlResponse = await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
+    // Configure webhook URL for automated call processing
+    const webhookUrl = `${supabaseUrl}/functions/v1/vapi-call-ended`;
+    
+    console.log('Configuring webhook URL for phone number:', webhookUrl);
+    const setWebhookResponse = await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${activeVapiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        serverUrl: null,
-        serverUrlSecret: null,
+        serverUrl: webhookUrl,
       }),
     });
 
-    if (!clearUrlResponse.ok) {
-      console.error('Warning: Failed to clear server URL:', await clearUrlResponse.text());
+    if (!setWebhookResponse.ok) {
+      console.error('Warning: Failed to set webhook URL:', await setWebhookResponse.text());
+    } else {
+      console.log('Webhook URL configured successfully');
     }
 
     // 7. Save to customer_phone_numbers table
