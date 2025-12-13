@@ -64,7 +64,7 @@ serve(async (req) => {
   }
 
   try {
-    const { customer_id, voice_id, voice_speed, greeting_text, regenerate_prompt } = await req.json();
+    const { customer_id, voice_id, voice_speed, greeting_text, ai_name, regenerate_prompt } = await req.json();
 
     if (!customer_id) {
       return new Response(
@@ -156,9 +156,32 @@ serve(async (req) => {
       console.log('Setting voice to Cartesia voiceId:', voice_id);
     }
 
-    // Update greeting if provided
-    if (greeting_text) {
-      updatePayload.firstMessage = greeting_text;
+    // Update greeting if provided (include AI name in greeting)
+    if (greeting_text || ai_name) {
+      // Fetch current ai_name if not provided
+      let effectiveAiName = ai_name;
+      if (!effectiveAiName) {
+        const { data: voiceSettings } = await supabase
+          .from('voice_settings')
+          .select('ai_name')
+          .eq('customer_id', customer_id)
+          .maybeSingle();
+        effectiveAiName = voiceSettings?.ai_name || 'Ashley';
+      }
+      
+      // If greeting is provided, use it; otherwise build a default with the name
+      if (greeting_text) {
+        updatePayload.firstMessage = greeting_text;
+      } else {
+        // Fetch customer business name for default greeting
+        const { data: profile } = await supabase
+          .from('customer_profiles')
+          .select('business_name')
+          .eq('id', customer_id)
+          .maybeSingle();
+        const businessName = profile?.business_name || 'our business';
+        updatePayload.firstMessage = `Hello, thank you for calling ${businessName}. My name is ${effectiveAiName}, how can I help you today?`;
+      }
     }
 
     // Regenerate system prompt with vertical template if requested

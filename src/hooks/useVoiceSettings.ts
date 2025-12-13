@@ -7,12 +7,14 @@ export type VoiceSettingsData = {
   voiceId: string;
   voiceSpeed: number;
   greetingText: string;
+  aiName: string;
 };
 
 const DEFAULT_SETTINGS: VoiceSettingsData = {
   voiceId: getDefaultVoiceId(),
   voiceSpeed: 1.0,
   greetingText: "Hi there! Thanks for calling. How can I help you today?",
+  aiName: "Ashley",
 };
 
 // Track current playing audio to stop it before playing new one
@@ -51,7 +53,7 @@ export function useVoiceSettings() {
         // Get voice settings
         const { data: voiceSettings, error } = await supabase
           .from('voice_settings')
-          .select('voice_id, voice_speed, greeting_text')
+          .select('voice_id, voice_speed, greeting_text, ai_name')
           .eq('customer_id', profile.id)
           .single();
 
@@ -64,6 +66,7 @@ export function useVoiceSettings() {
             voiceId: voiceSettings.voice_id || DEFAULT_SETTINGS.voiceId,
             voiceSpeed: Number(voiceSettings.voice_speed) || DEFAULT_SETTINGS.voiceSpeed,
             greetingText: voiceSettings.greeting_text || DEFAULT_SETTINGS.greetingText,
+            aiName: voiceSettings.ai_name || DEFAULT_SETTINGS.aiName,
           });
         } else {
           // Create default settings
@@ -74,6 +77,7 @@ export function useVoiceSettings() {
               voice_id: DEFAULT_SETTINGS.voiceId,
               voice_speed: DEFAULT_SETTINGS.voiceSpeed,
               greeting_text: DEFAULT_SETTINGS.greetingText,
+              ai_name: DEFAULT_SETTINGS.aiName,
             });
 
           if (insertError) {
@@ -112,6 +116,9 @@ export function useVoiceSettings() {
       if (newSettings.greetingText !== undefined) {
         updateData.greeting_text = newSettings.greetingText;
       }
+      if (newSettings.aiName !== undefined) {
+        updateData.ai_name = newSettings.aiName;
+      }
 
       const { error } = await supabase
         .from('voice_settings')
@@ -130,6 +137,7 @@ export function useVoiceSettings() {
           voice_id: newSettings.voiceId || settings?.voiceId,
           voice_speed: newSettings.voiceSpeed || settings?.voiceSpeed,
           greeting_text: newSettings.greetingText || settings?.greetingText,
+          ai_name: newSettings.aiName || settings?.aiName,
         },
       });
 

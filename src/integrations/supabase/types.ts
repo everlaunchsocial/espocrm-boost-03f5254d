@@ -2536,6 +2536,7 @@ export type Database = {
       }
       voice_settings: {
         Row: {
+          ai_name: string | null
           customer_id: string
           greeting_text: string | null
           id: string
@@ -2549,6 +2550,7 @@ export type Database = {
           voice_style: string | null
         }
         Insert: {
+          ai_name?: string | null
           customer_id: string
           greeting_text?: string | null
           id?: string
@@ -2562,6 +2564,7 @@ export type Database = {
           voice_style?: string | null
         }
         Update: {
+          ai_name?: string | null
           customer_id?: string
           greeting_text?: string | null
           id?: string
