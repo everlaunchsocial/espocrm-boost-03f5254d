@@ -18,6 +18,30 @@ serve(async (req) => {
 
     const phoneNumberId = '9cb95574-9432-4ca2-bc11-ab2c238b8fdc';
 
+    // Step 1: Get current phone number config to find existing assistant
+    console.log('Fetching current phone number config...');
+    const phoneResponse = await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${VAPI_API_KEY}`,
+      },
+    });
+    const phoneData = await phoneResponse.json();
+    const existingAssistantId = phoneData.assistantId;
+    console.log('Existing assistant ID:', existingAssistantId);
+
+    // Step 2: Delete existing assistant if one exists
+    if (existingAssistantId) {
+      console.log('Deleting existing assistant:', existingAssistantId);
+      await fetch(`https://api.vapi.ai/assistant/${existingAssistantId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${VAPI_API_KEY}`,
+        },
+      });
+      console.log('Deleted old assistant');
+    }
+
     // Hardcoded ReEnvision Medspa demo for Leslie
     const businessName = "ReEnvision Medspa";
     const personaName = "Jenna";
@@ -81,9 +105,9 @@ cheap, affordable, quick fix, miracle, anti-aging, guaranteed results, pain, saf
 
     const firstMessage = `Hello! You must be ${callerName} from ${businessName}. How are you, ${callerName}?`;
 
-    console.log('Creating Vapi assistant for ReEnvision Medspa demo...');
+    console.log('Creating fresh Vapi assistant for ReEnvision Medspa demo...');
 
-    // Step 1: Create the assistant
+    // Step 3: Create fresh assistant with proper settings
     const createResponse = await fetch('https://api.vapi.ai/assistant', {
       method: 'POST',
       headers: {
@@ -104,7 +128,7 @@ cheap, affordable, quick fix, miracle, anti-aging, guaranteed results, pain, saf
         },
         voice: {
           provider: 'cartesia',
-          voiceId: 'a8136a0c-9642-497a-882d-8d591bdcb2fa', // Diane - warm, clinical female voice
+          voiceId: '9626c31c-bec5-4cca-baa8-f8ba9e84c8bc', // Jacqueline - warm, louder voice
         },
         firstMessage: firstMessage,
         transcriber: {
@@ -112,8 +136,10 @@ cheap, affordable, quick fix, miracle, anti-aging, guaranteed results, pain, saf
           model: 'nova-2',
           language: 'en',
         },
-        silenceTimeoutSeconds: 60,
+        silenceTimeoutSeconds: 120,
         maxDurationSeconds: 600,
+        responseDelaySeconds: 0.5,
+        backgroundSound: 'off',
       }),
     });
 
