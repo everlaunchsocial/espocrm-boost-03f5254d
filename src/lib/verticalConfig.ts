@@ -5,7 +5,8 @@ export type VerticalKey =
   | 'legal' 
   | 'real-estate' 
   | 'pest-control' 
-  | 'network-marketing';
+  | 'network-marketing'
+  | 'med-spa';
 
 export interface VerticalConfig {
   key: VerticalKey;
@@ -282,6 +283,43 @@ export const verticalConfig: Record<VerticalKey, VerticalConfig> = {
       { question: 'Does it make income claims?', answer: 'Never. The AI is fully FTC-compliant and focuses on the opportunity without making income promises.' },
       { question: 'Is this approved by my MLM company?', answer: 'EverLaunch is a third-party business tool. Check your company\'s policies on business systems.' },
       { question: 'Can my team members use it too?', answer: 'Absolutely! Each person gets their own AI. You can earn affiliate commissions when they sign up.' },
+    ],
+  },
+  'med-spa': {
+    key: 'med-spa',
+    name: 'Medical Spa',
+    industry: 'Medical Aesthetics',
+    headline: 'Never Miss A Consultation Booking Again',
+    subheadline: 'Your AI Voice Concierge That Converts 80%+ of Calls to Consultations',
+    solutionSubheadline: 'Your 24/7 Luxury Concierge That Books Consultations Instantly',
+    leadTerm: 'Client',
+    heroImage: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=1920&q=80',
+    thumbnail: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=400&q=80',
+    painPoints: [
+      { icon: '📞', title: 'Missing high-value calls', description: 'Losing $5,000+ clients to competitors who answer first' },
+      { icon: '⏰', title: 'After-hours inquiries', description: 'Evening and weekend callers going to voicemail' },
+      { icon: '💼', title: 'Staff overwhelmed', description: 'Front desk juggling treatments and phones' },
+      { icon: '💰', title: 'Price shoppers leaving', description: 'Callers hanging up without booking consultations' },
+    ],
+    features: [
+      'Answers every call instantly - even at 3 AM',
+      'Books complimentary consultations automatically',
+      'Provides pricing ranges (never exact quotes)',
+      'Handles Botox, filler, and laser treatment questions',
+      'Escalates medical concerns to licensed staff immediately',
+      'Captures marketing attribution on every call',
+    ],
+    demoPrompts: ['Botox inquiry', 'Consultation booking', 'Treatment pricing', 'Available appointments'],
+    testimonial: {
+      quote: "We went from missing calls during treatments to booking 80% of inquiries. Each new client is worth $2,000+ to us.",
+      name: 'Dr. Michelle Torres',
+      business: 'Luxe Medical Aesthetics',
+    },
+    faqs: [
+      { question: 'How long does setup take?', answer: 'About 15 minutes. We guide you through everything.' },
+      { question: 'Can it handle medical questions?', answer: 'The AI provides treatment information but never medical advice. Medical concerns are escalated to licensed staff immediately.' },
+      { question: 'Does it quote exact prices?', answer: 'No - it provides pricing ranges only. Exact pricing is discussed during consultations.' },
+      { question: 'Can I try it before committing?', answer: 'Yes! Request a custom demo for your med spa.' },
     ],
   },
 };
