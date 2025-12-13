@@ -10,6 +10,9 @@ const corsHeaders = {
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const TRANSCRIPT_EMAIL = "info@everlaunch.ai";
 
+// Vapi bundled cost estimate (DeepSeek + Deepgram + Cartesia)
+const VAPI_COST_PER_MINUTE = 0.10; // $0.10/min fallback estimate
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -28,18 +31,42 @@ serve(async (req) => {
     const callId = call.id || message.callId || 'unknown';
     const endedReason = message.endedReason || call.endedReason || 'unknown';
     const assistantId = call.assistantId || message.assistantId;
-    const customerId = call.metadata?.customer_id || message.metadata?.customer_id;
+    const recordingUrl = call.recordingUrl || message.recordingUrl || null;
+
+    // Extract metadata for attribution
+    const metadata = call.metadata || message.metadata || {};
+    const customerId = metadata.customer_id || call.metadata?.customer_id;
+    const affiliateId = metadata.affiliate_id || null;
+    const demoId = metadata.demo_id || null;
+    const callType = metadata.call_type || (customerId ? 'customer' : (demoId ? 'demo' : 'preview'));
+
+    // Extract Vapi cost data
+    const costTotal = call.cost || message.cost || 0;
+    const costBreakdown = call.costBreakdown || message.costBreakdown || {};
+    const costLlm = costBreakdown.llm || 0;
+    const costStt = costBreakdown.transcription || costBreakdown.stt || 0;
+    const costTts = costBreakdown.voice || costBreakdown.tts || 0;
+    const costTransport = costBreakdown.transport || 0;
+    const costPlatform = costBreakdown.vapi || costBreakdown.platform || 0;
+
+    // If no cost provided, estimate from duration
+    const finalCostTotal = costTotal > 0 ? costTotal : (callDuration / 60) * VAPI_COST_PER_MINUTE;
 
     console.log('Call ID:', callId);
     console.log('Caller phone:', callerPhone);
     console.log('Duration:', callDuration, 'seconds');
     console.log('Customer ID:', customerId);
+    console.log('Affiliate ID:', affiliateId);
+    console.log('Demo ID:', demoId);
+    console.log('Call Type:', callType);
+    console.log('Cost Total:', finalCostTotal);
+    console.log('Cost Breakdown:', costBreakdown);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Save call to vapi_calls table for quality analysis
+    // Save call to vapi_calls table with full cost data
     let savedCallId: string | null = null;
     if (transcript && transcript.length >= 10) {
       try {
@@ -48,12 +75,22 @@ serve(async (req) => {
           .insert({
             vapi_call_id: callId !== 'unknown' ? callId : null,
             customer_id: customerId || null,
+            affiliate_id: affiliateId || null,
+            demo_id: demoId || null,
+            call_type: callType,
             caller_phone: callerPhone,
             transcript: transcript,
             summary: summary || null,
             duration_seconds: callDuration,
             ended_reason: endedReason,
             assistant_id: assistantId || null,
+            recording_url: recordingUrl,
+            cost_total: finalCostTotal,
+            cost_llm: costLlm,
+            cost_stt: costStt,
+            cost_tts: costTts,
+            cost_transport: costTransport,
+            cost_platform: costPlatform,
             call_metadata: { original_body: body },
           })
           .select('id')
@@ -64,6 +101,44 @@ serve(async (req) => {
         } else {
           savedCallId = savedCall?.id;
           console.log('Call saved to vapi_calls:', savedCallId);
+
+          // Insert into service_usage for unified tracking
+          const { error: usageError } = await supabase
+            .from('service_usage')
+            .insert({
+              provider: 'vapi',
+              model: 'deepseek-chat',
+              usage_type: 'phone_call',
+              call_type: callType,
+              customer_id: customerId || null,
+              affiliate_id: affiliateId || null,
+              demo_id: demoId || null,
+              duration_seconds: callDuration,
+              tokens_in: 0,
+              tokens_out: 0,
+              message_count: 0,
+              cost_usd: finalCostTotal,
+              cost_breakdown: {
+                llm: costLlm,
+                stt: costStt,
+                tts: costTts,
+                transport: costTransport,
+                platform: costPlatform
+              },
+              session_id: callId,
+              reference_id: savedCallId,
+              metadata: {
+                caller_phone: callerPhone,
+                ended_reason: endedReason,
+                assistant_id: assistantId
+              }
+            });
+
+          if (usageError) {
+            console.error('Error inserting service_usage:', usageError);
+          } else {
+            console.log('Service usage logged successfully');
+          }
 
           // Trigger async quality analysis (non-blocking)
           supabase.functions.invoke('analyze-call-quality', {
@@ -76,6 +151,77 @@ serve(async (req) => {
         }
       } catch (saveErr) {
         console.error('Failed to save call:', saveErr);
+      }
+    }
+
+    // If we have a customer_id, log minutes and check for alerts
+    if (customerId && callDuration > 0) {
+      const minutes = callDuration / 60;
+      
+      try {
+        // Log minutes usage and get current status
+        const { data: usageResult, error: usageError } = await supabase
+          .rpc('log_minutes_usage_for_customer', {
+            p_customer_id: customerId,
+            p_minutes: minutes,
+            p_occurred_at: new Date().toISOString(),
+            p_cost_usd: finalCostTotal
+          });
+
+        if (usageError) {
+          console.error('Error logging minutes usage:', usageError);
+        } else if (usageResult && usageResult.length > 0) {
+          const { new_minutes_used, minutes_included, percent_used } = usageResult[0];
+          console.log(`Customer usage: ${new_minutes_used}/${minutes_included} minutes (${percent_used.toFixed(1)}%)`);
+
+          // Check for usage thresholds and create alerts
+          if (minutes_included > 0) {
+            const thresholds = [
+              { percent: 80, type: 'customer_at_80pct' },
+              { percent: 95, type: 'customer_at_95pct' },
+              { percent: 100, type: 'customer_over_limit' }
+            ];
+
+            for (const threshold of thresholds) {
+              if (percent_used >= threshold.percent) {
+                // Check if alert already exists
+                const { data: existingAlert } = await supabase
+                  .from('usage_alerts')
+                  .select('id')
+                  .eq('alert_type', threshold.type)
+                  .eq('entity_id', customerId)
+                  .is('resolved_at', null)
+                  .maybeSingle();
+
+                if (!existingAlert) {
+                  const { error: alertError } = await supabase
+                    .from('usage_alerts')
+                    .insert({
+                      alert_type: threshold.type,
+                      entity_type: 'customer',
+                      entity_id: customerId,
+                      threshold_value: threshold.percent,
+                      current_value: percent_used,
+                      message: `Customer has used ${percent_used.toFixed(1)}% of their ${minutes_included} minute allocation.`,
+                      metadata: {
+                        minutes_used: new_minutes_used,
+                        minutes_included: minutes_included,
+                        last_call_id: savedCallId
+                      }
+                    });
+
+                  if (alertError) {
+                    console.error(`Error creating ${threshold.type} alert:`, alertError);
+                  } else {
+                    console.log(`Created ${threshold.type} alert for customer ${customerId}`);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (usageErr) {
+        console.error('Failed to log minutes usage:', usageErr);
       }
     }
 
@@ -130,8 +276,12 @@ serve(async (req) => {
             <p style="margin: 5px 0;"><strong>Caller:</strong> ${callerPhone}</p>
             <p style="margin: 5px 0;"><strong>Duration:</strong> ${formattedDuration}</p>
             <p style="margin: 5px 0;"><strong>Call ID:</strong> ${callId}</p>
+            <p style="margin: 5px 0;"><strong>Call Type:</strong> ${callType}</p>
             <p style="margin: 5px 0;"><strong>Ended:</strong> ${endedReason}</p>
+            <p style="margin: 5px 0;"><strong>Cost:</strong> $${finalCostTotal.toFixed(4)}</p>
             ${customerId ? `<p style="margin: 5px 0;"><strong>Customer ID:</strong> ${customerId}</p>` : ''}
+            ${affiliateId ? `<p style="margin: 5px 0;"><strong>Affiliate ID:</strong> ${affiliateId}</p>` : ''}
+            ${demoId ? `<p style="margin: 5px 0;"><strong>Demo ID:</strong> ${demoId}</p>` : ''}
             ${savedCallId ? `<p style="margin: 5px 0;"><strong>DB Record:</strong> ${savedCallId}</p>` : ''}
           </div>
           
@@ -159,7 +309,13 @@ ${transcript}
     console.log('Transcript email sent:', emailResponse);
 
     return new Response(
-      JSON.stringify({ success: true, emailSent: true, callSaved: !!savedCallId }),
+      JSON.stringify({ 
+        success: true, 
+        emailSent: true, 
+        callSaved: !!savedCallId,
+        costTracked: finalCostTotal,
+        callType: callType
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

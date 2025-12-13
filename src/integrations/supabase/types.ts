@@ -2086,6 +2086,98 @@ export type Database = {
         }
         Relationships: []
       }
+      service_usage: {
+        Row: {
+          affiliate_id: string | null
+          call_type: string | null
+          cost_breakdown: Json | null
+          cost_usd: number | null
+          created_at: string | null
+          customer_id: string | null
+          demo_id: string | null
+          duration_seconds: number | null
+          id: string
+          message_count: number | null
+          metadata: Json | null
+          model: string | null
+          provider: string
+          reference_id: string | null
+          session_id: string | null
+          tokens_in: number | null
+          tokens_out: number | null
+          usage_type: string
+        }
+        Insert: {
+          affiliate_id?: string | null
+          call_type?: string | null
+          cost_breakdown?: Json | null
+          cost_usd?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          demo_id?: string | null
+          duration_seconds?: number | null
+          id?: string
+          message_count?: number | null
+          metadata?: Json | null
+          model?: string | null
+          provider: string
+          reference_id?: string | null
+          session_id?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+          usage_type: string
+        }
+        Update: {
+          affiliate_id?: string | null
+          call_type?: string | null
+          cost_breakdown?: Json | null
+          cost_usd?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          demo_id?: string | null
+          duration_seconds?: number | null
+          id?: string
+          message_count?: number | null
+          metadata?: Json | null
+          model?: string | null
+          provider?: string
+          reference_id?: string | null
+          session_id?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+          usage_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_usage_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_usage_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "service_usage_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_usage_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "demos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       signup_events: {
         Row: {
           created_at: string | null
@@ -2360,6 +2452,54 @@ export type Database = {
           },
         ]
       }
+      usage_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string | null
+          current_value: number | null
+          entity_id: string
+          entity_type: string
+          id: string
+          message: string | null
+          metadata: Json | null
+          resolved_at: string | null
+          resolved_by: string | null
+          threshold_value: number | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string | null
+          current_value?: number | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          threshold_value?: number | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string | null
+          current_value?: number | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          threshold_value?: number | null
+        }
+        Relationships: []
+      }
       usage_logs: {
         Row: {
           created_at: string
@@ -2434,45 +2574,82 @@ export type Database = {
       }
       vapi_calls: {
         Row: {
+          affiliate_id: string | null
           assistant_id: string | null
           call_metadata: Json | null
+          call_type: string | null
           caller_phone: string | null
+          cost_llm: number | null
+          cost_platform: number | null
+          cost_stt: number | null
+          cost_total: number | null
+          cost_transport: number | null
+          cost_tts: number | null
           created_at: string
           customer_id: string | null
+          demo_id: string | null
           duration_seconds: number | null
           ended_reason: string | null
           id: string
+          recording_url: string | null
           summary: string | null
           transcript: string | null
           vapi_call_id: string | null
         }
         Insert: {
+          affiliate_id?: string | null
           assistant_id?: string | null
           call_metadata?: Json | null
+          call_type?: string | null
           caller_phone?: string | null
+          cost_llm?: number | null
+          cost_platform?: number | null
+          cost_stt?: number | null
+          cost_total?: number | null
+          cost_transport?: number | null
+          cost_tts?: number | null
           created_at?: string
           customer_id?: string | null
+          demo_id?: string | null
           duration_seconds?: number | null
           ended_reason?: string | null
           id?: string
+          recording_url?: string | null
           summary?: string | null
           transcript?: string | null
           vapi_call_id?: string | null
         }
         Update: {
+          affiliate_id?: string | null
           assistant_id?: string | null
           call_metadata?: Json | null
+          call_type?: string | null
           caller_phone?: string | null
+          cost_llm?: number | null
+          cost_platform?: number | null
+          cost_stt?: number | null
+          cost_total?: number | null
+          cost_transport?: number | null
+          cost_tts?: number | null
           created_at?: string
           customer_id?: string | null
+          demo_id?: string | null
           duration_seconds?: number | null
           ended_reason?: string | null
           id?: string
+          recording_url?: string | null
           summary?: string | null
           transcript?: string | null
           vapi_call_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vapi_calls_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vapi_calls_customer_id_fkey"
             columns: ["customer_id"]
@@ -2485,6 +2662,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vapi_calls_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "demos"
             referencedColumns: ["id"]
           },
         ]
@@ -2673,14 +2857,28 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_super_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
-      log_minutes_usage_for_customer: {
-        Args: {
-          p_customer_id: string
-          p_minutes: number
-          p_occurred_at: string
-        }
-        Returns: undefined
-      }
+      log_minutes_usage_for_customer:
+        | {
+            Args: {
+              p_customer_id: string
+              p_minutes: number
+              p_occurred_at: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_cost_usd?: number
+              p_customer_id: string
+              p_minutes: number
+              p_occurred_at: string
+            }
+            Returns: {
+              minutes_included: number
+              new_minutes_used: number
+              percent_used: number
+            }[]
+          }
       populate_genealogy_for_affiliate: {
         Args: { p_affiliate_id: string }
         Returns: undefined
