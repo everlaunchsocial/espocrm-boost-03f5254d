@@ -112,6 +112,8 @@ cheap, affordable, quick fix, miracle, anti-aging, guaranteed results, pain, saf
           model: 'nova-2',
           language: 'en',
         },
+        silenceTimeoutSeconds: 60,
+        maxDurationSeconds: 600,
       }),
     });
 
