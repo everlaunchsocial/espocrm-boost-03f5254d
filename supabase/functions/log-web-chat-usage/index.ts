@@ -11,16 +11,26 @@ const COST_PER_MILLION_INPUT_TOKENS = 0.075;  // $0.075 per million input tokens
 const COST_PER_MILLION_OUTPUT_TOKENS = 0.30;  // $0.30 per million output tokens
 
 interface WebChatUsageRequest {
+  // Original chat fields
   customer_id?: string;
   affiliate_id?: string;
   demo_id?: string;
-  usage_type: 'web_chat' | 'preview_chat';
-  call_type: 'customer' | 'demo' | 'preview';
-  messages_sent: number;
-  tokens_input: number;
-  tokens_output: number;
+  usage_type?: 'web_chat' | 'preview_chat' | 'customer_voice_preview';
+  call_type?: 'customer' | 'demo' | 'preview';
+  messages_sent?: number;
+  tokens_input?: number;
+  tokens_output?: number;
   session_id?: string;
   metadata?: Record<string, unknown>;
+  
+  // Direct voice/cost fields (alternative format)
+  customerId?: string;
+  usageType?: string;
+  callType?: string;
+  durationSeconds?: number;
+  costUsd?: number;
+  provider?: string;
+  model?: string;
 }
 
 serve(async (req) => {
@@ -30,27 +40,46 @@ serve(async (req) => {
 
   try {
     const body: WebChatUsageRequest = await req.json();
-    console.log('Logging web chat usage:', body);
+    console.log('Logging usage:', body);
 
-    const {
-      customer_id,
-      affiliate_id,
-      demo_id,
-      usage_type,
-      call_type,
-      messages_sent,
-      tokens_input,
-      tokens_output,
-      session_id,
-      metadata = {}
-    } = body;
+    // Support both payload formats (snake_case and camelCase)
+    const customerId = body.customer_id || body.customerId || null;
+    const affiliateId = body.affiliate_id || null;
+    const demoId = body.demo_id || null;
+    const usageType = body.usage_type || body.usageType || 'web_chat';
+    const callType = body.call_type || body.callType || 'preview';
+    const messagesSent = body.messages_sent || 0;
+    const tokensInput = body.tokens_input || 0;
+    const tokensOutput = body.tokens_output || 0;
+    const durationSeconds = body.durationSeconds || 0;
+    const sessionId = body.session_id || null;
+    const metadata = body.metadata || {};
+    const directCost = body.costUsd;
+    const directProvider = body.provider || 'lovable_ai';
+    const directModel = body.model || 'gemini-2.5-flash';
 
-    // Calculate cost based on token usage
-    const costInput = (tokens_input / 1_000_000) * COST_PER_MILLION_INPUT_TOKENS;
-    const costOutput = (tokens_output / 1_000_000) * COST_PER_MILLION_OUTPUT_TOKENS;
-    const totalCost = costInput + costOutput;
+    // Calculate cost - use direct cost if provided, otherwise calculate from tokens
+    let totalCost: number;
+    let costBreakdown: Record<string, number>;
 
-    console.log(`Cost calculation: input=${costInput.toFixed(6)}, output=${costOutput.toFixed(6)}, total=${totalCost.toFixed(6)}`);
+    if (directCost !== undefined && directCost > 0) {
+      // Direct cost provided (e.g., voice preview)
+      totalCost = directCost;
+      costBreakdown = { direct_cost: directCost };
+    } else {
+      // Calculate from tokens
+      const costInput = (tokensInput / 1_000_000) * COST_PER_MILLION_INPUT_TOKENS;
+      const costOutput = (tokensOutput / 1_000_000) * COST_PER_MILLION_OUTPUT_TOKENS;
+      totalCost = costInput + costOutput;
+      costBreakdown = {
+        input_tokens: tokensInput,
+        output_tokens: tokensOutput,
+        input_cost: costInput,
+        output_cost: costOutput
+      };
+    }
+
+    console.log(`Cost: $${totalCost.toFixed(6)}, Type: ${usageType}, CallType: ${callType}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -60,25 +89,20 @@ serve(async (req) => {
     const { data, error } = await supabase
       .from('service_usage')
       .insert({
-        provider: 'lovable_ai',
-        model: 'gemini-2.5-flash',
-        usage_type,
-        call_type,
-        customer_id: customer_id || null,
-        affiliate_id: affiliate_id || null,
-        demo_id: demo_id || null,
-        duration_seconds: 0, // Not applicable for chat
-        tokens_in: tokens_input,
-        tokens_out: tokens_output,
-        message_count: messages_sent,
+        provider: directProvider,
+        model: directModel,
+        usage_type: usageType,
+        call_type: callType,
+        customer_id: customerId,
+        affiliate_id: affiliateId,
+        demo_id: demoId,
+        duration_seconds: durationSeconds,
+        tokens_in: tokensInput,
+        tokens_out: tokensOutput,
+        message_count: messagesSent,
         cost_usd: totalCost,
-        cost_breakdown: {
-          input_tokens: tokens_input,
-          output_tokens: tokens_output,
-          input_cost: costInput,
-          output_cost: costOutput
-        },
-        session_id: session_id || null,
+        cost_breakdown: costBreakdown,
+        session_id: sessionId,
         reference_id: null,
         metadata
       })
