@@ -104,10 +104,12 @@ serve(async (req) => {
       supabase.from('service_usage').insert({
         customer_id: customerId,
         usage_type: 'customer_chat',
+        call_type: 'preview', // Mark as preview so it's separated from real customer chats
         provider: 'lovable_ai',
         model: 'google/gemini-2.5-flash',
         tokens_in: inputTokens,
         tokens_out: outputTokens,
+        message_count: 1,
         cost_usd: estimatedCost,
         metadata: {
           business_name: businessName,
