@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CRMLayout } from '@/components/crm/CRMLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -195,14 +194,12 @@ export default function UsageDashboard() {
 
   if (roleLoading) {
     return (
-      <CRMLayout>
-        <div className="p-6 space-y-4">
-          <Skeleton className="h-8 w-48" />
-          <div className="grid gap-4 md:grid-cols-4">
-            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
-          </div>
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
         </div>
-      </CRMLayout>
+      </div>
     );
   }
 
@@ -212,8 +209,7 @@ export default function UsageDashboard() {
   }
 
   return (
-    <CRMLayout>
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Usage & COGS Dashboard</h1>
           <p className="text-muted-foreground">Monitor AI usage, costs, and margins across all services</p>
@@ -523,7 +519,6 @@ export default function UsageDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </CRMLayout>
+    </div>
   );
 }
