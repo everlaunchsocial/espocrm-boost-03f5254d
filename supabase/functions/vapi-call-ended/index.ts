@@ -49,6 +49,10 @@ serve(async (req) => {
     let customerId = metadata.customer_id || call.metadata?.customer_id || null;
     const affiliateId = metadata.affiliate_id || null;
     const demoId = metadata.demo_id || null;
+    
+    // PHASE A: Detect if call came via Master Testing Line
+    const viaTestingLine = metadata.via_testing_line === true || metadata.via_testing_line === 'true';
+    console.log('Via testing line:', viaTestingLine, 'metadata:', JSON.stringify(metadata));
 
     // Extract Vapi cost data
     const costTotal = call.cost || message.cost || 0;
@@ -80,7 +84,8 @@ serve(async (req) => {
       }
     }
     
-    const callType = metadata.call_type || (customerId ? 'customer' : (demoId ? 'demo' : 'preview'));
+    // PHASE A: Force call_type to 'preview' if via testing line, otherwise use metadata or derive
+    const callType = viaTestingLine ? 'preview' : (metadata.call_type || (customerId ? 'customer' : (demoId ? 'demo' : 'preview')));
 
     // Save call to vapi_calls table with full cost data
     let savedCallId: string | null = null;
@@ -108,6 +113,7 @@ serve(async (req) => {
             cost_transport: costTransport,
             cost_platform: costPlatform,
             call_metadata: { original_body: body },
+            via_testing_line: viaTestingLine, // PHASE A: Track testing line calls
           })
           .select('id')
           .single();
@@ -171,8 +177,10 @@ serve(async (req) => {
     }
 
     // If we have a customer_id, log minutes and check for alerts
-    if (customerId && callDuration > 0) {
+    // PHASE A: Do NOT charge minutes for testing line calls (preview)
+    if (customerId && callDuration > 0 && !viaTestingLine && callType === 'customer') {
       const minutes = callDuration / 60;
+      console.log('Charging customer minutes (not via testing line):', minutes);
       
       try {
         // Log minutes usage and get current status

@@ -26,6 +26,7 @@ import { VoiceEmployeeCard } from '@/components/demos/VoiceEmployeeCard';
 import { MobileDeviceMockup } from '@/components/demos/MobileDeviceMockup';
 import { ChatButtonOverlay } from '@/components/demos/ChatButtonOverlay';
 import { PreviewUsageWarning } from '@/components/customer/PreviewUsageWarning';
+import { TestingHotlineCard } from '@/components/customer/TestingHotlineCard';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -476,6 +477,9 @@ Keep responses helpful, concise, and professional.`;
                 </div>
               </CardContent>
             </Card>
+
+            {/* Master Testing Hotline Card - PHASE A */}
+            <TestingHotlineCard customerId={customerProfile?.id} testingCode={customerProfile?.testing_code} />
 
             {/* Voice Employee Card */}
             <div className="hidden lg:block">

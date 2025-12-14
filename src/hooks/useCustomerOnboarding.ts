@@ -32,6 +32,7 @@ export interface CustomerProfile {
   minutes_included: number;
   embed_installed_at: string | null;
   phone_tested_at: string | null;
+  testing_code: string | null; // PHASE A: 4-digit code for testing hotline
 }
 
 export interface VoiceSettings {
