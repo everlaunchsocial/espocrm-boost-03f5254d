@@ -53,10 +53,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Simple exact match lookup by passcode - no fuzzy matching needed!
+    // Lookup demo by passcode and join with lead to get prospect's first name
     const { data: demos, error } = await supabase
       .from('demos')
-      .select('*')
+      .select('*, leads(first_name)')
       .eq('passcode', passcode)
       .limit(1);
 
@@ -82,16 +82,12 @@ serve(async (req) => {
 
     const demo = demos[0];
     const personaName = demo.ai_persona_name || 'Jenna';
-    console.log('Found demo:', demo.id, demo.business_name, 'Caller:', callerPhone);
+    // Get prospect's first name from the joined lead record
+    const prospectName = demo.leads?.first_name || 'there';
+    console.log('Found demo:', demo.id, demo.business_name, 'Prospect:', prospectName);
 
-    // Format caller phone for speaking (e.g., "508-123-4567" -> "5 0 8, 1 2 3, 4 5 6 7")
-    const phoneDigits = callerPhone.replace(/\D/g, '');
-    const formattedPhone = phoneDigits.length === 10 
-      ? `${phoneDigits.slice(0,3)}-${phoneDigits.slice(3,6)}-${phoneDigits.slice(6)}`
-      : callerPhone;
-
-    // Return direct speech text - what the AI should say immediately
-    const speakableResult = `Perfect! I found your demo for ${demo.business_name}. Let me show you how I would work as your AI receptionist. Hi! Thank you for calling ${demo.business_name}. My name is ${personaName}. How can I help you today?`;
+    // Demo script: Address prospect by name, explain it's a demo, ask if they want to hear it
+    const speakableResult = `Hi ${prospectName}! I'm ${personaName}. Welcome to your personalized EverLaunch demo! I'm going to show you exactly what your AI receptionist would sound like when customers call ${demo.business_name}. Ready to hear how I'd handle a customer call?`;
 
     return new Response(
       JSON.stringify({
