@@ -192,8 +192,8 @@ serve(async (req) => {
       body: JSON.stringify({
         name: `${businessName.slice(0, 26)} AI Assistant`.slice(0, 40),
         model: {
-          provider: 'deep-seek',
-          model: 'deepseek-chat',
+          provider: 'openai',
+          model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: systemPrompt }
           ],
