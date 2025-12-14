@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useServiceUsageSummary, useActiveAlerts, acknowledgeAlert, resolveAlert } from '@/hooks/useServiceUsage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -20,7 +22,9 @@ import {
   Building2, 
   TrendingUp,
   Check,
-  Eye
+  Eye,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
@@ -37,6 +41,8 @@ export default function UsageDashboard() {
   const { isAdmin, isLoading: roleLoading, userId } = useUserRole();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
+  const [callTypeFilter, setCallTypeFilter] = useState<string>('all');
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
 
   // Date range for current month
   const now = new Date();
@@ -85,9 +91,9 @@ export default function UsageDashboard() {
     }
   });
 
-  // Fetch customer usage with COGS
+  // Fetch customer usage with COGS - respects callTypeFilter
   const { data: customerUsage } = useQuery({
-    queryKey: ['customer-usage-summary'],
+    queryKey: ['customer-usage-summary', callTypeFilter],
     queryFn: async () => {
       const { data: customers, error: custError } = await supabase
         .from('customer_profiles')
@@ -102,26 +108,43 @@ export default function UsageDashboard() {
 
       if (custError) throw custError;
 
-      const { data: usage, error: usageError } = await supabase
+      // Build usage query with optional call_type filter
+      let usageQuery = supabase
         .from('service_usage')
-        .select('customer_id, cost_usd')
+        .select('customer_id, cost_usd, call_type, usage_type, duration_seconds, created_at')
         .not('customer_id', 'is', null)
-        .eq('call_type', 'customer')
         .gte('created_at', monthStart.toISOString());
+
+      if (callTypeFilter !== 'all') {
+        usageQuery = usageQuery.eq('call_type', callTypeFilter);
+      }
+
+      const { data: usage, error: usageError } = await usageQuery;
 
       if (usageError) throw usageError;
 
-      // Aggregate costs by customer
-      const costByCustomer: Record<string, number> = {};
+      // Aggregate costs by customer AND store detailed breakdown
+      const costByCustomer: Record<string, { total: number; breakdown: Array<{ call_type: string; usage_type: string; cost: number; duration: number; created_at: string }> }> = {};
       for (const row of usage || []) {
         const id = row.customer_id!;
-        costByCustomer[id] = (costByCustomer[id] || 0) + (Number(row.cost_usd) || 0);
+        if (!costByCustomer[id]) {
+          costByCustomer[id] = { total: 0, breakdown: [] };
+        }
+        costByCustomer[id].total += Number(row.cost_usd) || 0;
+        costByCustomer[id].breakdown.push({
+          call_type: row.call_type || 'unknown',
+          usage_type: row.usage_type || 'unknown',
+          cost: Number(row.cost_usd) || 0,
+          duration: row.duration_seconds || 0,
+          created_at: row.created_at
+        });
       }
 
       return (customers || []).map(c => {
         const planData = c.customer_plans as { name: string; monthly_price: number } | null;
         const revenue = Number(planData?.monthly_price) || 0;
-        const cogs = costByCustomer[c.id] || 0;
+        const customerData = costByCustomer[c.id] || { total: 0, breakdown: [] };
+        const cogs = customerData.total;
         const margin = revenue - cogs;
         const marginPercent = revenue > 0 ? (margin / revenue) * 100 : 0;
 
@@ -134,11 +157,24 @@ export default function UsageDashboard() {
           margin,
           margin_percent: marginPercent,
           minutes_used: c.minutes_used || 0,
-          minutes_included: c.minutes_included || 0
+          minutes_included: c.minutes_included || 0,
+          usage_breakdown: customerData.breakdown
         };
       }).sort((a, b) => b.cogs - a.cogs);
     }
   });
+
+  const toggleCustomerExpanded = (customerId: string) => {
+    setExpandedCustomers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(customerId)) {
+        newSet.delete(customerId);
+      } else {
+        newSet.add(customerId);
+      }
+      return newSet;
+    });
+  };
 
   // Fetch monthly trends
   const { data: monthlyTrends } = useQuery({
@@ -382,16 +418,32 @@ export default function UsageDashboard() {
           <TabsContent value="customers" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Customer COGS & Margins (This Month)
-                </CardTitle>
-                <CardDescription>Revenue vs AI costs per customer</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5" />
+                      Customer COGS & Margins (This Month)
+                    </CardTitle>
+                    <CardDescription>Revenue vs AI costs per customer - click rows to expand</CardDescription>
+                  </div>
+                  <Select value={callTypeFilter} onValueChange={setCallTypeFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="customer">Real Calls</SelectItem>
+                      <SelectItem value="preview">Preview Only</SelectItem>
+                      <SelectItem value="demo">Demo Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-8"></TableHead>
                       <TableHead>Business</TableHead>
                       <TableHead>Plan</TableHead>
                       <TableHead className="text-right">Revenue</TableHead>
@@ -401,25 +453,91 @@ export default function UsageDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(customerUsage || []).map(cust => (
-                      <TableRow key={cust.customer_id}>
-                        <TableCell className="font-medium">{cust.business_name}</TableCell>
-                        <TableCell>{cust.plan_name}</TableCell>
-                        <TableCell className="text-right">${cust.revenue.toFixed(0)}</TableCell>
-                        <TableCell className="text-right">${formatCost(cust.cogs)}</TableCell>
-                        <TableCell className="text-right">
-                          <span className={cust.margin >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            ${cust.margin.toFixed(2)} ({cust.margin_percent.toFixed(0)}%)
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {cust.minutes_used}/{cust.minutes_included} min
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {(customerUsage || []).map(cust => {
+                      const isExpanded = expandedCustomers.has(cust.customer_id);
+                      return (
+                        <Collapsible key={cust.customer_id} open={isExpanded} onOpenChange={() => toggleCustomerExpanded(cust.customer_id)} asChild>
+                          <>
+                            <CollapsibleTrigger asChild>
+                              <TableRow className="cursor-pointer hover:bg-muted/50">
+                                <TableCell className="w-8">
+                                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                </TableCell>
+                                <TableCell className="font-medium">{cust.business_name}</TableCell>
+                                <TableCell>{cust.plan_name}</TableCell>
+                                <TableCell className="text-right">${cust.revenue.toFixed(0)}</TableCell>
+                                <TableCell className="text-right">${formatCost(cust.cogs)}</TableCell>
+                                <TableCell className="text-right">
+                                  <span className={cust.margin >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                    ${cust.margin.toFixed(2)} ({cust.margin_percent.toFixed(0)}%)
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {cust.minutes_used}/{cust.minutes_included} min
+                                </TableCell>
+                              </TableRow>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent asChild>
+                              <TableRow className="bg-muted/30">
+                                <TableCell colSpan={7} className="p-4">
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium text-muted-foreground">Usage Breakdown ({cust.usage_breakdown?.length || 0} sessions)</p>
+                                    {cust.usage_breakdown && cust.usage_breakdown.length > 0 ? (
+                                      <div className="max-h-48 overflow-y-auto">
+                                        <Table>
+                                          <TableHeader>
+                                            <TableRow>
+                                              <TableHead className="text-xs">Type</TableHead>
+                                              <TableHead className="text-xs">Call Type</TableHead>
+                                              <TableHead className="text-xs text-right">Duration</TableHead>
+                                              <TableHead className="text-xs text-right">Cost</TableHead>
+                                              <TableHead className="text-xs text-right">Date</TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {cust.usage_breakdown.slice(0, 10).map((usage, idx) => (
+                                              <TableRow key={idx} className="text-xs">
+                                                <TableCell>
+                                                  <Badge variant="outline" className="text-xs">
+                                                    {usage.usage_type.replace(/_/g, ' ')}
+                                                  </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                  <Badge variant={usage.call_type === 'customer' ? 'default' : 'secondary'} className="text-xs">
+                                                    {usage.call_type}
+                                                  </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                  {usage.duration > 0 ? `${Math.round(usage.duration / 60)}m ${usage.duration % 60}s` : '-'}
+                                                </TableCell>
+                                                <TableCell className="text-right">${formatCost(usage.cost)}</TableCell>
+                                                <TableCell className="text-right">
+                                                  {format(new Date(usage.created_at), 'MMM d, h:mm a')}
+                                                </TableCell>
+                                              </TableRow>
+                                            ))}
+                                          </TableBody>
+                                        </Table>
+                                        {cust.usage_breakdown.length > 10 && (
+                                          <p className="text-xs text-muted-foreground mt-2">
+                                            Showing 10 of {cust.usage_breakdown.length} sessions
+                                          </p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground">No usage data for this period</p>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            </CollapsibleContent>
+                          </>
+                        </Collapsible>
+                      );
+                    })}
                     {!customerUsage?.length && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
                           No customer usage this month
                         </TableCell>
                       </TableRow>

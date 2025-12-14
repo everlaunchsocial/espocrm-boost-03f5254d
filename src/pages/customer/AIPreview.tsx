@@ -177,6 +177,7 @@ Keep responses helpful, concise, and professional.`;
           messages: [...messages, { role: 'user', content: userMessage }],
           systemPrompt,
           businessName: customerProfile?.business_name,
+          customerId: customerProfile?.id,
         }
       });
 
@@ -250,9 +251,33 @@ Keep responses helpful, concise, and professional.`;
         setIsVoiceConnected(false);
         setIsVoiceConnecting(false);
         setIsSpeaking(false);
+        
+        // Get the current duration before clearing
+        const finalDuration = durationIntervalRef.current ? callDuration : 0;
+        
         if (durationIntervalRef.current) {
           clearInterval(durationIntervalRef.current);
           durationIntervalRef.current = null;
+        }
+        
+        // Log voice preview usage to service_usage
+        if (customerProfile?.id && finalDuration > 0) {
+          const estimatedCost = (finalDuration / 60) * 0.10; // ~$0.10/min Vapi rate
+          supabase.functions.invoke('log-web-chat-usage', {
+            body: {
+              customerId: customerProfile.id,
+              usageType: 'customer_voice_preview',
+              callType: 'preview',
+              durationSeconds: finalDuration,
+              costUsd: estimatedCost,
+              provider: 'vapi',
+              model: 'gpt-4o-mini'
+            }
+          }).then(() => {
+            console.log('Voice preview usage logged:', finalDuration, 'seconds');
+          }).catch(err => {
+            console.error('Failed to log voice preview usage:', err);
+          });
         }
       });
 
