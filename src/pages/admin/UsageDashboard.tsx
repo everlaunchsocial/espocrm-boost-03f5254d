@@ -62,6 +62,50 @@ export default function UsageDashboard() {
   const { data: summary, isLoading: summaryLoading } = useServiceUsageSummary(monthStart, monthEnd);
   const { data: alerts, isLoading: alertsLoading } = useActiveAlerts();
 
+  // Aggregate preview usage across ALL customers
+  const { data: previewAggregate, isLoading: previewLoading } = useQuery({
+    queryKey: ['preview-usage-aggregate', monthStart.toISOString()],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('service_usage')
+        .select('usage_type, duration_seconds, cost_usd, message_count')
+        .eq('call_type', 'preview')
+        .gte('created_at', monthStart.toISOString());
+
+      if (error) throw error;
+
+      let voiceDuration = 0;
+      let voiceCost = 0;
+      let voiceSessions = 0;
+      let chatMessages = 0;
+      let chatCost = 0;
+      let chatSessions = 0;
+
+      for (const row of data || []) {
+        const cost = Number(row.cost_usd) || 0;
+        if (row.usage_type?.includes('voice') || row.usage_type?.includes('phone')) {
+          voiceDuration += row.duration_seconds || 0;
+          voiceCost += cost;
+          voiceSessions += 1;
+        } else if (row.usage_type?.includes('chat')) {
+          chatMessages += row.message_count || 1;
+          chatCost += cost;
+          chatSessions += 1;
+        }
+      }
+
+      return {
+        voice_duration: voiceDuration,
+        voice_cost: voiceCost,
+        voice_sessions: voiceSessions,
+        chat_messages: chatMessages,
+        chat_cost: chatCost,
+        chat_sessions: chatSessions,
+        total_cost: voiceCost + chatCost
+      };
+    }
+  });
+
   // Fetch affiliate usage summary
   const { data: affiliateUsage } = useQuery({
     queryKey: ['affiliate-usage-summary'],
@@ -384,13 +428,47 @@ export default function UsageDashboard() {
                   <div className="space-y-2">
                     {Object.entries(summary?.by_usage_type || {}).map(([type, data]) => (
                       <div key={type} className="flex justify-between items-center">
-                        <span className="capitalize">{type.replace('_', ' ')}</span>
+                        <span className="capitalize">{type.replace(/_/g, ' ')}</span>
                         <div className="text-right">
                           <span className="font-medium">${formatCost(data.cost)}</span>
                           <span className="text-muted-foreground text-sm ml-2">({data.count} sessions)</span>
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Preview Usage Aggregate - All Customers Testing */}
+            <Card className="border-orange-200 dark:border-orange-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-orange-500" />
+                  Preview Usage (All Customers Testing)
+                </CardTitle>
+                <CardDescription>Total cost of customer testing across all accounts this month</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {previewLoading ? (
+                  <Skeleton className="h-24" />
+                ) : (
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Voice Preview</p>
+                      <p className="text-lg font-semibold">{formatDuration(previewAggregate?.voice_duration || 0)}</p>
+                      <p className="text-xs text-muted-foreground">${formatCost(previewAggregate?.voice_cost || 0)} ({previewAggregate?.voice_sessions || 0} sessions)</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Chat Preview</p>
+                      <p className="text-lg font-semibold">{previewAggregate?.chat_messages || 0} messages</p>
+                      <p className="text-xs text-muted-foreground">${formatCost(previewAggregate?.chat_cost || 0)} ({previewAggregate?.chat_sessions || 0} sessions)</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Total Preview Cost</p>
+                      <p className="text-2xl font-bold text-orange-600">${formatCost(previewAggregate?.total_cost || 0)}</p>
+                      <p className="text-xs text-muted-foreground">Lost to testing this month</p>
+                    </div>
                   </div>
                 )}
               </CardContent>
