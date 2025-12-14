@@ -223,8 +223,8 @@ serve(async (req) => {
         );
         
         updatePayload.model = {
-          provider: 'deep-seek',
-          model: 'deepseek-chat',
+          provider: 'openai',
+          model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: systemPrompt }
           ],
