@@ -27,7 +27,18 @@ serve(async (req) => {
     const transcript = message.transcript || body.transcript || '';
     const summary = message.summary || body.summary || '';
     const callerPhone = call.customer?.number || message.customer?.number || 'Unknown';
-    const callDuration = call.duration || message.duration || 0;
+    
+    // Extract duration - Vapi provides durationSeconds, or we calculate from timestamps
+    let callDuration = call.durationSeconds || message.durationSeconds || call.duration || message.duration || 0;
+    
+    // If still 0, try to calculate from start/end timestamps
+    if (callDuration === 0 && call.startedAt && call.endedAt) {
+      const startTime = new Date(call.startedAt).getTime();
+      const endTime = new Date(call.endedAt).getTime();
+      callDuration = Math.round((endTime - startTime) / 1000);
+    }
+    
+    console.log('Extracted call duration:', callDuration, 'seconds');
     const callId = call.id || message.callId || 'unknown';
     const endedReason = message.endedReason || call.endedReason || 'unknown';
     const assistantId = call.assistantId || message.assistantId;

@@ -36,6 +36,16 @@ const formatCost = (cost: number): string => {
   return cost.toFixed(2);
 };
 
+// Format duration - show seconds for small values, minutes for larger
+const formatDuration = (seconds: number): string => {
+  if (seconds === 0) return '0';
+  if (seconds < 60) return `${Math.round(seconds)} sec`;
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  if (secs === 0) return `${mins} min`;
+  return `${mins}m ${secs}s`;
+};
+
 export default function UsageDashboard() {
   const navigate = useNavigate();
   const { isAdmin, isLoading: roleLoading, userId } = useUserRole();
@@ -287,12 +297,12 @@ export default function UsageDashboard() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Phone Minutes</CardTitle>
+                  <CardTitle className="text-sm font-medium">Phone Duration</CardTitle>
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {summaryLoading ? <Skeleton className="h-8 w-24" /> : Math.round((summary?.by_usage_type?.phone_call?.duration || 0) / 60)}
+                    {summaryLoading ? <Skeleton className="h-8 w-24" /> : formatDuration(summary?.by_usage_type?.phone_call?.duration || 0)}
                   </div>
                   <p className="text-xs text-muted-foreground">Inbound phone calls</p>
                 </CardContent>
@@ -300,12 +310,12 @@ export default function UsageDashboard() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Web Voice Minutes</CardTitle>
+                  <CardTitle className="text-sm font-medium">Web Voice Duration</CardTitle>
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {summaryLoading ? <Skeleton className="h-8 w-24" /> : Math.round((summary?.by_usage_type?.customer_voice_preview?.duration || 0) / 60)}
+                    {summaryLoading ? <Skeleton className="h-8 w-24" /> : formatDuration(summary?.by_usage_type?.customer_voice_preview?.duration || 0)}
                   </div>
                   <p className="text-xs text-muted-foreground">Browser voice previews</p>
                 </CardContent>
@@ -520,8 +530,8 @@ export default function UsageDashboard() {
                                                     {usage.call_type}
                                                   </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right">
-                                                  {usage.duration > 0 ? `${Math.round(usage.duration / 60)}m ${usage.duration % 60}s` : '-'}
+                                              <TableCell className="text-right">
+                                                  {usage.duration > 0 ? formatDuration(usage.duration) : '-'}
                                                 </TableCell>
                                                 <TableCell className="text-right">${formatCost(usage.cost)}</TableCell>
                                                 <TableCell className="text-right">
