@@ -30,6 +30,7 @@ export const VoiceWidget = ({ businessInfo, disabled, provider = 'openai' }: Voi
   const [transcript, setTranscript] = useState("");
   const openaiChatRef = useRef<RealtimeChat | null>(null);
   const elevenLabsChatRef = useRef<ElevenLabsChat | null>(null);
+  const sessionStartRef = useRef<Date | null>(null);
 
   const handleMessage = (event: any) => {
     console.log('Voice event:', event.type || event);
@@ -126,6 +127,7 @@ export const VoiceWidget = ({ businessInfo, disabled, provider = 'openai' }: Voi
       }
 
       setIsConnected(true);
+      sessionStartRef.current = new Date();
 
       toast({
         title: "Connected",
@@ -143,7 +145,29 @@ export const VoiceWidget = ({ businessInfo, disabled, provider = 'openai' }: Voi
     }
   };
 
-  const endConversation = () => {
+  const endConversation = async () => {
+    // Log OpenAI Realtime usage before disconnecting
+    if (provider === 'openai' && sessionStartRef.current && businessInfo) {
+      const durationSeconds = Math.round((Date.now() - sessionStartRef.current.getTime()) / 1000);
+      const durationMinutes = durationSeconds / 60;
+      // OpenAI Realtime costs ~$0.30/min
+      const estimatedCost = durationMinutes * 0.30;
+      
+      try {
+        await supabase.functions.invoke('log-openai-realtime-usage', {
+          body: {
+            duration_seconds: durationSeconds,
+            business_name: businessInfo.businessName,
+            provider: 'openai',
+            usage_type: 'web_voice'
+          }
+        });
+        console.log('OpenAI Realtime usage logged:', { durationSeconds, estimatedCost });
+      } catch (error) {
+        console.error('Failed to log OpenAI Realtime usage:', error);
+      }
+    }
+
     openaiChatRef.current?.disconnect();
     openaiChatRef.current = null;
     elevenLabsChatRef.current?.disconnect();
@@ -151,6 +175,7 @@ export const VoiceWidget = ({ businessInfo, disabled, provider = 'openai' }: Voi
     setIsConnected(false);
     setIsSpeaking(false);
     setTranscript("");
+    sessionStartRef.current = null;
 
     toast({
       title: "Disconnected",

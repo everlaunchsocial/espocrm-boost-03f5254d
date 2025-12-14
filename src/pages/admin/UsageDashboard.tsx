@@ -24,6 +24,14 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
+// Format cost with appropriate precision - show more decimals for micro-costs
+const formatCost = (cost: number): string => {
+  if (cost === 0) return '0.00';
+  if (cost < 0.01) return cost.toFixed(6);
+  if (cost < 0.1) return cost.toFixed(4);
+  return cost.toFixed(2);
+};
+
 export default function UsageDashboard() {
   const navigate = useNavigate();
   const { isAdmin, isLoading: roleLoading, userId } = useUserRole();
@@ -235,7 +243,7 @@ export default function UsageDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {summaryLoading ? <Skeleton className="h-8 w-24" /> : `$${(summary?.total_cost || 0).toFixed(2)}`}
+                    {summaryLoading ? <Skeleton className="h-8 w-24" /> : `$${formatCost(summary?.total_cost || 0)}`}
                   </div>
                   <p className="text-xs text-muted-foreground">All AI services combined</p>
                 </CardContent>
@@ -295,7 +303,7 @@ export default function UsageDashboard() {
                       <div key={provider} className="flex justify-between items-center">
                         <span className="capitalize">{provider.replace('_', ' ')}</span>
                         <div className="text-right">
-                          <span className="font-medium">${data.cost.toFixed(2)}</span>
+                          <span className="font-medium">${formatCost(data.cost)}</span>
                           <span className="text-muted-foreground text-sm ml-2">({data.count} sessions)</span>
                         </div>
                       </div>
@@ -319,7 +327,7 @@ export default function UsageDashboard() {
                       <div key={type} className="flex justify-between items-center">
                         <span className="capitalize">{type.replace('_', ' ')}</span>
                         <div className="text-right">
-                          <span className="font-medium">${data.cost.toFixed(2)}</span>
+                          <span className="font-medium">${formatCost(data.cost)}</span>
                           <span className="text-muted-foreground text-sm ml-2">({data.count} sessions)</span>
                         </div>
                       </div>
@@ -354,7 +362,7 @@ export default function UsageDashboard() {
                       <TableRow key={aff.affiliate_id}>
                         <TableCell className="font-medium">{aff.username}</TableCell>
                         <TableCell className="text-right">{aff.count}</TableCell>
-                        <TableCell className="text-right">${aff.cost.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${formatCost(aff.cost)}</TableCell>
                       </TableRow>
                     ))}
                     {!affiliateUsage?.length && (
@@ -398,7 +406,7 @@ export default function UsageDashboard() {
                         <TableCell className="font-medium">{cust.business_name}</TableCell>
                         <TableCell>{cust.plan_name}</TableCell>
                         <TableCell className="text-right">${cust.revenue.toFixed(0)}</TableCell>
-                        <TableCell className="text-right">${cust.cogs.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${formatCost(cust.cogs)}</TableCell>
                         <TableCell className="text-right">
                           <span className={cust.margin >= 0 ? 'text-green-600' : 'text-red-600'}>
                             ${cust.margin.toFixed(2)} ({cust.margin_percent.toFixed(0)}%)
