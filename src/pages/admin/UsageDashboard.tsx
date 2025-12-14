@@ -287,14 +287,27 @@ export default function UsageDashboard() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Voice Minutes</CardTitle>
+                  <CardTitle className="text-sm font-medium">Phone Minutes</CardTitle>
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {summaryLoading ? <Skeleton className="h-8 w-24" /> : Math.round((summary?.total_duration_seconds || 0) / 60)}
+                    {summaryLoading ? <Skeleton className="h-8 w-24" /> : Math.round((summary?.by_usage_type?.phone_call?.duration || 0) / 60)}
                   </div>
-                  <p className="text-xs text-muted-foreground">Phone + Web voice</p>
+                  <p className="text-xs text-muted-foreground">Inbound phone calls</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Web Voice Minutes</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {summaryLoading ? <Skeleton className="h-8 w-24" /> : Math.round((summary?.by_usage_type?.customer_voice_preview?.duration || 0) / 60)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Browser voice previews</p>
                 </CardContent>
               </Card>
 

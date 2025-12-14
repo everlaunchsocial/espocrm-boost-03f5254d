@@ -41,7 +41,7 @@ interface UsageSummary {
   total_duration_seconds: number;
   total_messages: number;
   by_provider: Record<string, { cost: number; count: number }>;
-  by_usage_type: Record<string, { cost: number; count: number }>;
+  by_usage_type: Record<string, { cost: number; count: number; duration: number }>;
   by_call_type: Record<string, { cost: number; count: number }>;
 }
 
@@ -90,10 +90,11 @@ export function useServiceUsageSummary(startDate?: Date, endDate?: Date) {
 
         // By usage type
         if (!summary.by_usage_type[row.usage_type]) {
-          summary.by_usage_type[row.usage_type] = { cost: 0, count: 0 };
+          summary.by_usage_type[row.usage_type] = { cost: 0, count: 0, duration: 0 };
         }
         summary.by_usage_type[row.usage_type].cost += cost;
         summary.by_usage_type[row.usage_type].count += 1;
+        summary.by_usage_type[row.usage_type].duration += row.duration_seconds || 0;
 
         // By call type
         const callType = row.call_type || 'unknown';

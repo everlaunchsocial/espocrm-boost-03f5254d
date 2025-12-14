@@ -66,6 +66,7 @@ export default function AIPreview() {
   const [callDuration, setCallDuration] = useState(0);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const vapiRef = useRef<Vapi | null>(null);
+  const callStartTimeRef = useRef<number | null>(null); // Track actual start time
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch phone number and assistant ID
@@ -239,6 +240,7 @@ Keep responses helpful, concise, and professional.`;
       vapi.on('call-start', () => {
         setIsVoiceConnected(true);
         setIsVoiceConnecting(false);
+        callStartTimeRef.current = Date.now(); // Capture start timestamp
         
         durationIntervalRef.current = setInterval(() => {
           setCallDuration(prev => prev + 1);
@@ -252,13 +254,16 @@ Keep responses helpful, concise, and professional.`;
         setIsVoiceConnecting(false);
         setIsSpeaking(false);
         
-        // Get the current duration before clearing
-        const finalDuration = durationIntervalRef.current ? callDuration : 0;
+        // Calculate actual duration from start timestamp (avoids React state closure bug)
+        const finalDuration = callStartTimeRef.current 
+          ? Math.round((Date.now() - callStartTimeRef.current) / 1000) 
+          : 0;
         
         if (durationIntervalRef.current) {
           clearInterval(durationIntervalRef.current);
           durationIntervalRef.current = null;
         }
+        callStartTimeRef.current = null;
         
         // Log voice preview usage to service_usage
         if (customerProfile?.id && finalDuration > 0) {

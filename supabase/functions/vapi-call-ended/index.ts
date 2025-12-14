@@ -35,10 +35,9 @@ serve(async (req) => {
 
     // Extract metadata for attribution
     const metadata = call.metadata || message.metadata || {};
-    const customerId = metadata.customer_id || call.metadata?.customer_id;
+    let customerId = metadata.customer_id || call.metadata?.customer_id || null;
     const affiliateId = metadata.affiliate_id || null;
     const demoId = metadata.demo_id || null;
-    const callType = metadata.call_type || (customerId ? 'customer' : (demoId ? 'demo' : 'preview'));
 
     // Extract Vapi cost data
     const costTotal = call.cost || message.cost || 0;
@@ -52,19 +51,25 @@ serve(async (req) => {
     // If no cost provided, estimate from duration
     const finalCostTotal = costTotal > 0 ? costTotal : (callDuration / 60) * VAPI_COST_PER_MINUTE;
 
-    console.log('Call ID:', callId);
-    console.log('Caller phone:', callerPhone);
-    console.log('Duration:', callDuration, 'seconds');
-    console.log('Customer ID:', customerId);
-    console.log('Affiliate ID:', affiliateId);
-    console.log('Demo ID:', demoId);
-    console.log('Call Type:', callType);
-    console.log('Cost Total:', finalCostTotal);
-    console.log('Cost Breakdown:', costBreakdown);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // If no customerId but we have assistantId, look up the customer via phone number records
+    if (!customerId && assistantId) {
+      const { data: phoneRecord } = await supabase
+        .from('customer_phone_numbers')
+        .select('customer_id')
+        .eq('vapi_assistant_id', assistantId)
+        .maybeSingle();
+      
+      if (phoneRecord?.customer_id) {
+        customerId = phoneRecord.customer_id;
+        console.log('Resolved customer_id from assistant_id:', customerId);
+      }
+    }
+    
+    const callType = metadata.call_type || (customerId ? 'customer' : (demoId ? 'demo' : 'preview'));
 
     // Save call to vapi_calls table with full cost data
     let savedCallId: string | null = null;
