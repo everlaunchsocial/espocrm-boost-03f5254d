@@ -172,6 +172,7 @@ IMPORTANT RULES:
 
       supabase.from('service_usage').insert({
         affiliate_id: demo.affiliate_id,
+        demo_id: demoId,
         usage_type: 'demo_chat',
         provider: 'lovable_ai',
         model: 'google/gemini-2.5-flash',
@@ -179,7 +180,6 @@ IMPORTANT RULES:
         tokens_out: outputTokens,
         cost_usd: estimatedCost,
         metadata: {
-          demo_id: demoId,
           business_name: demo.business_name,
           message_count: messages.length
         }
@@ -187,7 +187,7 @@ IMPORTANT RULES:
         if (error) {
           console.error('Error logging demo chat usage:', error);
         } else {
-          console.log('Demo chat usage logged successfully');
+          console.log('Demo chat usage logged for demo:', demoId);
         }
       });
     }
