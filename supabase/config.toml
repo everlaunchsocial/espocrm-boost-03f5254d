@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.check-affiliate-spam]
 verify_jwt = false
+
+[functions.vapi-transfer-to-customer]
+verify_jwt = false

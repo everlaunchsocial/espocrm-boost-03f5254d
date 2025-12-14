@@ -1092,6 +1092,7 @@ export type Database = {
           phone_tested_at: string | null
           plan_name: string | null
           sms_notifications_enabled: boolean | null
+          testing_code: string | null
           user_id: string
           website_url: string | null
         }
@@ -1125,6 +1126,7 @@ export type Database = {
           phone_tested_at?: string | null
           plan_name?: string | null
           sms_notifications_enabled?: boolean | null
+          testing_code?: string | null
           user_id: string
           website_url?: string | null
         }
@@ -1158,6 +1160,7 @@ export type Database = {
           phone_tested_at?: string | null
           plan_name?: string | null
           sms_notifications_enabled?: boolean | null
+          testing_code?: string | null
           user_id?: string
           website_url?: string | null
         }
@@ -2225,6 +2228,33 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -2595,6 +2625,7 @@ export type Database = {
           summary: string | null
           transcript: string | null
           vapi_call_id: string | null
+          via_testing_line: boolean | null
         }
         Insert: {
           affiliate_id?: string | null
@@ -2618,6 +2649,7 @@ export type Database = {
           summary?: string | null
           transcript?: string | null
           vapi_call_id?: string | null
+          via_testing_line?: boolean | null
         }
         Update: {
           affiliate_id?: string | null
@@ -2641,6 +2673,7 @@ export type Database = {
           summary?: string | null
           transcript?: string | null
           vapi_call_id?: string | null
+          via_testing_line?: boolean | null
         }
         Relationships: [
           {
