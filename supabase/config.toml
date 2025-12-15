@@ -131,3 +131,6 @@ verify_jwt = false
 
 [functions.parse-document]
 verify_jwt = false
+
+[functions.configure-demo-hotline]
+verify_jwt = false
