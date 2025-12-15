@@ -275,6 +275,54 @@ serve(async (req) => {
       }
     }
 
+    // If this is a demo call, increment voice_interaction_count and log activity
+    if (demoId) {
+      try {
+        // Increment voice interaction count using RPC
+        const { error: rpcError } = await supabase.rpc('increment_demo_voice_count', { demo_id: demoId });
+        
+        if (rpcError) {
+          console.error('Error incrementing demo voice count:', rpcError);
+          // Fallback: direct update
+          await supabase.from('demos')
+            .update({ status: 'engaged', updated_at: new Date().toISOString() })
+            .eq('id', demoId);
+        }
+
+        // Get lead_id from demo for activity tracking
+        const { data: demoInfo } = await supabase
+          .from('demos')
+          .select('lead_id, business_name')
+          .eq('id', demoId)
+          .single();
+
+        if (demoInfo?.lead_id) {
+          // Log activity for the phone call
+          const { error: activityError } = await supabase
+            .from('activities')
+            .insert({
+              type: 'call',
+              subject: `Demo phone call - ${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, '0')}`,
+              description: summary || `Phone demo call for ${demoInfo.business_name}`,
+              related_to_type: 'lead',
+              related_to_id: demoInfo.lead_id,
+              related_to_name: demoInfo.business_name,
+              is_system_generated: true,
+            });
+
+          if (activityError) {
+            console.error('Error logging demo call activity:', activityError);
+          } else {
+            console.log('Demo call activity logged for lead:', demoInfo.lead_id);
+          }
+        }
+
+        console.log('Demo voice interaction incremented for demo:', demoId);
+      } catch (demoErr) {
+        console.error('Error updating demo engagement:', demoErr);
+      }
+    }
+
     // If this is a demo call, send transcript to prospect with tracking
     if (demoId && transcript && transcript.length >= 10) {
       try {
