@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { CRMLayout } from "@/components/crm/CRMLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -111,8 +110,7 @@ export default function TestAnalyzer() {
   };
 
   return (
-    <CRMLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">AI Quality Analyzer - Test Page</h1>
           <p className="text-muted-foreground">Phase 1 testing: Analyze call quality manually</p>
@@ -322,6 +320,6 @@ export default function TestAnalyzer() {
           </CardContent>
         </Card>
       </div>
-    </CRMLayout>
+    </div>
   );
 }

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Send, Eye, FileText, MoreHorizontal, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { CRMLayout } from '@/components/crm/CRMLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -60,15 +59,10 @@ const Estimates = () => {
   };
 
   if (isLoading) {
-    return (
-      <CRMLayout>
-        <div className="p-6">Loading...</div>
-      </CRMLayout>
-    );
+    return <div className="p-6">Loading...</div>;
   }
 
   return (
-    <CRMLayout>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -181,7 +175,6 @@ const Estimates = () => {
           </div>
         )}
       </div>
-    </CRMLayout>
   );
 };
 

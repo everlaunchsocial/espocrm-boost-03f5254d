@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { CRMLayout } from '@/components/crm/CRMLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -177,8 +176,7 @@ const CreateEstimate = () => {
   };
 
   return (
-    <CRMLayout>
-      <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
             <ArrowLeft className="h-5 w-5" />
@@ -459,7 +457,6 @@ const CreateEstimate = () => {
           </div>
         </form>
       </div>
-    </CRMLayout>
   );
 };
 
