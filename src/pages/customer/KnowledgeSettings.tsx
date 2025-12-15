@@ -104,16 +104,20 @@ export default function KnowledgeSettings() {
       const storagePath = `${customerProfile.id}/${Date.now()}-${file.name}`;
       
       try {
+        console.log(`Uploading file: ${file.name} to path: ${storagePath}`);
+        
         // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('customer-documents')
           .upload(storagePath, file);
 
         if (uploadError) {
-          console.error('Upload error:', uploadError);
-          toast.error(`Failed to upload ${file.name}`);
+          console.error('Storage upload error:', uploadError);
+          toast.error(`Failed to upload ${file.name}: ${uploadError.message}`);
           continue;
         }
+
+        console.log('Upload successful:', uploadData);
 
         // Add knowledge source record
         const result = await addKnowledgeSource({
@@ -123,13 +127,22 @@ export default function KnowledgeSettings() {
         });
 
         if (result) {
-          toast.success(`${file.name} uploaded`);
+          toast.success(`${file.name} uploaded - processing...`);
           
           // Trigger document parsing in background
+          console.log('Triggering parse-document for:', result.id);
           supabase.functions.invoke('parse-document', {
             body: { knowledge_source_id: result.id }
-          }).then(({ error }) => {
-            if (error) console.error('Parse document error:', error);
+          }).then(({ data, error }) => {
+            if (error) {
+              console.error('Parse document error:', error);
+              toast.error(`Failed to process ${file.name}`);
+            } else {
+              console.log('Parse document result:', data);
+              if (data?.status === 'processed') {
+                toast.success(`${file.name} ready for AI`);
+              }
+            }
           });
         }
       } catch (error) {

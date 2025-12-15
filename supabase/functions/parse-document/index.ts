@@ -25,6 +25,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Fetch the knowledge source record
@@ -53,7 +54,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Downloading file from: ${storagePath}`);
+    console.log(`Downloading file from storage: ${storagePath}`);
 
     // Download the file from storage
     const { data: fileData, error: downloadError } = await supabase.storage
@@ -74,6 +75,8 @@ serve(async (req) => {
       );
     }
 
+    console.log(`File downloaded successfully, size: ${fileData.size} bytes`);
+
     let extractedText = '';
     const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
 
@@ -85,39 +88,78 @@ serve(async (req) => {
         extractedText = await fileData.text();
         console.log(`Extracted ${extractedText.length} chars from TXT file`);
       } else if (fileExtension === 'pdf') {
-        // For PDFs, we'll use a simple text extraction approach
-        // Note: Full PDF parsing would require additional libraries
-        const arrayBuffer = await fileData.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer);
-        
-        // Simple PDF text extraction - looks for text between stream/endstream markers
-        const decoder = new TextDecoder('utf-8', { fatal: false });
-        const content = decoder.decode(bytes);
-        
-        // Extract text objects from PDF (simplified approach)
-        const textMatches = content.match(/\((.*?)\)/g);
-        if (textMatches) {
-          extractedText = textMatches
-            .map(m => m.slice(1, -1)) // Remove parentheses
-            .filter(t => t.length > 1 && /[a-zA-Z]/.test(t)) // Filter to actual text
-            .join(' ');
+        // Use Lovable AI (Gemini) for PDF text extraction via vision
+        if (!LOVABLE_API_KEY) {
+          console.error('LOVABLE_API_KEY not configured for PDF extraction');
+          extractedText = '';
+        } else {
+          console.log('Using Lovable AI (Gemini) for PDF text extraction...');
+          
+          // Convert PDF to base64
+          const arrayBuffer = await fileData.arrayBuffer();
+          const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+          
+          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'Extract ALL text content from this PDF document. Return ONLY the extracted text, preserving the structure and formatting as much as possible. Do not add any commentary or explanations - just return the raw text content from the document.'
+                    },
+                    {
+                      type: 'image_url',
+                      image_url: {
+                        url: `data:application/pdf;base64,${base64Data}`
+                      }
+                    }
+                  ]
+                }
+              ]
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            extractedText = data.choices?.[0]?.message?.content || '';
+            console.log(`Lovable AI extracted ${extractedText.length} chars from PDF`);
+          } else {
+            const errorText = await response.text();
+            console.error('Lovable AI PDF extraction failed:', response.status, errorText);
+            
+            // Fallback to basic text extraction for text-based PDFs
+            console.log('Falling back to basic PDF text extraction...');
+            const decoder = new TextDecoder('utf-8', { fatal: false });
+            const content = decoder.decode(new Uint8Array(arrayBuffer));
+            
+            // Extract text objects from PDF
+            const textMatches = content.match(/\((.*?)\)/g);
+            if (textMatches) {
+              extractedText = textMatches
+                .map(m => m.slice(1, -1))
+                .filter(t => t.length > 1 && /[a-zA-Z]/.test(t))
+                .join(' ');
+            }
+            
+            if (!extractedText || extractedText.length < 50) {
+              const readablePattern = /[A-Za-z0-9\s,.!?;:'"-]{20,}/g;
+              const matches = content.match(readablePattern) || [];
+              extractedText = matches.join(' ').trim();
+            }
+          }
         }
-        
-        // Fallback: If no text found, try extracting readable strings
-        if (!extractedText || extractedText.length < 50) {
-          const readablePattern = /[A-Za-z0-9\s,.!?;:'"-]{20,}/g;
-          const matches = content.match(readablePattern) || [];
-          extractedText = matches.join(' ').trim();
-        }
-        
-        console.log(`Extracted ${extractedText.length} chars from PDF file`);
       } else if (fileExtension === 'docx') {
         // For DOCX, extract XML content
-        // DOCX is a ZIP file containing XML
         const arrayBuffer = await fileData.arrayBuffer();
         const bytes = new Uint8Array(arrayBuffer);
-        
-        // Find the document.xml content within the DOCX ZIP structure
         const decoder = new TextDecoder('utf-8', { fatal: false });
         const content = decoder.decode(bytes);
         
@@ -147,7 +189,7 @@ serve(async (req) => {
     // Clean up the extracted text
     extractedText = extractedText
       .replace(/\s+/g, ' ') // Normalize whitespace
-      .replace(/[^\x20-\x7E\n]/g, '') // Remove non-printable chars
+      .replace(/[^\x20-\x7E\n\u00A0-\u024F]/g, '') // Keep printable ASCII and extended Latin
       .trim();
 
     // Limit to reasonable size (100KB of text)
@@ -176,6 +218,8 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Successfully parsed document, status: ${status}, chars: ${extractedText.length}`);
 
     return new Response(
       JSON.stringify({ 
