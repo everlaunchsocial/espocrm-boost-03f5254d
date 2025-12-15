@@ -1,13 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAffiliateDemos } from '@/hooks/useAffiliateDemos';
+import { useQueryClient } from '@tanstack/react-query';
 import { DataTable } from '@/components/crm/DataTable';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Globe, Eye, MessageSquare, Phone, Mail, MailOpen, Presentation, TrendingUp, Users } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Globe, Eye, MessageSquare, Phone, Mail, MailOpen, Presentation, TrendingUp, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Demo } from '@/hooks/useDemos';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface EmailStatus {
   sent: boolean;
@@ -16,7 +29,10 @@ interface EmailStatus {
 
 export default function AffiliateDemos() {
   const { data: demos = [], isLoading } = useAffiliateDemos();
+  const queryClient = useQueryClient();
   const [emailStatuses, setEmailStatuses] = useState<Record<string, EmailStatus>>({});
+  const [demoToDelete, setDemoToDelete] = useState<Demo | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch email statuses for all demos
   useEffect(() => {
@@ -85,6 +101,29 @@ export default function AffiliateDemos() {
       engagementRate,
     };
   }, [demos]);
+
+  const handleDeleteDemo = async () => {
+    if (!demoToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('demos')
+        .delete()
+        .eq('id', demoToDelete.id);
+
+      if (error) throw error;
+
+      toast.success(`Demo "${demoToDelete.business_name}" deleted`);
+      queryClient.invalidateQueries({ queryKey: ['affiliate-demos'] });
+    } catch (error) {
+      console.error('[AffiliateDemos] Delete error:', error);
+      toast.error('Failed to delete demo');
+    } finally {
+      setIsDeleting(false);
+      setDemoToDelete(null);
+    }
+  };
 
   const columns = [
     {
@@ -189,6 +228,23 @@ export default function AffiliateDemos() {
         </span>
       ),
     },
+    {
+      key: 'actions',
+      label: '',
+      render: (demo: Demo) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDemoToDelete(demo);
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ),
+    },
   ];
 
   const handleRowClick = (demo: Demo) => {
@@ -266,6 +322,29 @@ export default function AffiliateDemos() {
           onRowClick={handleRowClick}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!demoToDelete} onOpenChange={(open) => !open && setDemoToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Demo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the demo for "{demoToDelete?.business_name}"? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDemo}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
