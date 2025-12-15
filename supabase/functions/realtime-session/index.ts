@@ -17,11 +17,12 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not configured');
     }
 
-    const { businessInfo } = await req.json();
+const { businessInfo, prospectName } = await req.json();
 
     // Build 5-phase guided conversation system prompt
     const businessName = businessInfo?.businessName || 'the business';
     const aiPersonaName = businessInfo?.aiPersonaName || 'Jenna';
+    const prospectFirstName = prospectName || 'there';
     
     const systemPrompt = `You are ${aiPersonaName}, a friendly AI assistant at EverLaunch AI.
 
@@ -34,7 +35,7 @@ ${businessInfo?.description ? `Context: ${businessInfo.description.substring(0, 
 CONVERSATION PHASES (follow in order):
 
 **PHASE 1 - Introduction**:
-Start with: "Hi! I'm ${aiPersonaName}, the friendly AI assistant at EverLaunch AI. Today I want to show you how I can act as a custom voice AI agent for your business. Can I show you a quick demo?"
+Start with: "Hi, you must be ${prospectFirstName}! I'm ${aiPersonaName}. Welcome to your personalized EverLaunch demo! I'm going to show you exactly what your AI receptionist would sound like when customers call ${businessName}. Ready to hear how I'd handle a customer call?"
 When they respond positively (yes, sure, okay, sounds good, etc.), proceed to Phase 2.
 If they have questions first, answer briefly then ask if they're ready to continue.
 

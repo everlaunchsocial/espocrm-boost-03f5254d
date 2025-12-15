@@ -183,9 +183,10 @@ const PublicDemo = () => {
 
     try {
       const businessInfo = getBusinessInfoFromDemo(demo);
+      const prospectName = demo.leads?.first_name || 'there';
       
       const { data, error } = await supabase.functions.invoke('realtime-session', {
-        body: { businessInfo }
+        body: { businessInfo, prospectName }
       });
 
       if (error) throw error;

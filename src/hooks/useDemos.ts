@@ -34,6 +34,11 @@ export interface Demo {
   voice_interaction_count: number;
   created_at: string;
   updated_at: string;
+  // Joined lead data (optional)
+  leads?: {
+    first_name: string;
+    last_name: string;
+  } | null;
 }
 
 // Input type for creating a new demo
@@ -180,7 +185,7 @@ export const useDemos = () => {
     try {
       const { data, error } = await supabase
         .from('demos')
-        .select('*')
+        .select('*, leads(first_name, last_name)')
         .eq('id', demoId)
         .maybeSingle();
 

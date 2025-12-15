@@ -87,7 +87,7 @@ serve(async (req) => {
     console.log('Found demo:', demo.id, demo.business_name, 'Prospect:', prospectName);
 
     // Demo script: Address prospect by name, explain it's a demo, ask if they want to hear it
-    const speakableResult = `Hi ${prospectName}! I'm ${personaName}. Welcome to your personalized EverLaunch demo! I'm going to show you exactly what your AI receptionist would sound like when customers call ${demo.business_name}. Ready to hear how I'd handle a customer call?`;
+    const speakableResult = `Hi, you must be ${prospectName}! I'm ${personaName}. Welcome to your personalized EverLaunch demo! I'm going to show you exactly what your AI receptionist would sound like when customers call ${demo.business_name}. Ready to hear how I'd handle a customer call?`;
 
     return new Response(
       JSON.stringify({
