@@ -35,7 +35,6 @@ const plans = [
     price: 249,
     setupFee: 799,
     minutes: 750,
-    popular: true,
     features: [
       "750 minutes/month",
       "Everything in Starter",
@@ -52,6 +51,7 @@ const plans = [
     price: 399,
     setupFee: 999,
     minutes: 1500,
+    popular: true,
     features: [
       "1500 minutes/month",
       "Everything in Growth",

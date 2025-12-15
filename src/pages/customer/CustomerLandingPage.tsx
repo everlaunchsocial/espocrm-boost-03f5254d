@@ -30,7 +30,6 @@ const plans = [
     price: 249,
     setupFee: 799,
     minutes: 750,
-    popular: true,
     features: [
       "750 minutes/month",
       "Everything in Starter",
@@ -46,6 +45,7 @@ const plans = [
     price: 399,
     setupFee: 999,
     minutes: 1500,
+    popular: true,
     features: [
       "1500 minutes/month",
       "Everything in Growth",
@@ -107,6 +107,11 @@ export default function CustomerLandingPage() {
     navigate(`/buy?plan=${planId}`);
   };
 
+  // Scroll to pricing section
+  const scrollToPricing = () => {
+    document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-[#0A0F1C]">
       {/* Header */}
@@ -123,7 +128,7 @@ export default function CustomerLandingPage() {
             </Button>
             <Button 
               className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0"
-              onClick={() => handlePlanSelect("growth")}
+              onClick={scrollToPricing}
             >
               Get Started
             </Button>
@@ -165,7 +170,7 @@ export default function CustomerLandingPage() {
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row animate-fade-in" style={{ animationDelay: '0.3s' }}>
               <Button 
                 size="lg" 
-                onClick={() => handlePlanSelect("growth")} 
+                onClick={scrollToPricing} 
                 className="px-8 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 shadow-lg shadow-blue-500/25 text-lg h-14"
               >
                 Get Started Now
@@ -238,7 +243,7 @@ export default function CustomerLandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section className="relative py-24 border-t border-white/10">
+      <section id="pricing" className="relative py-24 border-t border-white/10">
         <div className="absolute inset-0 bg-[#0A0F1C]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[200px]" />
         
@@ -333,7 +338,7 @@ export default function CustomerLandingPage() {
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button 
                 size="lg" 
-                onClick={() => handlePlanSelect("growth")} 
+                onClick={scrollToPricing} 
                 className="px-10 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0 shadow-lg shadow-blue-500/25 text-lg h-14"
               >
                 Start Your Free Trial
