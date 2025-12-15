@@ -225,23 +225,39 @@ Keep responses helpful, concise, and professional.`;
 
     setIsVoiceConnecting(true);
     setCallDuration(0);
+    toast.info('Requesting microphone access...');
 
     try {
+      // Request microphone permission first
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('[Vapi] Microphone permission granted');
+      } catch (micError) {
+        console.error('[Vapi] Microphone permission denied:', micError);
+        toast.error('Microphone access denied. Please allow microphone access to use voice.');
+        setIsVoiceConnecting(false);
+        return;
+      }
+
+      console.log('[Vapi] Fetching session for assistant:', assistantId);
       const { data, error } = await supabase.functions.invoke('vapi-web-session', {
         body: { assistantId }
       });
 
       if (error || !data?.publicKey) {
+        console.error('[Vapi] Session error:', error, data);
         throw new Error('Failed to get voice session');
       }
 
+      console.log('[Vapi] Got public key, initializing Vapi SDK');
       const vapi = new Vapi(data.publicKey);
       vapiRef.current = vapi;
 
       vapi.on('call-start', () => {
+        console.log('[Vapi] Call started successfully');
         setIsVoiceConnected(true);
         setIsVoiceConnecting(false);
-        callStartTimeRef.current = Date.now(); // Capture start timestamp
+        callStartTimeRef.current = Date.now();
         
         durationIntervalRef.current = setInterval(() => {
           setCallDuration(prev => prev + 1);
@@ -251,6 +267,7 @@ Keep responses helpful, concise, and professional.`;
       });
 
       vapi.on('call-end', () => {
+        console.log('[Vapi] Call ended');
         setIsVoiceConnected(false);
         setIsVoiceConnecting(false);
         setIsSpeaking(false);
@@ -296,8 +313,9 @@ Keep responses helpful, concise, and professional.`;
       });
 
       vapi.on('error', (error: any) => {
-        console.error('Vapi error:', error);
-        toast.error('Voice call error');
+        console.error('[Vapi] Error:', error);
+        const errorMessage = error?.message || error?.error?.message || 'Voice call error';
+        toast.error(`Voice error: ${errorMessage}`);
         setIsVoiceConnected(false);
         setIsVoiceConnecting(false);
         setIsSpeaking(false);
@@ -307,7 +325,13 @@ Keep responses helpful, concise, and professional.`;
         }
       });
 
+      vapi.on('message', (message: any) => {
+        console.log('[Vapi] Message:', message.type, message);
+      });
+
+      console.log('[Vapi] Starting call with assistant:', assistantId);
       await vapi.start(assistantId);
+      console.log('[Vapi] Call start initiated');
 
     } catch (error) {
       console.error('Failed to start voice call:', error);

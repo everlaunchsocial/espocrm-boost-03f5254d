@@ -45,6 +45,7 @@ export interface VoiceSettings {
   language_code: string | null;
   voice_pitch: number | null;
   voice_speed: number | null;
+  ai_name: string | null;
 }
 
 export interface ChatSettings {
