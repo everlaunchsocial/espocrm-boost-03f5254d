@@ -7,7 +7,9 @@ import { StatusBadge } from '@/components/crm/StatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
 import { LeadDetail } from '@/components/crm/LeadDetail';
 import { Button } from '@/components/ui/button';
-import { Plus, MoreHorizontal, Pencil, Trash2, UserCheck, Globe, Star, MapPin } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, UserCheck, Globe, Star, MapPin, Eye, MessageSquare, Phone } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +65,33 @@ export default function AffiliateLeads() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Fetch demo engagement data for all leads
+  const leadIds = leads.map(l => l.id);
+  const { data: demoEngagements = {} } = useQuery({
+    queryKey: ['demo-engagements', leadIds],
+    queryFn: async () => {
+      if (leadIds.length === 0) return {};
+      const { data } = await supabase
+        .from('demos')
+        .select('lead_id, view_count, chat_interaction_count, voice_interaction_count')
+        .in('lead_id', leadIds);
+      
+      const map: Record<string, { views: number; chats: number; calls: number }> = {};
+      data?.forEach(d => {
+        if (d.lead_id) {
+          const existing = map[d.lead_id] || { views: 0, chats: 0, calls: 0 };
+          map[d.lead_id] = {
+            views: existing.views + (d.view_count || 0),
+            chats: existing.chats + (d.chat_interaction_count || 0),
+            calls: existing.calls + (d.voice_interaction_count || 0),
+          };
+        }
+      });
+      return map;
+    },
+    enabled: leadIds.length > 0,
+  });
 
   // Use persisted form state for new leads only (not editing)
   const { 
@@ -127,6 +156,32 @@ export default function AffiliateLeads() {
       ) : (
         <span className="text-sm text-muted-foreground">-</span>
       ),
+    },
+    {
+      key: 'engagement',
+      label: 'Engagement',
+      render: (lead: Lead) => {
+        const engagement = demoEngagements[lead.id];
+        if (!engagement) {
+          return <span className="text-sm text-muted-foreground">-</span>;
+        }
+        return (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5" title={`${engagement.views} views`}>
+              <Eye className={`h-3.5 w-3.5 ${engagement.views > 0 ? 'text-blue-500' : 'text-muted-foreground/30'}`} />
+              {engagement.views > 0 && <span className="text-xs text-blue-500">{engagement.views}</span>}
+            </div>
+            <div className="flex items-center gap-0.5" title={`${engagement.chats} chats`}>
+              <MessageSquare className={`h-3.5 w-3.5 ${engagement.chats > 0 ? 'text-green-500' : 'text-muted-foreground/30'}`} />
+              {engagement.chats > 0 && <span className="text-xs text-green-500">{engagement.chats}</span>}
+            </div>
+            <div className="flex items-center gap-0.5" title={`${engagement.calls} calls`}>
+              <Phone className={`h-3.5 w-3.5 ${engagement.calls > 0 ? 'text-primary' : 'text-muted-foreground/30'}`} />
+              {engagement.calls > 0 && <span className="text-xs text-primary">{engagement.calls}</span>}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: 'website',
