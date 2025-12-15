@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 
 const statusConfig: Record<VideoStatus, { label: string; color: string; icon: React.ComponentType<any> }> = {
+  draft: { label: 'Draft', color: 'bg-muted text-muted-foreground', icon: Clock },
   generating: { label: 'Generating', color: 'bg-amber-500/20 text-amber-400', icon: Loader2 },
   ready: { label: 'Ready', color: 'bg-green-500/20 text-green-400', icon: CheckCircle2 },
   failed: { label: 'Failed', color: 'bg-destructive/20 text-destructive', icon: AlertCircle },
@@ -98,7 +99,7 @@ export default function AffiliateVideos() {
       ) : profile.status !== 'ready' ? (
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="flex items-center gap-4 py-6">
-            {profile.status === 'processing' ? (
+            {profile.status === 'training' ? (
               <>
                 <Loader2 className="h-8 w-8 text-amber-500 animate-spin" />
                 <div>
@@ -108,7 +109,7 @@ export default function AffiliateVideos() {
                   </p>
                 </div>
               </>
-            ) : profile.status === 'pending' ? (
+            ) : profile.status === 'uploading' || profile.status === 'draft' ? (
               <>
                 <Clock className="h-8 w-8 text-amber-500" />
                 <div>

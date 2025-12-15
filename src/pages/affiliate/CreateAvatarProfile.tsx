@@ -58,8 +58,8 @@ export default function CreateAvatarProfile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const voiceInputRef = useRef<HTMLInputElement>(null);
 
-  // If profile already exists and is processing/ready, redirect
-  if (profile && (profile.status === 'processing' || profile.status === 'ready')) {
+  // If profile already exists and is training/ready, redirect
+  if (profile && (profile.status === 'training' || profile.status === 'ready')) {
     navigate('/affiliate/videos');
     return null;
   }
@@ -158,11 +158,13 @@ export default function CreateAvatarProfile() {
 
         if (error) throw error;
 
-        const { data: urlData } = supabase.storage
+        // Use signed URL (1 hour expiry) instead of public URL
+        const { data: urlData, error: signedError } = await supabase.storage
           .from('affiliate-photos')
-          .getPublicUrl(path);
+          .createSignedUrl(path, 3600);
 
-        uploadedPhotoUrls.push(urlData.publicUrl);
+        if (signedError || !urlData?.signedUrl) throw signedError || new Error('Failed to get signed URL');
+        uploadedPhotoUrls.push(urlData.signedUrl);
       }
 
       // Upload voice
@@ -176,11 +178,13 @@ export default function CreateAvatarProfile() {
 
         if (error) throw error;
 
-        const { data: urlData } = supabase.storage
+        // Use signed URL (1 hour expiry) instead of public URL
+        const { data: urlData, error: signedError } = await supabase.storage
           .from('affiliate-voices')
-          .getPublicUrl(path);
+          .createSignedUrl(path, 3600);
 
-        uploadedVoiceUrl = urlData.publicUrl;
+        if (signedError || !urlData?.signedUrl) throw signedError || new Error('Failed to get signed URL');
+        uploadedVoiceUrl = urlData.signedUrl;
       }
 
       setPhotoUrls(uploadedPhotoUrls);
