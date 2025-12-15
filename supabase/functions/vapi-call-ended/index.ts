@@ -278,12 +278,23 @@ serve(async (req) => {
     // If this is a demo call, send transcript to prospect with tracking
     if (demoId && transcript && transcript.length >= 10) {
       try {
-        // Look up demo details including prospect email and affiliate name
+        // Look up demo details including prospect email, affiliate name and contact info
         const { data: demoData, error: demoError } = await supabase
           .from('demos')
-          .select('*, leads(first_name, email), affiliates:affiliate_id(username)')
+          .select('*, leads(first_name, email), affiliates:affiliate_id(username, user_id)')
           .eq('id', demoId)
           .single();
+        
+        // Get affiliate's phone from profiles if available
+        let affiliatePhone = '';
+        if (demoData?.affiliates?.user_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('phone')
+            .eq('user_id', demoData.affiliates.user_id)
+            .single();
+          affiliatePhone = profileData?.phone || '';
+        }
 
         if (demoError) {
           console.error('Error fetching demo for transcript email:', demoError);
@@ -311,7 +322,7 @@ serve(async (req) => {
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0A0F1C; color: #F8FAFC; padding: 30px; border-radius: 12px;">
                 <div style="text-align: center; margin-bottom: 30px;">
                   <h1 style="color: #3B82F6; margin: 0;">EverLaunch AI</h1>
-                  <p style="color: #94A3B8; margin-top: 5px;">Your Personalized Demo Transcript</p>
+                  <p style="color: #94A3B8; margin-top: 5px;">Your Demo Call Transcript</p>
                 </div>
                 
                 <p style="font-size: 16px; line-height: 1.6;">
@@ -319,13 +330,25 @@ serve(async (req) => {
                 </p>
                 
                 <p style="font-size: 16px; line-height: 1.6;">
-                  Thanks for checking out your personalized AI demo for <strong>${businessName}</strong>! 
-                  As promised, here's the transcript from your call with ${personaName}.
+                  Thanks for taking the time to experience your personalized AI demo! Below is the transcript from your call with ${personaName}—this is similar to the transcript you would receive of your customers' calls when you sign up.
                 </p>
                 
+                <div style="background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%); padding: 20px; border-radius: 8px; margin: 25px 0; text-align: center;">
+                  <p style="margin: 0 0 10px 0; font-size: 16px;">
+                    Ready to get started?
+                  </p>
+                  <a href="https://tryeverlaunch.com/${affiliateName}" style="display: inline-block; background: #ffffff; color: #1E40AF; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 15px;">
+                    Sign Up Today
+                  </a>
+                  <p style="margin: 15px 0 0 0; font-size: 14px; color: #E2E8F0;">
+                    Or schedule a follow-up call with <strong>${affiliateName}</strong>${affiliatePhone ? ` at <a href="tel:${affiliatePhone}" style="color: #93C5FD;">${affiliatePhone}</a>` : ''}
+                  </p>
+                </div>
+                
                 <div style="background: #1E293B; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                  <p style="margin: 5px 0; color: #94A3B8;"><strong>Duration:</strong> ${formattedDuration}</p>
+                  <p style="margin: 5px 0; color: #94A3B8;"><strong>Call Duration:</strong> ${formattedDuration}</p>
                   <p style="margin: 5px 0; color: #94A3B8;"><strong>AI Persona:</strong> ${personaName}</p>
+                  <p style="margin: 5px 0; color: #94A3B8;"><strong>Business:</strong> ${businessName}</p>
                 </div>
                 
                 <div style="margin: 25px 0;">
@@ -333,15 +356,6 @@ serve(async (req) => {
                   <div style="background: #1E293B; border: 1px solid #334155; padding: 20px; border-radius: 8px; white-space: pre-wrap; line-height: 1.6; color: #E2E8F0; font-size: 14px;">
 ${transcript}
                   </div>
-                </div>
-                
-                <div style="background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%); padding: 20px; border-radius: 8px; margin-top: 30px; text-align: center;">
-                  <p style="margin: 0 0 15px 0; font-size: 16px;">
-                    Ready to have ${personaName} answer calls for ${businessName}?
-                  </p>
-                  <a href="https://tryeverlaunch.com/${affiliateName}" style="display: inline-block; background: #ffffff; color: #1E40AF; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold;">
-                    Get Started
-                  </a>
                 </div>
                 
                 <p style="color: #64748B; font-size: 12px; margin-top: 30px; text-align: center;">
