@@ -10,6 +10,7 @@ interface DemoChatProps {
   demoId: string;
   businessName?: string;
   aiPersonaName?: string;
+  avatarUrl?: string;
   onFirstMessage?: () => void;
 }
 
@@ -18,12 +19,15 @@ interface ChatMessage {
   content: string;
 }
 
+const DEFAULT_AVATAR_URL = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face';
+
 export const DemoChat = ({ 
   isOpen, 
   onClose, 
   demoId, 
   businessName,
   aiPersonaName,
+  avatarUrl,
   onFirstMessage 
 }: DemoChatProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -133,9 +137,13 @@ export const DemoChat = ({
     <div className="absolute inset-0 z-20 flex flex-col bg-background rounded-[2rem] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center text-xs font-semibold">
-            {personaInitials}
+      <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-foreground/20 flex items-center justify-center text-xs font-semibold">
+            <img
+              src={avatarUrl || DEFAULT_AVATAR_URL}
+              alt={aiPersonaName || 'AI Assistant'}
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <span className="font-semibold text-sm">{aiPersonaName || 'AI Assistant'}</span>
