@@ -29,8 +29,10 @@ export default function OnboardingStep4() {
 
   const validateEmail = (email: string) => {
     if (!email) return true;
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+    const trimmed = email.trim();
+    // More robust email regex
+    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return re.test(trimmed);
   };
 
   const validatePhone = (phone: string) => {
@@ -149,10 +151,10 @@ export default function OnboardingStep4() {
                 </Label>
                 <Input
                   id="leadEmail"
-                  type="email"
+                  type="text"
                   placeholder="you@yourbusiness.com"
                   value={leadEmail}
-                  onChange={(e) => setLeadEmail(e.target.value)}
+                  onChange={(e) => setLeadEmail(e.target.value.trim())}
                   onBlur={handleBlur}
                 />
                 <p className="text-xs text-muted-foreground">
