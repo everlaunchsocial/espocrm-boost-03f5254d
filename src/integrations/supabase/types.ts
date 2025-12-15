@@ -1577,6 +1577,113 @@ export type Database = {
           },
         ]
       }
+      expenses_monthly: {
+        Row: {
+          actual_amount: number | null
+          budgeted_amount: number | null
+          created_at: string
+          id: string
+          invoice_url: string | null
+          is_overdue: boolean | null
+          month: string
+          notes: Json | null
+          paid_at: string | null
+          service_id: string
+          updated_at: string
+        }
+        Insert: {
+          actual_amount?: number | null
+          budgeted_amount?: number | null
+          created_at?: string
+          id?: string
+          invoice_url?: string | null
+          is_overdue?: boolean | null
+          month: string
+          notes?: Json | null
+          paid_at?: string | null
+          service_id: string
+          updated_at?: string
+        }
+        Update: {
+          actual_amount?: number | null
+          budgeted_amount?: number | null
+          created_at?: string
+          id?: string
+          invoice_url?: string | null
+          is_overdue?: boolean | null
+          month?: string
+          notes?: Json | null
+          paid_at?: string | null
+          service_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_monthly_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "expenses_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses_services: {
+        Row: {
+          attribution_split: Json | null
+          base_cost: number
+          billing_portal_url: string | null
+          cancellation_impact: string | null
+          category: string
+          cost_attribution: string
+          created_at: string
+          current_plan: string | null
+          id: string
+          last_reviewed_at: string | null
+          notes: string | null
+          pricing_model: string
+          primary_purpose: string | null
+          service_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attribution_split?: Json | null
+          base_cost?: number
+          billing_portal_url?: string | null
+          cancellation_impact?: string | null
+          category: string
+          cost_attribution: string
+          created_at?: string
+          current_plan?: string | null
+          id?: string
+          last_reviewed_at?: string | null
+          notes?: string | null
+          pricing_model: string
+          primary_purpose?: string | null
+          service_name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attribution_split?: Json | null
+          base_cost?: number
+          billing_portal_url?: string | null
+          cancellation_impact?: string | null
+          category?: string
+          cost_attribution?: string
+          created_at?: string
+          current_plan?: string | null
+          id?: string
+          last_reviewed_at?: string | null
+          notes?: string | null
+          pricing_model?: string
+          primary_purpose?: string | null
+          service_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       genealogy: {
         Row: {
           affiliate_id: string
