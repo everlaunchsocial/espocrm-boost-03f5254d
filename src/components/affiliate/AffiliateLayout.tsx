@@ -27,6 +27,7 @@ import {
   UserX,
   CreditCard,
   Sparkles,
+  Video,
 } from 'lucide-react';
 import { useAffiliateAbandonments } from '@/hooks/useAffiliateAbandonments';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ const affiliateNavigation = [
   { name: 'Deals', href: '/affiliate/deals', icon: Handshake },
   { name: 'Tasks', href: '/affiliate/tasks', icon: CheckSquare },
   { name: 'Demos', href: '/affiliate/demos', icon: Presentation },
+  { name: 'Videos', href: '/affiliate/videos', icon: Video },
   { name: 'Sales Tools', href: '/affiliate/sales-tools', icon: Sparkles },
   { name: 'Commissions', href: '/affiliate/commissions', icon: DollarSign },
   { name: 'Team', href: '/affiliate/team', icon: Users },
