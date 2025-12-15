@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { CRMLayout } from '@/components/crm/CRMLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -193,17 +192,14 @@ export default function ExpensesDashboard() {
 
   if (servicesLoading) {
     return (
-      <CRMLayout>
-        <div className="flex items-center justify-center h-64">
-          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </CRMLayout>
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
-    <CRMLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold">Company Expenses</h1>
@@ -555,8 +551,7 @@ export default function ExpensesDashboard() {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
       </div>
-    </CRMLayout>
+    </div>
   );
 }
