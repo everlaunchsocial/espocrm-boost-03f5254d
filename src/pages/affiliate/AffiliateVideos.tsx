@@ -29,6 +29,10 @@ const statusConfig: Record<VideoStatus, { label: string; color: string; icon: Re
 
 const videoTypeLabels: Record<VideoType, string> = {
   recruitment: 'Recruitment',
+  attorney: 'Attorney/Legal',
+  dentist: 'Dental Practice',
+  salon: 'Salon/Spa',
+  plumber: 'Home Services',
   product_sales: 'Product Sales',
   testimonial: 'Testimonial',
 };

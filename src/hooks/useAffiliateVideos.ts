@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 export type AvatarProfileStatus = 'draft' | 'uploading' | 'training' | 'ready' | 'failed';
 export type VideoStatus = 'draft' | 'generating' | 'ready' | 'failed';
-export type VideoType = 'recruitment' | 'product_sales' | 'testimonial';
+export type VideoType = 'recruitment' | 'attorney' | 'dentist' | 'salon' | 'plumber' | 'product_sales' | 'testimonial';
 
 export interface AvatarProfile {
   id: string;

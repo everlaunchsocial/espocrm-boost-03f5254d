@@ -472,6 +472,10 @@ export default function AdminAffiliateVideos() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recruitment">Recruitment</SelectItem>
+                  <SelectItem value="attorney">Attorney/Legal</SelectItem>
+                  <SelectItem value="dentist">Dental Practice</SelectItem>
+                  <SelectItem value="salon">Salon/Spa</SelectItem>
+                  <SelectItem value="plumber">Home Services</SelectItem>
                   <SelectItem value="product_sales">Product Sales</SelectItem>
                   <SelectItem value="testimonial">Testimonial</SelectItem>
                 </SelectContent>
