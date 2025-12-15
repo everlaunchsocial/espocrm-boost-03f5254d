@@ -117,7 +117,7 @@ Thanks!`);
             </div>
             {!twilioNumber && (
               <p className="text-sm text-muted-foreground mt-2">
-                Click "Finish & Activate" below, then check your dashboard to set up your AI phone number.
+                Click "Finish & Activate" below, then check your dashboard to view the status of your AI phone number.
               </p>
             )}
           </div>
