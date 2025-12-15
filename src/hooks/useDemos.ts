@@ -69,15 +69,44 @@ export interface DemoResult<T> {
 
 export const useDemos = () => {
   /**
-   * Generate a unique 4-digit passcode for phone demos
+   * Extract last 4 digits from a phone number
    */
-  const generateUniquePasscode = async (): Promise<string> => {
+  const extractPasscodeFromPhone = (phone: string): string | null => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length >= 4) {
+      return digits.slice(-4);
+    }
+    return null;
+  };
+
+  /**
+   * Generate a unique 4-digit passcode for phone demos
+   * Prefers last 4 digits of phone number, falls back to random
+   */
+  const generateUniquePasscode = async (phone?: string): Promise<string> => {
+    // First try using last 4 digits of phone
+    if (phone) {
+      const phonePasscode = extractPasscodeFromPhone(phone);
+      if (phonePasscode) {
+        // Check if it's unique
+        const { data: existing } = await supabase
+          .from('demos')
+          .select('id')
+          .eq('passcode', phonePasscode)
+          .maybeSingle();
+        
+        if (!existing) {
+          console.log('Using phone-based passcode:', phonePasscode);
+          return phonePasscode;
+        }
+        console.log('Phone passcode already exists, falling back to random');
+      }
+    }
+
+    // Fallback to random generation
     const maxAttempts = 10;
     for (let i = 0; i < maxAttempts; i++) {
-      // Generate random 4-digit code (1000-9999)
       const passcode = String(Math.floor(Math.random() * 9000) + 1000);
-      
-      // Check if it already exists
       const { data: existing } = await supabase
         .from('demos')
         .select('id')
@@ -88,7 +117,6 @@ export const useDemos = () => {
         return passcode;
       }
     }
-    // Fallback: use timestamp-based code
     return String(Date.now()).slice(-4);
   };
 
@@ -105,10 +133,21 @@ export const useDemos = () => {
         };
       }
 
-      // Generate unique passcode for phone demos
+      // If we have a lead_id, fetch the lead's phone for passcode generation
+      let leadPhone: string | undefined;
+      if (input.lead_id) {
+        const { data: leadData } = await supabase
+          .from('leads')
+          .select('phone')
+          .eq('id', input.lead_id)
+          .single();
+        leadPhone = leadData?.phone || undefined;
+      }
+
+      // Generate unique passcode - prefer last 4 digits of phone
       let passcode: string;
       try {
-        passcode = await generateUniquePasscode();
+        passcode = await generateUniquePasscode(leadPhone);
         console.log('Generated passcode for new demo:', passcode);
       } catch (passcodeError) {
         console.error('Error generating passcode, using fallback:', passcodeError);
