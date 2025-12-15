@@ -194,13 +194,18 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    // Step 2: Generate passcode for demo
-    const generatePasscode = (): string => {
-      return String(Math.floor(Math.random() * 9000) + 1000);
+    // Step 2: Generate passcode for demo - use last 4 digits of phone
+    const extractPasscodeFromPhone = (phoneNumber: string): string | null => {
+      const digits = phoneNumber.replace(/\D/g, '');
+      if (digits.length >= 4) {
+        return digits.slice(-4);
+      }
+      return null;
     };
 
-    let passcode = generatePasscode();
-    // Check for uniqueness (simplified - in production might want more robust handling)
+    let passcode = extractPasscodeFromPhone(phone) || String(Math.floor(Math.random() * 9000) + 1000);
+    
+    // Check for uniqueness
     const { data: existingPasscode } = await supabase
       .from("demos")
       .select("id")
@@ -208,7 +213,11 @@ serve(async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (existingPasscode) {
-      passcode = String(Date.now()).slice(-4);
+      // Collision - fall back to random
+      passcode = String(Math.floor(Math.random() * 9000) + 1000);
+      console.log("Phone passcode collision, using random:", passcode);
+    } else {
+      console.log("Using phone-based passcode:", passcode);
     }
 
     // Step 3: Create demo record
@@ -298,7 +307,7 @@ serve(async (req: Request): Promise<Response> => {
               <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 8px; padding: 20px; margin-bottom: 24px; border: 1px solid #bbf7d0;">
                 <h3 style="color: #166534; margin: 0 0 8px 0; font-size: 16px;">📞 Try the Phone Demo</h3>
                 <p style="color: #15803d; font-size: 14px; margin: 0 0 12px 0;">Call <strong>+1 (508) 779-9437</strong> to talk with the AI</p>
-                <p style="color: #166534; font-size: 13px; margin: 0;">Your passcode: <span style="font-size: 24px; font-weight: 700; letter-spacing: 4px;">${passcode}</span></p>
+                <p style="color: #166534; font-size: 13px; margin: 0;">Your passcode is the last 4 digits of your phone number: <span style="font-size: 24px; font-weight: 700; letter-spacing: 4px;">${passcode}</span></p>
               </div>
               ` : ""}
               <p style="color: #52525b; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">

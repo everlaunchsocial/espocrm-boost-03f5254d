@@ -76,7 +76,7 @@ export const VapiPhoneCard = ({
 
           {passcode && (
             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
-              <p className="text-xs text-amber-700 dark:text-amber-400 mb-1">Your demo passcode</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mb-1">Your demo passcode (last 4 digits of your phone)</p>
               <p className="text-3xl font-bold tracking-widest text-amber-600 dark:text-amber-500">
                 {passcode}
               </p>

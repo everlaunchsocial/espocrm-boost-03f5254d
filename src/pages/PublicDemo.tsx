@@ -452,7 +452,7 @@ const PublicDemo = () => {
                     <div className="flex items-start gap-3">
                       <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">3</div>
                       <p className="text-sm text-muted-foreground">
-                        <span className="font-medium text-foreground">Try the AI Phone Assistant</span> — Call the demo hotline and enter your passcode below to hear exactly how it sounds when customers call your business{demo.passcode ? ` (Passcode: ${demo.passcode})` : ''}.
+                        <span className="font-medium text-foreground">Try the AI Phone Assistant</span> — Call the demo hotline and enter your passcode (the last 4 digits of your mobile phone number){demo.passcode ? ` — ${demo.passcode}` : ''}.
                       </p>
                     </div>
                     <div className="flex items-start gap-3">
