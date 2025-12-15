@@ -219,8 +219,8 @@ export const verticalConfig: Record<VerticalKey, VerticalConfig> = {
     subheadline: 'Handle Spring Rush Without Hiring More Staff',
     solutionSubheadline: 'Your AI Dispatcher That Works 24/7/365',
     leadTerm: 'Call',
-    heroImage: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
+    heroImage: 'https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=1920&q=80',
+    thumbnail: 'https://images.unsplash.com/photo-1584036561566-baf8f5f1b144?w=400&q=80',
     painPoints: [
       { icon: '🐛', title: 'Emergency calls', description: 'Wasp nest in garage calls going to voicemail' },
       { icon: '📞', title: 'Seasonal surge', description: 'Spring/summer rush overwhelming your team' },
