@@ -29,6 +29,7 @@ import {
   User,
   LogOut,
   GraduationCap,
+  Video,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +65,7 @@ const crmNavigation = [
 
 const adminNavigation = [
   { name: 'Affiliates', href: '/admin/affiliates', icon: Users },
+  { name: 'Affiliate Videos', href: '/admin/affiliate-videos', icon: Video },
   { name: 'Payouts', href: '/admin/payouts', icon: DollarSign },
   { name: 'Customer Usage', href: '/admin/customer-usage', icon: BarChart3 },
   { name: 'AI Usage & Costs', href: '/admin/usage', icon: DollarSign },

@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCurrentAffiliate } from './useCurrentAffiliate';
 import { toast } from 'sonner';
 
-export type AvatarProfileStatus = 'pending' | 'processing' | 'ready' | 'failed';
-export type VideoStatus = 'generating' | 'ready' | 'failed';
+export type AvatarProfileStatus = 'draft' | 'uploading' | 'training' | 'ready' | 'failed';
+export type VideoStatus = 'draft' | 'generating' | 'ready' | 'failed';
 export type VideoType = 'recruitment' | 'product_sales' | 'testimonial';
 
 export interface AvatarProfile {
@@ -171,6 +171,12 @@ export function useAffiliateVideos() {
       return null;
     }
 
+    // Find template name for video naming
+    const template = templates.find(t => t.id === templateId);
+    const videoName = template 
+      ? `${template.name} - ${new Date().toLocaleDateString()}`
+      : `Video - ${new Date().toLocaleDateString()}`;
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -179,7 +185,11 @@ export function useAffiliateVideos() {
       }
 
       const response = await supabase.functions.invoke('generate-affiliate-video', {
-        body: { template_id: templateId },
+        body: { 
+          profile_id: profile.id,
+          template_id: templateId,
+          video_name: videoName
+        },
       });
 
       if (response.error) {

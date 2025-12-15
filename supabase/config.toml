@@ -146,3 +146,15 @@ verify_jwt = false
 
 [functions.expenses-monthly-upsert]
 verify_jwt = false
+
+[functions.create-avatar-profile]
+verify_jwt = true
+
+[functions.generate-affiliate-video]
+verify_jwt = true
+
+[functions.heygen-webhook]
+verify_jwt = false
+
+[functions.track-video-analytics]
+verify_jwt = false
