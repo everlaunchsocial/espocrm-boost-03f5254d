@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, BookOpen, Globe, FileText, Upload, Trash2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, BookOpen, Globe, FileText, Upload, Trash2, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -82,7 +83,7 @@ export default function KnowledgeSettings() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !customerProfile) return;
 
     setIsUploading(true);
     
@@ -100,15 +101,40 @@ export default function KnowledgeSettings() {
         continue;
       }
 
-      // Add knowledge source (same pattern as wizard)
-      const result = await addKnowledgeSource({
-        source_type: 'document',
-        file_name: file.name,
-        storage_path: `uploads/${customerProfile?.id}/${file.name}`
-      });
+      const storagePath = `${customerProfile.id}/${Date.now()}-${file.name}`;
+      
+      try {
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('customer-documents')
+          .upload(storagePath, file);
 
-      if (result) {
-        toast.success(`${file.name} uploaded`);
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          toast.error(`Failed to upload ${file.name}`);
+          continue;
+        }
+
+        // Add knowledge source record
+        const result = await addKnowledgeSource({
+          source_type: 'document',
+          file_name: file.name,
+          storage_path: storagePath
+        });
+
+        if (result) {
+          toast.success(`${file.name} uploaded`);
+          
+          // Trigger document parsing in background
+          supabase.functions.invoke('parse-document', {
+            body: { knowledge_source_id: result.id }
+          }).then(({ error }) => {
+            if (error) console.error('Parse document error:', error);
+          });
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        toast.error(`Failed to upload ${file.name}`);
       }
     }
 
@@ -116,10 +142,14 @@ export default function KnowledgeSettings() {
     event.target.value = '';
   };
 
-  const handleRemoveSource = async (id: string, fileName: string) => {
+  const handleRemoveSource = async (id: string, storagePath?: string | null, fileName?: string) => {
+    // Delete from storage if path exists
+    if (storagePath) {
+      await supabase.storage.from('customer-documents').remove([storagePath]);
+    }
     const success = await removeKnowledgeSource(id);
     if (success) {
-      toast.success(`${fileName} removed`);
+      toast.success(`${fileName || 'Document'} removed`);
     }
   };
 
@@ -275,14 +305,26 @@ export default function KnowledgeSettings() {
                             <div className="flex items-center gap-2 min-w-0">
                               <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               <span className="text-sm truncate">{source.file_name}</span>
-                              <span className="text-xs text-muted-foreground capitalize flex-shrink-0">
-                                ({source.status})
-                              </span>
+                              {source.status === 'processed' ? (
+                                <span className="flex items-center gap-1 text-xs text-green-600 flex-shrink-0">
+                                  <CheckCircle className="h-3 w-3" />
+                                  Ready
+                                </span>
+                              ) : source.status === 'pending' ? (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  Processing
+                                </span>
+                              ) : (
+                                <span className="text-xs text-destructive flex-shrink-0">
+                                  ({source.status})
+                                </span>
+                              )}
                             </div>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleRemoveSource(source.id, source.file_name || 'Document')}
+                              onClick={() => handleRemoveSource(source.id, source.storage_path, source.file_name || undefined)}
                               className="flex-shrink-0"
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />

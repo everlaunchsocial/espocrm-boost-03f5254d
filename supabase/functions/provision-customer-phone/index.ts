@@ -13,7 +13,8 @@ function buildSystemPrompt(
   websiteUrl: string | null,
   verticalTemplate: any | null,
   voiceInstructions: string | null,
-  aiName: string
+  aiName: string,
+  knowledgeContent: string | null
 ): string {
   // Start with vertical template if available
   let prompt = '';
@@ -63,6 +64,15 @@ Always be helpful, courteous, and concise. If you don't know something, offer to
   // Add website context
   if (websiteUrl) {
     prompt += `\n\nThe business website is ${websiteUrl}.`;
+  }
+  
+  // Add knowledge base content from uploaded documents
+  if (knowledgeContent && knowledgeContent.length > 0) {
+    // Truncate to 8000 chars max to avoid context overflow
+    const truncatedKnowledge = knowledgeContent.length > 8000 
+      ? knowledgeContent.substring(0, 8000) + '...' 
+      : knowledgeContent;
+    prompt += `\n\n=== KNOWLEDGE BASE ===\nUse the following information to answer customer questions:\n${truncatedKnowledge}`;
   }
   
   // Add custom voice instructions overlay
@@ -173,13 +183,30 @@ serve(async (req) => {
     const businessName = customerProfile.business_name || 'the business';
     const greeting = voiceSettings?.greeting_text || `Hello, thank you for calling ${businessName}. My name is ${aiName}, how can I help you today?`;
 
-    // 5. Build industry-aware system prompt
+    // 5. Fetch knowledge sources content
+    let knowledgeContent: string | null = null;
+    const { data: knowledgeSources } = await supabase
+      .from('customer_knowledge_sources')
+      .select('content_text, file_name')
+      .eq('customer_id', customer_id)
+      .eq('status', 'processed')
+      .not('content_text', 'is', null);
+    
+    if (knowledgeSources && knowledgeSources.length > 0) {
+      knowledgeContent = knowledgeSources
+        .map(src => `[${src.file_name}]:\n${src.content_text}`)
+        .join('\n\n');
+      console.log(`Including ${knowledgeSources.length} knowledge sources in prompt`);
+    }
+
+    // 6. Build industry-aware system prompt
     const systemPrompt = buildSystemPrompt(
       businessName,
       customerProfile.website_url,
       verticalTemplate,
       voiceSettings?.instructions || null,
-      aiName
+      aiName,
+      knowledgeContent
     );
 
     console.log('Creating Vapi assistant with industry-aware prompt...');

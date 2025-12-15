@@ -12,7 +12,9 @@ function buildSystemPrompt(
   businessName: string,
   websiteUrl: string | null,
   verticalTemplate: any | null,
-  voiceInstructions: string | null
+  voiceInstructions: string | null,
+  aiName: string,
+  knowledgeContent: string | null
 ): string {
   let prompt = '';
   
@@ -42,13 +44,25 @@ function buildSystemPrompt(
       prompt += `\n\nYour primary goals are to: ${goals.join(', ')}.`;
     }
   } else {
-    prompt = `You are a friendly and professional AI phone assistant for ${businessName}. 
+    prompt = `You are ${aiName}, a friendly and professional AI phone assistant for ${businessName}. 
 Your job is to answer calls, help customers with their questions, and provide excellent service.
 Always be helpful, courteous, and concise. If you don't know something, offer to take a message or transfer to a human.`;
   }
   
+  if (verticalTemplate) {
+    prompt = `You are ${aiName}, the AI receptionist. ` + prompt;
+  }
+  
   if (websiteUrl) {
     prompt += `\n\nThe business website is ${websiteUrl}.`;
+  }
+  
+  // Add knowledge base content from uploaded documents
+  if (knowledgeContent && knowledgeContent.length > 0) {
+    const truncatedKnowledge = knowledgeContent.length > 8000 
+      ? knowledgeContent.substring(0, 8000) + '...' 
+      : knowledgeContent;
+    prompt += `\n\n=== KNOWLEDGE BASE ===\nUse the following information to answer customer questions:\n${truncatedKnowledge}`;
   }
   
   if (voiceInstructions) {
@@ -208,18 +222,38 @@ serve(async (req) => {
           verticalTemplate = template;
         }
         
-        // Fetch voice instructions
+        // Fetch voice settings (including ai_name)
         const { data: voiceSettings } = await supabase
           .from('voice_settings')
-          .select('instructions')
+          .select('instructions, ai_name, voice_gender')
           .eq('customer_id', customer_id)
           .maybeSingle();
+        
+        const effectiveAiName = voiceSettings?.ai_name || (voiceSettings?.voice_gender === 'male' ? 'Alex' : 'Ashley');
+        
+        // Fetch knowledge sources content
+        let knowledgeContent: string | null = null;
+        const { data: knowledgeSources } = await supabase
+          .from('customer_knowledge_sources')
+          .select('content_text, file_name')
+          .eq('customer_id', customer_id)
+          .eq('status', 'processed')
+          .not('content_text', 'is', null);
+        
+        if (knowledgeSources && knowledgeSources.length > 0) {
+          knowledgeContent = knowledgeSources
+            .map(src => `[${src.file_name}]:\n${src.content_text}`)
+            .join('\n\n');
+          console.log(`Including ${knowledgeSources.length} knowledge sources in prompt`);
+        }
         
         const systemPrompt = buildSystemPrompt(
           customerProfile.business_name || 'the business',
           customerProfile.website_url,
           verticalTemplate,
-          voiceSettings?.instructions || null
+          voiceSettings?.instructions || null,
+          effectiveAiName,
+          knowledgeContent
         );
         
         updatePayload.model = {
