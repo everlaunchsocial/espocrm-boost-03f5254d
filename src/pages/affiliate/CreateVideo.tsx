@@ -127,7 +127,7 @@ export default function CreateVideo() {
                       </div>
                     )}
                   </div>
-                </CardContent>
+                </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground line-clamp-3">
                     {template.script_text.substring(0, 150)}...

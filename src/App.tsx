@@ -59,9 +59,14 @@ import AffiliateSalesTools from "./pages/affiliate/AffiliateSalesTools";
 import AffiliateSettings from "./pages/affiliate/AffiliateSettings";
 import AffiliateBilling from "./pages/affiliate/AffiliateBilling";
 import AffiliateAbandonments from "./pages/affiliate/AffiliateAbandonments";
+import AffiliateVideos from "./pages/affiliate/AffiliateVideos";
+import CreateAvatarProfile from "./pages/affiliate/CreateAvatarProfile";
+import CreateVideo from "./pages/affiliate/CreateVideo";
 import AdminPayouts from "./pages/AdminPayouts";
 import AdminCustomerUsage from "./pages/AdminCustomerUsage";
 import CustomerUsage from "./pages/CustomerUsage";
+import AdminAffiliateVideos from "./pages/admin/AdminAffiliateVideos";
+import VideoLandingPage from "./pages/VideoLandingPage";
 
 // Admin pages
 import AdminProfile from "./pages/admin/AdminProfile";
@@ -114,6 +119,7 @@ const App = () => (
           <Routes>
           {/* Public pages - outside any layout */}
           <Route path="/demo/:id" element={<PublicDemo />} />
+          <Route path="/v/:slug" element={<VideoLandingPage />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/biz" element={<BusinessOpportunity />} />
@@ -201,6 +207,9 @@ const App = () => (
             <Route path="/affiliate/team" element={<AffiliateTeam />} />
             <Route path="/affiliate/training" element={<AffiliateTraining />} />
             <Route path="/affiliate/sales-tools" element={<AffiliateSalesTools />} />
+            <Route path="/affiliate/videos" element={<AffiliateVideos />} />
+            <Route path="/affiliate/create-profile" element={<CreateAvatarProfile />} />
+            <Route path="/affiliate/create-video/:profileId" element={<CreateVideo />} />
             <Route path="/affiliate/billing" element={<AffiliateBilling />} />
             <Route path="/affiliate/settings" element={<AffiliateSettings />} />
           </Route>
@@ -228,6 +237,7 @@ const App = () => (
             <Route path="/admin/quality-insights" element={<QualityInsights />} />
             <Route path="/admin/usage" element={<UsageDashboard />} />
             <Route path="/admin/expenses" element={<ExpensesDashboard />} />
+            <Route path="/admin/affiliate-videos" element={<AdminAffiliateVideos />} />
             <Route path="/customer/usage" element={<CustomerUsage />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/email" element={<Email />} />

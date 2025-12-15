@@ -480,8 +480,8 @@ export default function AdminAffiliateVideos() {
             <div className="space-y-2">
               <Label>Script Template</Label>
               <Textarea
-                value={templateForm.script_template}
-                onChange={e => setTemplateForm(prev => ({ ...prev, script_template: e.target.value }))}
+                value={templateForm.script_text}
+                onChange={e => setTemplateForm(prev => ({ ...prev, script_text: e.target.value }))}
                 placeholder="Enter the full video script..."
                 rows={10}
               />
