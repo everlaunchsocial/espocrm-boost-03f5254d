@@ -77,6 +77,7 @@ export interface KnowledgeSource {
   file_name: string | null;
   storage_path: string | null;
   status: string;
+  content_text: string | null;
   created_at: string;
 }
 

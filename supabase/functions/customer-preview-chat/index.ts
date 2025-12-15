@@ -33,8 +33,36 @@ serve(async (req) => {
       );
     }
 
-    // Build the system prompt
-    const finalSystemPrompt = systemPrompt || `You are a helpful AI assistant for ${businessName || 'a business'}. Keep responses clear, concise, and professional.`;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Build enhanced system prompt with knowledge base if customerId provided
+    let finalSystemPrompt = systemPrompt || `You are a helpful AI assistant for ${businessName || 'a business'}. Keep responses clear, concise, and professional.`;
+    
+    if (customerId) {
+      // Fetch knowledge sources content
+      const { data: knowledgeSources } = await supabase
+        .from('customer_knowledge_sources')
+        .select('content_text, file_name')
+        .eq('customer_id', customerId)
+        .eq('status', 'processed')
+        .not('content_text', 'is', null);
+      
+      if (knowledgeSources && knowledgeSources.length > 0) {
+        const knowledgeContent = knowledgeSources
+          .map(src => `[${src.file_name}]:\n${src.content_text}`)
+          .join('\n\n');
+        
+        // Truncate to 8000 chars max
+        const truncatedKnowledge = knowledgeContent.length > 8000 
+          ? knowledgeContent.substring(0, 8000) + '...' 
+          : knowledgeContent;
+        
+        finalSystemPrompt += `\n\n=== KNOWLEDGE BASE ===\nUse the following information to answer customer questions:\n${truncatedKnowledge}`;
+        console.log(`Including ${knowledgeSources.length} knowledge sources in chat prompt`);
+      }
+    }
 
     // Prepare messages for the API
     const apiMessages = [

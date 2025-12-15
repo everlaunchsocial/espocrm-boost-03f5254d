@@ -912,6 +912,7 @@ export type Database = {
       }
       customer_knowledge_sources: {
         Row: {
+          content_text: string | null
           created_at: string
           customer_id: string
           file_name: string | null
@@ -922,6 +923,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          content_text?: string | null
           created_at?: string
           customer_id: string
           file_name?: string | null
@@ -932,6 +934,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          content_text?: string | null
           created_at?: string
           customer_id?: string
           file_name?: string | null

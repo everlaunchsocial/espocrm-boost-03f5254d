@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, ArrowRight, BookOpen, Globe, FileText, Upload, Trash2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Globe, FileText, Upload, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -59,7 +60,7 @@ export default function OnboardingStep3() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !customerProfile) return;
 
     setIsUploading(true);
     
@@ -71,22 +72,58 @@ export default function OnboardingStep3() {
         continue;
       }
 
-      // For now, we'll just track the file metadata
-      // In production, you'd upload to Supabase Storage
-      await addKnowledgeSource({
-        source_type: 'document',
-        file_name: file.name,
-        storage_path: `uploads/${customerProfile?.id}/${file.name}`
-      });
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large. Maximum file size is 10MB.`);
+        continue;
+      }
 
-      toast.success(`${file.name} added`);
+      const storagePath = `${customerProfile.id}/${Date.now()}-${file.name}`;
+      
+      try {
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('customer-documents')
+          .upload(storagePath, file);
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          toast.error(`Failed to upload ${file.name}`);
+          continue;
+        }
+
+        // Add knowledge source record
+        const result = await addKnowledgeSource({
+          source_type: 'document',
+          file_name: file.name,
+          storage_path: storagePath
+        });
+
+        if (result) {
+          toast.success(`${file.name} uploaded`);
+          
+          // Trigger document parsing in background
+          supabase.functions.invoke('parse-document', {
+            body: { knowledge_source_id: result.id }
+          }).then(({ error }) => {
+            if (error) console.error('Parse document error:', error);
+          });
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        toast.error(`Failed to upload ${file.name}`);
+      }
     }
 
     setIsUploading(false);
     event.target.value = '';
   };
 
-  const handleRemoveSource = async (id: string) => {
+  const handleRemoveSource = async (id: string, storagePath?: string | null) => {
+    // Delete from storage if path exists
+    if (storagePath) {
+      await supabase.storage.from('customer-documents').remove([storagePath]);
+    }
     await removeKnowledgeSource(id);
     toast.success('Document removed');
   };
@@ -208,14 +245,21 @@ export default function OnboardingStep3() {
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm">{source.file_name}</span>
-                          <span className="text-xs text-muted-foreground capitalize">
-                            ({source.status})
-                          </span>
+                          {source.status === 'processed' ? (
+                            <span className="text-xs text-green-600">✓ Ready</span>
+                          ) : source.status === 'pending' ? (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Processing
+                            </span>
+                          ) : (
+                            <span className="text-xs text-destructive">({source.status})</span>
+                          )}
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleRemoveSource(source.id)}
+                          onClick={() => handleRemoveSource(source.id, source.storage_path)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
