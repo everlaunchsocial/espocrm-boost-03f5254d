@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAffiliateLeads, useAddAffiliatedLead } from '@/hooks/useAffiliateLeads';
 import { useUpdateLead, useDeleteLead, useConvertLeadToContact } from '@/hooks/useCRMData';
+import { usePersistedFormState } from '@/hooks/usePersistedFormState';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
@@ -49,6 +50,8 @@ const leadFields = [
   ]},
 ];
 
+const defaultFormValues = { source: 'web', status: 'new' };
+
 export default function AffiliateLeads() {
   const { data: leads = [], isLoading } = useAffiliateLeads();
   const addLead = useAddAffiliatedLead();
@@ -58,9 +61,16 @@ export default function AffiliateLeads() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Use persisted form state for new leads only (not editing)
+  const { 
+    values: formValues, 
+    setValues: setFormValues, 
+    updateField, 
+    clearDraft 
+  } = usePersistedFormState('affiliate_lead', defaultFormValues, formOpen && !editingLead);
 
   const columns = [
     {
@@ -235,6 +245,7 @@ export default function AffiliateLeads() {
       // affiliateId will be automatically set by the hook
       await addLead.mutateAsync(formValues as any);
       toast.success('Lead created successfully');
+      clearDraft(); // Clear the saved draft on successful creation
     }
     setFormOpen(false);
   };
