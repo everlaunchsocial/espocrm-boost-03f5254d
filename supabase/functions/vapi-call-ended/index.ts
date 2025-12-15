@@ -275,6 +275,113 @@ serve(async (req) => {
       }
     }
 
+    // If this is a demo call, send transcript to prospect with tracking
+    if (demoId && transcript && transcript.length >= 10) {
+      try {
+        // Look up demo details including prospect email and affiliate name
+        const { data: demoData, error: demoError } = await supabase
+          .from('demos')
+          .select('*, leads(first_name, email), affiliates:affiliate_id(username)')
+          .eq('id', demoId)
+          .single();
+
+        if (demoError) {
+          console.error('Error fetching demo for transcript email:', demoError);
+        } else if (demoData?.leads?.email) {
+          const prospectEmail = demoData.leads.email;
+          const prospectName = demoData.leads.first_name || 'there';
+          const affiliateName = demoData.affiliates?.username || 'your rep';
+          const businessName = demoData.business_name || 'your business';
+          const personaName = demoData.ai_persona_name || 'Jenna';
+
+          // Generate tracking ID for email open tracking
+          const trackingId = crypto.randomUUID();
+          const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email-open?id=${trackingId}`;
+
+          const minutes = Math.floor(callDuration / 60);
+          const seconds = callDuration % 60;
+          const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+          // Send transcript email to prospect
+          const prospectEmailResponse = await resend.emails.send({
+            from: "EverLaunch AI <info@everlaunch.ai>",
+            to: [prospectEmail],
+            subject: `Your ${businessName} AI Demo Transcript`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0A0F1C; color: #F8FAFC; padding: 30px; border-radius: 12px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <h1 style="color: #3B82F6; margin: 0;">EverLaunch AI</h1>
+                  <p style="color: #94A3B8; margin-top: 5px;">Your Personalized Demo Transcript</p>
+                </div>
+                
+                <p style="font-size: 16px; line-height: 1.6;">
+                  Hi ${prospectName}!
+                </p>
+                
+                <p style="font-size: 16px; line-height: 1.6;">
+                  Thanks for checking out your personalized AI demo for <strong>${businessName}</strong>! 
+                  As promised, here's the transcript from your call with ${personaName}.
+                </p>
+                
+                <div style="background: #1E293B; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                  <p style="margin: 5px 0; color: #94A3B8;"><strong>Duration:</strong> ${formattedDuration}</p>
+                  <p style="margin: 5px 0; color: #94A3B8;"><strong>AI Persona:</strong> ${personaName}</p>
+                </div>
+                
+                <div style="margin: 25px 0;">
+                  <h3 style="color: #3B82F6; margin-bottom: 15px;">Call Transcript</h3>
+                  <div style="background: #1E293B; border: 1px solid #334155; padding: 20px; border-radius: 8px; white-space: pre-wrap; line-height: 1.6; color: #E2E8F0; font-size: 14px;">
+${transcript}
+                  </div>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%); padding: 20px; border-radius: 8px; margin-top: 30px; text-align: center;">
+                  <p style="margin: 0 0 15px 0; font-size: 16px;">
+                    Ready to have ${personaName} answer calls for ${businessName}?
+                  </p>
+                  <a href="https://tryeverlaunch.com/${affiliateName}" style="display: inline-block; background: #ffffff; color: #1E40AF; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+                    Get Started
+                  </a>
+                </div>
+                
+                <p style="color: #64748B; font-size: 12px; margin-top: 30px; text-align: center;">
+                  Demo arranged by ${affiliateName} • Powered by EverLaunch AI
+                </p>
+                
+                <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
+              </div>
+            `,
+          });
+
+          console.log('Prospect transcript email sent:', prospectEmailResponse);
+
+          // Save to emails table for tracking
+          const { error: emailSaveError } = await supabase
+            .from('emails')
+            .insert({
+              tracking_id: trackingId,
+              contact_id: demoData.contact_id || demoData.lead_id || demoId,
+              to_email: prospectEmail,
+              to_name: prospectName,
+              sender_address: 'info@everlaunch.ai',
+              sender_name: 'EverLaunch AI',
+              subject: `Your ${businessName} AI Demo Transcript`,
+              body: `Demo transcript for ${businessName}`,
+              status: 'sent',
+              sent_at: new Date().toISOString(),
+            });
+
+          if (emailSaveError) {
+            console.error('Error saving email record for tracking:', emailSaveError);
+          } else {
+            console.log('Email saved for open tracking, tracking_id:', trackingId);
+          }
+        }
+      } catch (prospectEmailErr) {
+        console.error('Failed to send prospect transcript email:', prospectEmailErr);
+      }
+    }
+
     // Still send transcript email to admin
     if (!transcript || transcript.length < 10) {
       console.log('No meaningful transcript to send');
