@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ArrowLeft, ArrowRight, Mic, MessageCircle, Sparkles, Gauge, Settings } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Mic, MessageCircle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AVATAR_OPTIONS } from '@/components/demos/AvatarSelector';
@@ -23,44 +22,33 @@ export default function OnboardingStep2() {
   } = useCustomerOnboarding();
   
   const [voiceGender, setVoiceGender] = useState<string>('female');
-  const [voiceStyle, setVoiceStyle] = useState<string>('professional');
   const [greetingText, setGreetingText] = useState('');
-  const [responsePace, setResponsePace] = useState<string>('balanced');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (voiceSettings) {
       setVoiceGender(voiceSettings.voice_gender || 'female');
-      setVoiceStyle(voiceSettings.voice_style || 'professional');
       setGreetingText(voiceSettings.greeting_text || '');
-      setResponsePace(voiceSettings.response_pace || 'balanced');
     }
   }, [voiceSettings]);
 
   const handleSave = async (showToast = false, overrides: Partial<{
     voiceGender: string;
-    voiceStyle: string;
-    responsePace: string;
     greetingText: string;
   }> = {}) => {
     const finalVoiceGender = overrides.voiceGender ?? voiceGender;
-    const finalVoiceStyle = overrides.voiceStyle ?? voiceStyle;
     const finalGreetingText = overrides.greetingText ?? greetingText;
-    const finalResponsePace = overrides.responsePace ?? responsePace;
 
     const success = await updateVoiceSettings({
       voice_gender: finalVoiceGender,
-      voice_style: finalVoiceStyle,
       greeting_text: finalGreetingText,
-      response_pace: finalResponsePace,
       language_code: 'en'
     });
 
-    // Mirror greeting and tone to chat settings
+    // Mirror greeting to chat settings
     if (success) {
       await updateChatSettings({
-        greeting_text: finalGreetingText,
-        tone: finalVoiceStyle
+        greeting_text: finalGreetingText
       });
     }
 
@@ -186,39 +174,6 @@ export default function OnboardingStep2() {
             </p>
           </div>
 
-          {/* Voice Style */}
-          <div className="space-y-3">
-            <Label className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-muted-foreground" />
-              Personality Style
-            </Label>
-            <RadioGroup value={voiceStyle} onValueChange={(v) => { setVoiceStyle(v); handleSave(false, { voiceStyle: v }); }}>
-              <div className="grid gap-3">
-                {[
-                  { value: 'friendly', label: 'Friendly', description: 'Warm, approachable, and casual' },
-                  { value: 'professional', label: 'Professional', description: 'Polished, business-like, and formal' },
-                  { value: 'high_energy', label: 'High Energy', description: 'Enthusiastic, upbeat, and energetic' }
-                ].map((option) => (
-                  <label
-                    key={option.value}
-                    className={cn(
-                      "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
-                      voiceStyle === option.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    <RadioGroupItem value={option.value} className="mt-1" />
-                    <div>
-                      <div className="font-medium">{option.label}</div>
-                      <div className="text-sm text-muted-foreground">{option.description}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </RadioGroup>
-          </div>
-
           {/* Greeting Text */}
           <div className="space-y-2">
             <Label htmlFor="greeting" className="flex items-center gap-2">
@@ -236,37 +191,6 @@ export default function OnboardingStep2() {
             <p className="text-xs text-muted-foreground">
               This is what your AI will say when answering a call or starting a chat.
             </p>
-          </div>
-
-          {/* Response Pace */}
-          <div className="space-y-3">
-            <Label className="flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-muted-foreground" />
-              Response Pace
-            </Label>
-            <RadioGroup value={responsePace} onValueChange={(v) => { setResponsePace(v); handleSave(false, { responsePace: v }); }}>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { value: 'quick', label: 'Quick', description: 'Fast responses' },
-                  { value: 'balanced', label: 'Balanced', description: 'Natural pace' },
-                  { value: 'thoughtful', label: 'Thoughtful', description: 'Slower, detailed' }
-                ].map((option) => (
-                  <label
-                    key={option.value}
-                    className={cn(
-                      "flex flex-col items-center gap-1 p-3 rounded-lg border-2 cursor-pointer transition-all text-center",
-                      responsePace === option.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    <RadioGroupItem value={option.value} className="sr-only" />
-                    <div className="font-medium text-sm">{option.label}</div>
-                    <div className="text-xs text-muted-foreground">{option.description}</div>
-                  </label>
-                ))}
-              </div>
-            </RadioGroup>
           </div>
 
           <div className="flex justify-between pt-4">
