@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SubdomainRouter } from "./components/SubdomainRouter";
+import { ScrollToTop } from "./components/ScrollToTop";
 import { CRMLayout } from "./components/crm/CRMLayout";
 import { AffiliateLayout } from "./components/affiliate/AffiliateLayout";
 import { CustomerPortalLayout } from "./components/customer/CustomerPortalLayout";
@@ -107,6 +108,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToTop />
         <SubdomainRouter>
           <Routes>
           {/* Public pages - outside any layout */}

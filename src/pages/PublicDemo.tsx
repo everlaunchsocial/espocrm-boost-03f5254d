@@ -4,7 +4,7 @@
  * Modern redesign with colorful hero, improved calendar layout
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useDemos, Demo } from '@/hooks/useDemos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,10 +50,10 @@ const PublicDemo = () => {
   const [contactInfoRequest, setContactInfoRequest] = useState<ContactInfoRequest | null>(null);
   const pendingContactRequest = useRef<ContactInfoRequest | null>(null);
 
-  // Scroll to top on page load
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  // Scroll to top on page load - use layoutEffect for synchronous execution before paint
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [id]);
 
   useEffect(() => {
     const loadDemo = async () => {
