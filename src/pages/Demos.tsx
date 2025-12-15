@@ -5,10 +5,21 @@ import { StatusBadge } from '@/components/crm/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Globe, Eye, MessageCircle, Mic, FileText, Send, Users, Sparkles } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Plus, Globe, Eye, MessageCircle, Mic, FileText, Send, Users, Sparkles, Trash2 } from 'lucide-react';
 import { useDemos, Demo, DemoStatus } from '@/hooks/useDemos';
 import { supabase } from '@/integrations/supabase/client';
 import { format, subDays, isAfter } from 'date-fns';
+import { toast } from 'sonner';
 
 type VoiceProviderFilter = 'all' | 'openai' | 'elevenlabs';
 type DateRangeFilter = 'all' | '7days' | '30days';
@@ -19,6 +30,8 @@ export default function Demos() {
   const [demos, setDemos] = useState<Demo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [demoToDelete, setDemoToDelete] = useState<Demo | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState<DemoStatus | 'all'>('all');
@@ -107,6 +120,29 @@ export default function Demos() {
     };
   }, [demos]);
 
+  const handleDeleteDemo = async () => {
+    if (!demoToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('demos')
+        .delete()
+        .eq('id', demoToDelete.id);
+
+      if (error) throw error;
+
+      toast.success(`Demo "${demoToDelete.business_name}" deleted`);
+      setDemos(demos.filter(d => d.id !== demoToDelete.id));
+    } catch (error) {
+      console.error('[Demos] Delete error:', error);
+      toast.error('Failed to delete demo');
+    } finally {
+      setIsDeleting(false);
+      setDemoToDelete(null);
+    }
+  };
+
   const columns = [
     {
       key: 'business_name',
@@ -186,6 +222,23 @@ export default function Demos() {
             <span>{demo.voice_interaction_count}</span>
           </div>
         </div>
+      ),
+    },
+    {
+      key: 'actions',
+      label: '',
+      render: (demo: Demo) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDemoToDelete(demo);
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       ),
     },
   ];
@@ -392,6 +445,29 @@ export default function Demos() {
         searchKeys={['business_name', 'website_url', 'ai_persona_name']}
         onRowClick={handleRowClick}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!demoToDelete} onOpenChange={(open) => !open && setDemoToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Demo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the demo for "{demoToDelete?.business_name}"? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDemo}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
