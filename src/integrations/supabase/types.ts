@@ -104,6 +104,56 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_avatar_profiles: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          elevenlabs_voice_id: string | null
+          error_message: string | null
+          heygen_avatar_group_id: string | null
+          heygen_avatar_id: string | null
+          id: string
+          photo_urls: string[]
+          status: Database["public"]["Enums"]["avatar_profile_status"]
+          updated_at: string
+          voice_audio_url: string | null
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          elevenlabs_voice_id?: string | null
+          error_message?: string | null
+          heygen_avatar_group_id?: string | null
+          heygen_avatar_id?: string | null
+          id?: string
+          photo_urls?: string[]
+          status?: Database["public"]["Enums"]["avatar_profile_status"]
+          updated_at?: string
+          voice_audio_url?: string | null
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          elevenlabs_voice_id?: string | null
+          error_message?: string | null
+          heygen_avatar_group_id?: string | null
+          heygen_avatar_id?: string | null
+          id?: string
+          photo_urls?: string[]
+          status?: Database["public"]["Enums"]["avatar_profile_status"]
+          updated_at?: string
+          voice_audio_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_avatar_profiles_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: true
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_billing_history: {
         Row: {
           affiliate_id: string
@@ -328,6 +378,82 @@ export type Database = {
           stripe_price_id?: string | null
         }
         Relationships: []
+      }
+      affiliate_videos: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          error_message: string | null
+          estimated_cost_usd: number | null
+          heygen_video_id: string | null
+          heygen_video_url: string | null
+          id: string
+          is_active: boolean
+          landing_page_slug: string | null
+          profile_id: string
+          script_template_id: string
+          status: Database["public"]["Enums"]["video_status"]
+          updated_at: string
+          video_name: string
+          video_type: Database["public"]["Enums"]["video_type"]
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          heygen_video_id?: string | null
+          heygen_video_url?: string | null
+          id?: string
+          is_active?: boolean
+          landing_page_slug?: string | null
+          profile_id: string
+          script_template_id: string
+          status?: Database["public"]["Enums"]["video_status"]
+          updated_at?: string
+          video_name: string
+          video_type: Database["public"]["Enums"]["video_type"]
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          heygen_video_id?: string | null
+          heygen_video_url?: string | null
+          id?: string
+          is_active?: boolean
+          landing_page_slug?: string | null
+          profile_id?: string
+          script_template_id?: string
+          status?: Database["public"]["Enums"]["video_status"]
+          updated_at?: string
+          video_name?: string
+          video_type?: Database["public"]["Enums"]["video_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_videos_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_videos_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_avatar_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_videos_script_template_id_fkey"
+            columns: ["script_template_id"]
+            isOneToOne: false
+            referencedRelation: "video_script_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       affiliates: {
         Row: {
@@ -2861,6 +2987,149 @@ export type Database = {
         }
         Relationships: []
       }
+      video_analytics: {
+        Row: {
+          affiliate_id: string
+          event_timestamp: string
+          event_type: Database["public"]["Enums"]["video_event_type"]
+          id: string
+          ip_address: string | null
+          referrer: string | null
+          user_agent: string | null
+          video_id: string
+        }
+        Insert: {
+          affiliate_id: string
+          event_timestamp?: string
+          event_type: Database["public"]["Enums"]["video_event_type"]
+          id?: string
+          ip_address?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+          video_id: string
+        }
+        Update: {
+          affiliate_id?: string
+          event_timestamp?: string
+          event_type?: Database["public"]["Enums"]["video_event_type"]
+          id?: string
+          ip_address?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_analytics_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_analytics_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_cost_log: {
+        Row: {
+          affiliate_id: string | null
+          created_at: string
+          estimated_cost_usd: number | null
+          estimated_credits: number | null
+          id: string
+          metadata: Json | null
+          operation_type: string
+          provider: string
+        }
+        Insert: {
+          affiliate_id?: string | null
+          created_at?: string
+          estimated_cost_usd?: number | null
+          estimated_credits?: number | null
+          id?: string
+          metadata?: Json | null
+          operation_type: string
+          provider: string
+        }
+        Update: {
+          affiliate_id?: string | null
+          created_at?: string
+          estimated_cost_usd?: number | null
+          estimated_credits?: number | null
+          id?: string
+          metadata?: Json | null
+          operation_type?: string
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_cost_log_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_script_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          script_text: string
+          sort_order: number
+          video_type: Database["public"]["Enums"]["video_type"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          script_text: string
+          sort_order?: number
+          video_type: Database["public"]["Enums"]["video_type"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          script_text?: string
+          sort_order?: number
+          video_type?: Database["public"]["Enums"]["video_type"]
+        }
+        Relationships: []
+      }
+      video_system_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       voice_settings: {
         Row: {
           ai_name: string | null
@@ -3046,7 +3315,21 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      avatar_profile_status:
+        | "draft"
+        | "uploading"
+        | "training"
+        | "ready"
+        | "failed"
+      video_event_type: "view" | "phone_cta" | "chat_cta" | "voice_cta"
+      video_status: "draft" | "generating" | "ready" | "failed"
+      video_type:
+        | "recruitment"
+        | "product"
+        | "attorney"
+        | "dentist"
+        | "salon"
+        | "plumber"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3173,6 +3456,24 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      avatar_profile_status: [
+        "draft",
+        "uploading",
+        "training",
+        "ready",
+        "failed",
+      ],
+      video_event_type: ["view", "phone_cta", "chat_cta", "voice_cta"],
+      video_status: ["draft", "generating", "ready", "failed"],
+      video_type: [
+        "recruitment",
+        "product",
+        "attorney",
+        "dentist",
+        "salon",
+        "plumber",
+      ],
+    },
   },
 } as const
