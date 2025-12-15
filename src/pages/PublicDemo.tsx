@@ -478,6 +478,16 @@ const PublicDemo = () => {
                 onEndCall={endVoiceDemo}
               />
             </div>
+
+            {/* Vapi Phone Call Card - Desktop only, under voice card */}
+            <div className="hidden lg:block">
+              <VapiPhoneCard
+                aiPersonaName={demo.ai_persona_name || 'Jenna'}
+                avatarUrl={demo.avatar_url || undefined}
+                phoneNumber="+1 (508) 779-9437"
+                passcode={demo.passcode || undefined}
+              />
+            </div>
           </div>
 
           {/* Right Column - Phone Preview FIRST, then Calendar */}
@@ -549,15 +559,17 @@ const PublicDemo = () => {
               />
             </div>
 
-            {/* Vapi Phone Call Card */}
-            <VapiPhoneCard
-              aiPersonaName={demo.ai_persona_name || 'Jenna'}
-              avatarUrl={demo.avatar_url || undefined}
-              phoneNumber="+1 (508) 779-9437"
-              passcode={demo.passcode || undefined}
-            />
+            {/* Vapi Phone Call Card - Mobile only */}
+            <div className="lg:hidden">
+              <VapiPhoneCard
+                aiPersonaName={demo.ai_persona_name || 'Jenna'}
+                avatarUrl={demo.avatar_url || undefined}
+                phoneNumber="+1 (508) 779-9437"
+                passcode={demo.passcode || undefined}
+              />
+            </div>
 
-            {/* Calendar Section - AFTER the demo */}
+            {/* Calendar Section - Moved up */}
             <Card className="shadow-xl border-0">
               <CardHeader className="border-b bg-muted/30">
                 <div className="flex items-center justify-between">
@@ -619,6 +631,7 @@ const PublicDemo = () => {
                 </div>
               </CardContent>
             </Card>
+
           </div>
         </div>
       </main>
