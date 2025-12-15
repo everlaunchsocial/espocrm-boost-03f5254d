@@ -38,11 +38,15 @@ export default function OnboardingStep2() {
   }> = {}) => {
     const finalVoiceGender = overrides.voiceGender ?? voiceGender;
     const finalGreetingText = overrides.greetingText ?? greetingText;
+    
+    // Auto-update ai_name based on voice gender
+    const aiName = finalVoiceGender === 'male' ? 'Alex' : 'Ashley';
 
     const success = await updateVoiceSettings({
       voice_gender: finalVoiceGender,
       greeting_text: finalGreetingText,
-      language_code: 'en'
+      language_code: 'en',
+      ai_name: aiName
     });
 
     // Mirror greeting to chat settings
