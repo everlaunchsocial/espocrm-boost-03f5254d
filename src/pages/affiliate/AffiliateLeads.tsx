@@ -198,7 +198,6 @@ export default function AffiliateLeads() {
 
   const handleCreate = () => {
     setEditingLead(null);
-    setFormValues({ source: 'web', status: 'new' });
     setFormOpen(true);
   };
 
@@ -281,7 +280,7 @@ export default function AffiliateLeads() {
         title={editingLead ? 'Edit Lead' : 'New Lead'}
         fields={leadFields}
         values={formValues}
-        onChange={(name, value) => setFormValues((prev) => ({ ...prev, [name]: value }))}
+        onChange={updateField}
         onSubmit={handleSubmit}
         submitLabel={editingLead ? 'Update' : 'Create'}
       />

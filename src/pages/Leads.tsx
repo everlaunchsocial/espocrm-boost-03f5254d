@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLeads, useAddLead, useUpdateLead, useDeleteLead, useConvertLeadToContact } from '@/hooks/useCRMData';
+import { usePersistedFormState } from '@/hooks/usePersistedFormState';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { PipelineStatusBadge } from '@/components/crm/PipelineStatusBadge';
@@ -48,6 +49,8 @@ const leadFields = [
   ]},
 ];
 
+const defaultFormValues = { source: 'web', status: 'new' };
+
 export default function Leads() {
   const { data: leads = [], isLoading } = useLeads();
   const addLead = useAddLead();
@@ -57,9 +60,16 @@ export default function Leads() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Use persisted form state for new leads only (not editing)
+  const { 
+    values: formValues, 
+    setValues: setFormValues, 
+    updateField, 
+    clearDraft 
+  } = usePersistedFormState('crm_lead', defaultFormValues, formOpen && !editingLead);
 
   const columns = [
     {
@@ -192,7 +202,6 @@ export default function Leads() {
 
   const handleCreate = () => {
     setEditingLead(null);
-    setFormValues({ source: 'web', status: 'new' });
     setFormOpen(true);
   };
 
@@ -238,6 +247,7 @@ export default function Leads() {
     } else {
       await addLead.mutateAsync(formValues as any);
       toast.success('Lead created successfully');
+      clearDraft();
     }
     setFormOpen(false);
   };
@@ -273,7 +283,7 @@ export default function Leads() {
         title={editingLead ? 'Edit Lead' : 'New Lead'}
         fields={leadFields}
         values={formValues}
-        onChange={(name, value) => setFormValues((prev) => ({ ...prev, [name]: value }))}
+        onChange={updateField}
         onSubmit={handleSubmit}
         submitLabel={editingLead ? 'Update' : 'Create'}
       />
