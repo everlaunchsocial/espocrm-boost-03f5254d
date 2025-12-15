@@ -19,12 +19,20 @@ import {
 
 const videoTypeLabels: Record<VideoType, string> = {
   recruitment: 'Recruitment',
+  attorney: 'Attorney/Legal',
+  dentist: 'Dental Practice',
+  salon: 'Salon/Spa',
+  plumber: 'Home Services',
   product_sales: 'Product Sales',
   testimonial: 'Testimonial',
 };
 
 const videoTypeDescriptions: Record<VideoType, string> = {
   recruitment: 'Attract new affiliates to join your team',
+  attorney: 'Target law firms and legal practices',
+  dentist: 'Target dental offices and practices',
+  salon: 'Target salons and spas',
+  plumber: 'Target home service businesses',
   product_sales: 'Promote the AI receptionist product to businesses',
   testimonial: 'Share your success story with the platform',
 };
