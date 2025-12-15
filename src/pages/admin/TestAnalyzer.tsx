@@ -320,6 +320,5 @@ export default function TestAnalyzer() {
           </CardContent>
         </Card>
       </div>
-    </div>
   );
 }

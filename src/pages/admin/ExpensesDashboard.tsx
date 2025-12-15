@@ -551,7 +551,7 @@ export default function ExpensesDashboard() {
               </Button>
             </DialogFooter>
           </DialogContent>
+        </Dialog>
       </div>
-    </div>
   );
 }

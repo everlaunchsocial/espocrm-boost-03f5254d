@@ -568,5 +568,5 @@ export default function QualityInsights() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
   );
+}
