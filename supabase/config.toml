@@ -134,3 +134,15 @@ verify_jwt = false
 
 [functions.configure-demo-hotline]
 verify_jwt = false
+
+[functions.check-redundant-services]
+verify_jwt = false
+
+[functions.reconcile-monthly-expenses]
+verify_jwt = false
+
+[functions.expenses-upsert]
+verify_jwt = false
+
+[functions.expenses-monthly-upsert]
+verify_jwt = false

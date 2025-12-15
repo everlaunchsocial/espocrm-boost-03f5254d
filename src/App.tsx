@@ -74,6 +74,7 @@ import AdminTraining from "./pages/admin/AdminTraining";
 import TestAnalyzer from "./pages/admin/TestAnalyzer";
 import QualityInsights from "./pages/admin/QualityInsights";
 import UsageDashboard from "./pages/admin/UsageDashboard";
+import ExpensesDashboard from "./pages/admin/ExpensesDashboard";
 
 // Customer Portal pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -226,6 +227,7 @@ const App = () => (
             <Route path="/admin/test-analyzer" element={<TestAnalyzer />} />
             <Route path="/admin/quality-insights" element={<QualityInsights />} />
             <Route path="/admin/usage" element={<UsageDashboard />} />
+            <Route path="/admin/expenses" element={<ExpensesDashboard />} />
             <Route path="/customer/usage" element={<CustomerUsage />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/email" element={<Email />} />
