@@ -8,6 +8,7 @@ interface PagePreviewProps {
   demoId: string;
   businessName?: string;
   aiPersonaName?: string;
+  avatarUrl?: string;
   onChatInteraction?: () => void;
 }
 
@@ -16,6 +17,7 @@ export const PagePreview = ({
   demoId,
   businessName,
   aiPersonaName,
+  avatarUrl,
   onChatInteraction 
 }: PagePreviewProps) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -37,6 +39,7 @@ export const PagePreview = ({
           demoId={demoId}
           businessName={businessName}
           aiPersonaName={aiPersonaName}
+          avatarUrl={avatarUrl}
           onFirstMessage={onChatInteraction}
         />
       </div>
