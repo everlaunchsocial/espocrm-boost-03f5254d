@@ -53,10 +53,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Lookup demo by passcode and join with lead to get prospect's first name
+    // Lookup demo by passcode and join with lead and affiliate to get prospect's first name and affiliate username
     const { data: demos, error } = await supabase
       .from('demos')
-      .select('*, leads(first_name)')
+      .select('*, leads(first_name, email), affiliates:affiliate_id(username)')
       .eq('passcode', passcode)
       .limit(1);
 
@@ -82,12 +82,16 @@ serve(async (req) => {
 
     const demo = demos[0];
     const personaName = demo.ai_persona_name || 'Jenna';
-    // Get prospect's first name from the joined lead record
+    // Get prospect's first name and email from the joined lead record
     const prospectName = demo.leads?.first_name || 'there';
-    console.log('Found demo:', demo.id, demo.business_name, 'Prospect:', prospectName);
+    const prospectEmail = demo.leads?.email || null;
+    // Get affiliate username from the joined affiliate record
+    const affiliateName = demo.affiliates?.username || 'your rep';
+    console.log('Found demo:', demo.id, demo.business_name, 'Prospect:', prospectName, 'Affiliate:', affiliateName);
 
+    // Store affiliate name and prospect email in the response for the system prompt to reference
     // Demo script: Address prospect by name, explain it's a demo, ask if they want to hear it
-    const speakableResult = `Hi, you must be ${prospectName}! I'm ${personaName}. Welcome to your personalized EverLaunch demo! I'm going to show you exactly what your AI receptionist would sound like when customers call ${demo.business_name}. Ready to hear how I'd handle a customer call?`;
+    const speakableResult = `Hi, you must be ${prospectName}! I'm ${personaName}. Welcome to your personalized EverLaunch demo! I'm going to show you exactly what your AI receptionist would sound like when customers call ${demo.business_name}. Ready to hear how I'd handle a customer call? [CONTEXT: affiliate_name=${affiliateName}, prospect_email=${prospectEmail || 'not provided'}]`;
 
     return new Response(
       JSON.stringify({
