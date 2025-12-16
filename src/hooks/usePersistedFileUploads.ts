@@ -93,42 +93,24 @@ export function usePersistedFileUploads(affiliateId: string | null) {
         let restoredPhotos: PersistedPhoto[] = [];
         let restoredVoice: PersistedVoice | null = null;
 
-        // Restore photos - get fresh signed URLs
+        // Restore photos - use public URLs (buckets are now public)
         for (const photo of draft.photos) {
-          try {
-            const { data, error } = await supabase.storage
-              .from('affiliate-photos')
-              .createSignedUrl(photo.path, 3600);
-            
-            if (!error && data?.signedUrl) {
-              restoredPhotos.push({ path: photo.path, previewUrl: data.signedUrl });
-            } else {
-              console.warn('[usePersistedFileUploads] Failed to restore photo:', photo.path, error);
-            }
-          } catch (e) {
-            console.warn('[usePersistedFileUploads] Error restoring photo:', e);
-          }
+          const { data } = supabase.storage
+            .from('affiliate-photos')
+            .getPublicUrl(photo.path);
+          restoredPhotos.push({ path: photo.path, previewUrl: data.publicUrl });
         }
 
-        // Restore voice - get fresh signed URL
+        // Restore voice - use public URL
         if (draft.voice) {
-          try {
-            const { data, error } = await supabase.storage
-              .from('affiliate-voices')
-              .createSignedUrl(draft.voice.path, 3600);
-            
-            if (!error && data?.signedUrl) {
-              restoredVoice = { 
-                path: draft.voice.path, 
-                previewUrl: data.signedUrl, 
-                duration: draft.voice.duration 
-              };
-            } else {
-              console.warn('[usePersistedFileUploads] Failed to restore voice:', error);
-            }
-          } catch (e) {
-            console.warn('[usePersistedFileUploads] Error restoring voice:', e);
-          }
+          const { data } = supabase.storage
+            .from('affiliate-voices')
+            .getPublicUrl(draft.voice.path);
+          restoredVoice = { 
+            path: draft.voice.path, 
+            previewUrl: data.publicUrl, 
+            duration: draft.voice.duration 
+          };
         }
 
         if (restoredPhotos.length > 0 || restoredVoice) {
@@ -183,16 +165,12 @@ export function usePersistedFileUploads(affiliateId: string | null) {
         return false;
       }
 
-      const { data: urlData, error: signedError } = await supabase.storage
+      // Use public URL (buckets are now public)
+      const { data: publicUrlData } = supabase.storage
         .from('affiliate-photos')
-        .createSignedUrl(path, 3600);
+        .getPublicUrl(path);
 
-      if (signedError || !urlData?.signedUrl) {
-        console.error('[usePersistedFileUploads] Signed URL error:', signedError);
-        throw signedError || new Error('Failed to get signed URL');
-      }
-
-      const newPhoto: PersistedPhoto = { path, previewUrl: urlData.signedUrl };
+      const newPhoto: PersistedPhoto = { path, previewUrl: publicUrlData.publicUrl };
       
       setPhotos(prev => {
         const updated = [...prev];
@@ -276,16 +254,12 @@ export function usePersistedFileUploads(affiliateId: string | null) {
         return false;
       }
 
-      const { data: urlData, error: signedError } = await supabase.storage
+      // Use public URL (buckets are now public)
+      const { data: publicUrlData } = supabase.storage
         .from('affiliate-voices')
-        .createSignedUrl(path, 3600);
+        .getPublicUrl(path);
 
-      if (signedError || !urlData?.signedUrl) {
-        console.error('[usePersistedFileUploads] Voice signed URL error:', signedError);
-        throw signedError || new Error('Failed to get signed URL');
-      }
-
-      const newVoice: PersistedVoice = { path, previewUrl: urlData.signedUrl, duration };
+      const newVoice: PersistedVoice = { path, previewUrl: publicUrlData.publicUrl, duration };
       setVoice(newVoice);
       saveDraft(photos, newVoice, userId, storageKey);
 
@@ -369,13 +343,12 @@ export function usePersistedFileUploads(affiliateId: string | null) {
 
       if (uploadError) throw uploadError;
 
-      // Get signed URL for final path
-      const { data: urlData, error: signedError } = await supabase.storage
+      // Get public URL for final path
+      const { data: urlData } = supabase.storage
         .from('affiliate-photos')
-        .createSignedUrl(finalPath, 3600);
+        .getPublicUrl(finalPath);
 
-      if (signedError || !urlData?.signedUrl) throw signedError || new Error('Failed to get signed URL');
-      photoUrls.push(urlData.signedUrl);
+      photoUrls.push(urlData.publicUrl);
     }
 
     let voiceUrl: string | null = null;
@@ -400,13 +373,12 @@ export function usePersistedFileUploads(affiliateId: string | null) {
 
       if (uploadError) throw uploadError;
 
-      // Get signed URL for final path
-      const { data: urlData, error: signedError } = await supabase.storage
+      // Get public URL for final path
+      const { data: urlData } = supabase.storage
         .from('affiliate-voices')
-        .createSignedUrl(finalPath, 3600);
+        .getPublicUrl(finalPath);
 
-      if (signedError || !urlData?.signedUrl) throw signedError || new Error('Failed to get signed URL');
-      voiceUrl = urlData.signedUrl;
+      voiceUrl = urlData.publicUrl;
     }
 
     return { photoUrls, voiceUrl };
