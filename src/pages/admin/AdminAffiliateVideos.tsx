@@ -227,15 +227,21 @@ export default function AdminAffiliateVideos() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Affiliate Videos Admin</h1>
           <p className="text-muted-foreground">Manage avatar profiles, videos, and templates</p>
         </div>
-        <Button onClick={() => navigate('/affiliate/create-profile')}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Avatar Profile
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button variant="outline" onClick={() => navigate('/admin/affiliate-videos/create-profile')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Avatar Profile
+          </Button>
+          <Button onClick={() => navigate('/admin/affiliate-videos/create-video')}>
+            <Video className="h-4 w-4 mr-2" />
+            Create Video
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}

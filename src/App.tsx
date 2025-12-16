@@ -66,6 +66,8 @@ import AdminPayouts from "./pages/AdminPayouts";
 import AdminCustomerUsage from "./pages/AdminCustomerUsage";
 import CustomerUsage from "./pages/CustomerUsage";
 import AdminAffiliateVideos from "./pages/admin/AdminAffiliateVideos";
+import AdminCreateAvatarProfile from "./pages/admin/AdminCreateAvatarProfile";
+import AdminCreateVideo from "./pages/admin/AdminCreateVideo";
 import VideoLandingPage from "./pages/VideoLandingPage";
 
 // Admin pages
@@ -238,6 +240,8 @@ const App = () => (
             <Route path="/admin/usage" element={<UsageDashboard />} />
             <Route path="/admin/expenses" element={<ExpensesDashboard />} />
             <Route path="/admin/affiliate-videos" element={<AdminAffiliateVideos />} />
+            <Route path="/admin/affiliate-videos/create-profile" element={<AdminCreateAvatarProfile />} />
+            <Route path="/admin/affiliate-videos/create-video" element={<AdminCreateVideo />} />
             <Route path="/customer/usage" element={<CustomerUsage />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/email" element={<Email />} />
