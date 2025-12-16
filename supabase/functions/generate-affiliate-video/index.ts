@@ -145,7 +145,9 @@ serve(async (req) => {
     // ============================================
     // CALL HEYGEN VIDEO GENERATE API
     // ============================================
-    // TODO: Verify exact HeyGen video generation API endpoint and payload from docs
+    // Background image URL - hosted on deployed site
+    const videoBackgroundUrl = Deno.env.get('VIDEO_BACKGROUND_URL') || 'https://mrcfpbkoulldnkqzzprb.supabase.co/storage/v1/object/public/assets/video-background.png';
+    
     const heygenPayload = {
       video_inputs: [
         {
@@ -155,15 +157,15 @@ serve(async (req) => {
           },
           voice: {
             type: 'audio',
-            // Use ElevenLabs voice or audio file
-            // Option 1: Use cloned voice ID if HeyGen supports ElevenLabs integration
-            // voice_id: profile.elevenlabs_voice_id,
-            // Option 2: Generate audio with ElevenLabs first, then pass URL
-            audio_url: profile.voice_audio_url, // Fallback to original voice
+            audio_url: profile.voice_audio_url,
           },
           script: {
             type: 'text',
             input: template.script_text,
+          },
+          background: {
+            type: 'image',
+            url: videoBackgroundUrl,
           },
         },
       ],
