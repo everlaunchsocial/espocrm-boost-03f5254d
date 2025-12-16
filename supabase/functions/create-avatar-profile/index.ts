@@ -117,11 +117,15 @@ serve(async (req) => {
       if (!photoResponse.ok) {
         throw new Error(`Failed to fetch photo ${i + 1}: ${photoResponse.statusText}`);
       }
-      const photoBlob = await photoResponse.blob();
+
+      const photoArrayBuffer = await photoResponse.arrayBuffer();
+      const photoFile = new File([photoArrayBuffer], `photo_${i + 1}.jpg`, {
+        type: 'image/jpeg',
+      });
 
       // Upload to HeyGen - FIXED: Use upload.heygen.com
       const formData = new FormData();
-      formData.append('file', photoBlob, `photo_${i + 1}.jpg`);
+      formData.append('file', photoFile);
 
       const heygenUploadResponse = await fetch('https://upload.heygen.com/v1/asset', {
         method: 'POST',
@@ -250,12 +254,16 @@ serve(async (req) => {
     if (!voiceResponse.ok) {
       throw new Error(`Failed to fetch voice file: ${voiceResponse.statusText}`);
     }
-    const voiceBlob = await voiceResponse.blob();
+
+    const voiceArrayBuffer = await voiceResponse.arrayBuffer();
+    const voiceFile = new File([voiceArrayBuffer], 'voice.mp3', {
+      type: 'audio/mpeg',
+    });
 
     // Clone voice with ElevenLabs
     const voiceFormData = new FormData();
     voiceFormData.append('name', `${affiliate.username}_voice`);
-    voiceFormData.append('files', voiceBlob, 'voice.mp3');
+    voiceFormData.append('files', voiceFile);
     voiceFormData.append('description', `Voice clone for affiliate ${affiliate.username}`);
 
     const elevenlabsResponse = await fetch('https://api.elevenlabs.io/v1/voices/add', {
