@@ -15,13 +15,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const heygenApiKey = Deno.env.get('HEYGEN_API_KEY');
-    const elevenlabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
 
     if (!heygenApiKey) {
       throw new Error('Missing HEYGEN_API_KEY');
-    }
-    if (!elevenlabsApiKey) {
-      throw new Error('Missing ELEVENLABS_API_KEY');
     }
 
     const authHeader = req.headers.get('Authorization');
@@ -75,12 +71,12 @@ serve(async (req) => {
       throw new Error('Avatar profile is not ready. Please wait for training to complete.');
     }
 
-    if (!profile.elevenlabs_voice_id) {
-      throw new Error('Avatar profile has no ElevenLabs voice ID');
-    }
-
     if (!profile.heygen_avatar_id) {
       throw new Error('Avatar profile has no HeyGen avatar ID');
+    }
+
+    if (!profile.voice_audio_url) {
+      throw new Error('Avatar profile has no voice audio URL');
     }
 
     // ============================================
@@ -155,83 +151,67 @@ serve(async (req) => {
     console.log(`[generate-affiliate-video] Creating video ${videoRecord.id} for affiliate ${affiliate.id}`);
 
     // ============================================
-    // STEP 1: GENERATE AUDIO VIA ELEVENLABS TTS
+    // STEP 1: CREATE HEYGEN INSTANT VOICE CLONE
+    // Using HeyGen's native voice cloning instead of ElevenLabs
     // ============================================
-    console.log(`[generate-affiliate-video] Generating audio with ElevenLabs voice: ${profile.elevenlabs_voice_id}`);
+    console.log(`[generate-affiliate-video] Creating HeyGen instant voice clone from: ${profile.voice_audio_url}`);
     
-    const ttsResponse = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${profile.elevenlabs_voice_id}`,
-      {
-        method: 'POST',
-        headers: {
-          'xi-api-key': elevenlabsApiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: template.script_text,
-          model_id: 'eleven_multilingual_v2',
-          output_format: 'mp3_44100_128',
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-          },
-        }),
-      }
-    );
+    // Download the voice audio file
+    const voiceResponse = await fetch(profile.voice_audio_url);
+    if (!voiceResponse.ok) {
+      throw new Error(`Failed to fetch voice audio: ${voiceResponse.statusText}`);
+    }
+    const voiceBlob = await voiceResponse.blob();
+    
+    // Create form data for HeyGen voice clone
+    const voiceFormData = new FormData();
+    voiceFormData.append('file', voiceBlob, 'voice_sample.mp3');
+    voiceFormData.append('voice_name', `${affiliate.username}_voice_${Date.now()}`);
+    
+    const voiceCloneResponse = await fetch('https://api.heygen.com/v1/voice/instant', {
+      method: 'POST',
+      headers: {
+        'X-Api-Key': heygenApiKey,
+      },
+      body: voiceFormData,
+    });
 
-    if (!ttsResponse.ok) {
-      const errorText = await ttsResponse.text();
-      console.error(`[generate-affiliate-video] ElevenLabs TTS failed: ${errorText}`);
+    if (!voiceCloneResponse.ok) {
+      const errorText = await voiceCloneResponse.text();
+      console.error(`[generate-affiliate-video] HeyGen voice clone failed: ${errorText}`);
       
       await supabase
         .from('affiliate_videos')
         .update({
           status: 'failed',
-          error_message: `ElevenLabs audio generation failed: ${ttsResponse.statusText}`,
+          error_message: `HeyGen voice clone failed: ${voiceCloneResponse.statusText}`,
         })
         .eq('id', videoRecord.id);
       
-      throw new Error(`ElevenLabs audio generation failed: ${ttsResponse.statusText}`);
+      throw new Error(`HeyGen voice clone failed: ${voiceCloneResponse.statusText}`);
     }
 
-    const audioBuffer = await ttsResponse.arrayBuffer();
-    console.log(`[generate-affiliate-video] Audio generated, size: ${audioBuffer.byteLength} bytes`);
-
-    // ============================================
-    // STEP 2: UPLOAD AUDIO TO SUPABASE STORAGE
-    // ============================================
-    const audioFileName = `${videoRecord.id}.mp3`;
-    const audioPath = `video-audio/${affiliate.id}/${audioFileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('affiliate-voices')
-      .upload(audioPath, audioBuffer, {
-        contentType: 'audio/mpeg',
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error(`[generate-affiliate-video] Failed to upload audio: ${uploadError.message}`);
-      throw new Error(`Failed to upload audio: ${uploadError.message}`);
+    const voiceCloneResult = await voiceCloneResponse.json();
+    const heygenVoiceId = voiceCloneResult.data?.voice_id;
+    
+    if (!heygenVoiceId) {
+      console.error(`[generate-affiliate-video] No voice_id in response:`, voiceCloneResult);
+      throw new Error('HeyGen voice clone did not return a voice_id');
     }
 
-    // Get public URL for the audio
-    const { data: audioUrlData } = supabase.storage
-      .from('affiliate-voices')
-      .getPublicUrl(audioPath);
-
-    const audioUrl = audioUrlData.publicUrl;
-    console.log(`[generate-affiliate-video] Audio uploaded to: ${audioUrl}`);
+    console.log(`[generate-affiliate-video] HeyGen voice clone created: ${heygenVoiceId}`);
 
     // ============================================
-    // STEP 3: CALL HEYGEN VIDEO GENERATE API
+    // STEP 2: CALL HEYGEN VIDEO GENERATE API
+    // Using HeyGen's native TTS with the cloned voice
     // ============================================
     const videoBackgroundUrl = Deno.env.get('VIDEO_BACKGROUND_URL') || 'https://mrcfpbkoulldnkqzzprb.supabase.co/storage/v1/object/public/assets/video-background.png';
     
     console.log(`[generate-affiliate-video] Using background: ${videoBackgroundUrl}`);
     console.log(`[generate-affiliate-video] Using avatar_id: ${profile.heygen_avatar_id}`);
+    console.log(`[generate-affiliate-video] Using HeyGen voice_id: ${heygenVoiceId}`);
     
-    // Use audio type instead of elevenlabs type
+    // Use HeyGen's native TTS instead of pre-generated audio
     const heygenPayload = {
       video_inputs: [
         {
@@ -241,8 +221,9 @@ serve(async (req) => {
             scale: 1.0,
           },
           voice: {
-            type: 'audio',
-            audio_url: audioUrl,
+            type: 'text',
+            input_text: template.script_text,
+            voice_id: heygenVoiceId,
           },
           background: {
             type: 'image',
@@ -296,7 +277,7 @@ serve(async (req) => {
       })
       .eq('id', videoRecord.id);
 
-    // Log estimated cost (~$2-5 per video)
+    // Log estimated cost (~$2-5 per video, no ElevenLabs cost now)
     await supabase
       .from('video_cost_log')
       .insert({
@@ -304,10 +285,11 @@ serve(async (req) => {
         operation_type: 'video_generation',
         provider: 'heygen',
         estimated_credits: 1,
-        estimated_cost_usd: 3.50,
+        estimated_cost_usd: 3.00, // Slightly lower without ElevenLabs
         metadata: {
           video_id: videoRecord.id,
           heygen_video_id: heygenVideoId,
+          heygen_voice_id: heygenVoiceId,
           template_id,
           video_type: template.video_type,
         },
