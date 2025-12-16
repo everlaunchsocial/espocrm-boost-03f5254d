@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrentAffiliate } from "@/hooks/useCurrentAffiliate";
 import { useAffiliateVideos } from "@/hooks/useAffiliateVideos";
-import { supabase } from "@/integrations/supabase/client";
+import { usePersistedFileUploads } from "@/hooks/usePersistedFileUploads";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -40,14 +40,24 @@ export default function AdminCreateAvatarProfile() {
   const { affiliateId } = useCurrentAffiliate();
   const { createAvatarProfile, profile } = useAffiliateVideos();
 
+  const {
+    photos,
+    voice,
+    isRestoring,
+    uploadingPhotoIndex,
+    isUploadingVoice,
+    uploadPhoto,
+    removePhoto,
+    uploadVoice,
+    clearVoice,
+    clearDraft,
+    getFinalUrls,
+  } = usePersistedFileUploads(affiliateId);
+
   const [step, setStep] = useState(1);
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [voiceFile, setVoiceFile] = useState<File | null>(null);
-  const [voiceUrl, setVoiceUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -59,6 +69,13 @@ export default function AdminCreateAvatarProfile() {
     document.title = "Create Avatar Profile | Admin";
   }, []);
 
+  // Restore recording time from persisted voice
+  useEffect(() => {
+    if (voice?.duration) {
+      setRecordingTime(voice.duration);
+    }
+  }, [voice?.duration]);
+
   // If profile already exists and is training/ready, go back to admin list
   useEffect(() => {
     if (profile && (profile.status === "training" || profile.status === "ready")) {
@@ -66,7 +83,7 @@ export default function AdminCreateAvatarProfile() {
     }
   }, [navigate, profile]);
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles = files.filter((f) => f.type.startsWith("image/"));
 
@@ -75,11 +92,16 @@ export default function AdminCreateAvatarProfile() {
       return;
     }
 
-    setPhotos((prev) => [...prev, ...validFiles].slice(0, 5));
-  };
+    // Upload each file immediately
+    for (let i = 0; i < validFiles.length; i++) {
+      const nextIndex = photos.length + i;
+      if (nextIndex < 5) {
+        await uploadPhoto(validFiles[i], nextIndex);
+      }
+    }
 
-  const removePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    // Clear input
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const startRecording = async () => {
@@ -93,12 +115,13 @@ export default function AdminCreateAvatarProfile() {
         audioChunksRef.current.push(e.data);
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         const file = new File([blob], "voice-recording.webm", { type: "audio/webm" });
-        setVoiceFile(file);
-        setVoiceUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach((track) => track.stop());
+        
+        // Upload immediately after recording stops
+        await uploadVoice(file, recordingTime);
       };
 
       mediaRecorder.start();
@@ -121,7 +144,7 @@ export default function AdminCreateAvatarProfile() {
     }
   };
 
-  const handleVoiceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -130,81 +153,42 @@ export default function AdminCreateAvatarProfile() {
       return;
     }
 
-    setVoiceFile(file);
-    setVoiceUrl(URL.createObjectURL(file));
+    // Get audio duration
+    const audio = new Audio();
+    audio.src = URL.createObjectURL(file);
+    audio.onloadedmetadata = async () => {
+      const duration = Math.round(audio.duration);
+      setRecordingTime(duration);
+      await uploadVoice(file, duration);
+      URL.revokeObjectURL(audio.src);
+    };
   };
 
-  const clearVoice = () => {
-    setVoiceFile(null);
-    setVoiceUrl(null);
+  const handleClearVoice = async () => {
+    await clearVoice();
     setRecordingTime(0);
   };
 
-  const uploadFiles = async () => {
-    if (!affiliateId) return { photoUrls: [], voiceUrl: null };
-
-    setIsUploading(true);
-    const uploadedPhotoUrls: string[] = [];
-    let uploadedVoiceUrl: string | null = null;
-
-    try {
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        const ext = photo.name.split(".").pop();
-        const path = `${affiliateId}/photo-${i + 1}.${ext}`;
-
-        const { error } = await supabase.storage.from("affiliate-photos").upload(path, photo, { upsert: true });
-        if (error) throw error;
-
-        const { data: urlData, error: signedError } = await supabase.storage
-          .from("affiliate-photos")
-          .createSignedUrl(path, 3600);
-
-        if (signedError || !urlData?.signedUrl) throw signedError || new Error("Failed to get signed URL");
-        uploadedPhotoUrls.push(urlData.signedUrl);
-      }
-
-      if (voiceFile) {
-        const ext = voiceFile.name.split(".").pop();
-        const path = `${affiliateId}/voice.${ext}`;
-
-        const { error } = await supabase.storage.from("affiliate-voices").upload(path, voiceFile, { upsert: true });
-        if (error) throw error;
-
-        const { data: urlData, error: signedError } = await supabase.storage
-          .from("affiliate-voices")
-          .createSignedUrl(path, 3600);
-
-        if (signedError || !urlData?.signedUrl) throw signedError || new Error("Failed to get signed URL");
-        uploadedVoiceUrl = urlData.signedUrl;
-      }
-
-      return { photoUrls: uploadedPhotoUrls, voiceUrl: uploadedVoiceUrl };
-    } catch (error: any) {
-      toast.error("Failed to upload files: " + error.message);
-      return { photoUrls: [], voiceUrl: null };
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleSubmit = async () => {
-    if (photos.length < 5 || !voiceFile) {
+    if (photos.length < 5 || !voice) {
       toast.error("Please upload 5 photos and a voice recording");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const { photoUrls, voiceUrl: uploadedVoice } = await uploadFiles();
+      const { photoUrls, voiceUrl } = await getFinalUrls();
 
-      if (photoUrls.length !== 5 || !uploadedVoice) {
-        toast.error("Failed to upload all files");
+      if (photoUrls.length !== 5 || !voiceUrl) {
+        toast.error("Failed to prepare files for submission");
         return;
       }
 
-      const result = await createAvatarProfile(photoUrls, uploadedVoice);
-      if (result) navigate("/admin/affiliate-videos");
+      const result = await createAvatarProfile(photoUrls, voiceUrl);
+      if (result) {
+        await clearDraft();
+        navigate("/admin/affiliate-videos");
+      }
     } catch (error: any) {
       toast.error("Failed to create profile: " + error.message);
     } finally {
@@ -225,9 +209,9 @@ export default function AdminCreateAvatarProfile() {
       case 2:
         return photos.length === 5;
       case 3:
-        return !!voiceFile && recordingTime >= 30;
+        return !!voice && (voice.duration >= 30 || recordingTime >= 30);
       case 4:
-        return photos.length === 5 && !!voiceFile;
+        return photos.length === 5 && !!voice;
       default:
         return false;
     }
@@ -253,6 +237,17 @@ export default function AdminCreateAvatarProfile() {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (isRestoring) {
+    return (
+      <div className="max-w-3xl mx-auto p-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Restoring your progress...</p>
+        </div>
       </div>
     );
   }
@@ -344,9 +339,11 @@ export default function AdminCreateAvatarProfile() {
                     key={index}
                     className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center relative overflow-hidden bg-muted/50"
                   >
-                    {photos[index] ? (
+                    {uploadingPhotoIndex === index ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    ) : photos[index] ? (
                       <>
-                        <img src={URL.createObjectURL(photos[index])} alt={`Avatar training photo ${index + 1}`} className="w-full h-full object-cover" />
+                        <img src={photos[index].previewUrl} alt={`Avatar training photo ${index + 1}`} className="w-full h-full object-cover" />
                         <button
                           onClick={() => removePhoto(index)}
                           className="absolute top-1 right-1 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
@@ -361,26 +358,43 @@ export default function AdminCreateAvatarProfile() {
                 ))}
               </div>
               <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
-              <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={photos.length >= 5}>
-                <Upload className="h-4 w-4 mr-2" />Upload Photos ({photos.length}/5)
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => fileInputRef.current?.click()} 
+                disabled={photos.length >= 5 || uploadingPhotoIndex !== null}
+              >
+                {uploadingPhotoIndex !== null ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploading...</>
+                ) : (
+                  <><Upload className="h-4 w-4 mr-2" />Upload Photos ({photos.length}/5)</>
+                )}
               </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Photos are saved automatically. You can safely switch tabs and return.
+              </p>
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-6">
-              {voiceUrl ? (
+              {voice ? (
                 <div className="space-y-4">
                   <div className="p-4 rounded-lg bg-muted flex items-center gap-4">
-                    <audio src={voiceUrl} controls className="flex-1" />
-                    <Button variant="ghost" size="icon" onClick={clearVoice}>
+                    <audio src={voice.previewUrl} controls className="flex-1" />
+                    <Button variant="ghost" size="icon" onClick={handleClearVoice}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground text-center">
-                    Duration: {formatTime(recordingTime)}
-                    {recordingTime < 30 && <span className="text-destructive ml-2">(Minimum 30 seconds required)</span>}
+                    Duration: {formatTime(voice.duration || recordingTime)}
+                    {(voice.duration || recordingTime) < 30 && <span className="text-destructive ml-2">(Minimum 30 seconds required)</span>}
                   </p>
+                </div>
+              ) : isUploadingVoice ? (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-muted-foreground">Saving voice recording...</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -417,6 +431,9 @@ export default function AdminCreateAvatarProfile() {
                   "Hi, I'm excited to introduce you to EverLaunch, the AI-powered receptionist that can transform how your business handles customer calls..."
                 </p>
               </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Voice recording is saved automatically. You can safely switch tabs and return.
+              </p>
             </div>
           )}
 
@@ -429,33 +446,44 @@ export default function AdminCreateAvatarProfile() {
                 </div>
                 <div className="p-4 rounded-lg bg-muted">
                   <p className="font-medium mb-2">Voice</p>
-                  <p className="text-sm text-muted-foreground">{voiceFile ? `${formatTime(recordingTime)} recorded` : "Not provided"}</p>
+                  <p className="text-sm text-muted-foreground">{voice ? `${formatTime(voice.duration || recordingTime)} recorded` : "Not provided"}</p>
                 </div>
               </div>
 
-              <Button className="w-full" size="lg" onClick={handleSubmit} disabled={isSubmitting || isUploading}>
-                {isSubmitting || isUploading ? (
+              <Button className="w-full" size="lg" onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {isUploading ? "Uploading..." : "Submitting..."}
+                    Creating Avatar...
                   </>
                 ) : (
-                  "Create Avatar Profile"
+                  "Create AI Avatar"
                 )}
               </Button>
+
+              <div className="p-4 rounded-lg bg-muted text-sm text-muted-foreground">
+                <p>
+                  After submission, your avatar will be processed. This typically takes 10-30 minutes.
+                  You'll be notified when it's ready for video creation.
+                </p>
+              </div>
             </div>
           )}
-
-          <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1}>
-              Back
-            </Button>
-            <Button onClick={() => setStep((s) => Math.min(4, s + 1))} disabled={!canProceed() || step === 4}>
-              Next
-            </Button>
-          </div>
         </CardContent>
       </Card>
+
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={() => setStep((s) => Math.max(1, s - 1))} disabled={step === 1}>
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+        {step < 4 ? (
+          <Button onClick={() => setStep((s) => Math.min(4, s + 1))} disabled={!canProceed()}>
+            Next
+            <ChevronLeft className="h-4 w-4 ml-1 rotate-180" />
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
