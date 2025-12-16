@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 
 const videoTypeLabels: Record<VideoType, string> = {
-  recruitment: 'Recruitment',
+  recruitment: 'Recruiting',
+  product: 'Product',
   attorney: 'Attorney/Legal',
   dentist: 'Dental Practice',
   salon: 'Salon/Spa',
@@ -29,6 +30,7 @@ const videoTypeLabels: Record<VideoType, string> = {
 
 const videoTypeDescriptions: Record<VideoType, string> = {
   recruitment: 'Attract new affiliates to join your team',
+  product: 'Sell the AI receptionist product to customers',
   attorney: 'Target law firms and legal practices',
   dentist: 'Target dental offices and practices',
   salon: 'Target salons and spas',

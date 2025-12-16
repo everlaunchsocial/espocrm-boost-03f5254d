@@ -28,7 +28,8 @@ const statusConfig: Record<VideoStatus, { label: string; color: string; icon: Re
 };
 
 const videoTypeLabels: Record<VideoType, string> = {
-  recruitment: 'Recruitment',
+  recruitment: 'Recruiting',
+  product: 'Product',
   attorney: 'Attorney/Legal',
   dentist: 'Dental Practice',
   salon: 'Salon/Spa',
@@ -153,44 +154,92 @@ export default function AffiliateVideos() {
         </Card>
       )}
 
-      {/* Quick Create Section */}
+      {/* Video Type Selection */}
       {profileReady && templates.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Quick Create</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {templates.map(template => (
-              <Card key={template.id} className="hover:border-primary/50 transition-colors">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="outline">{videoTypeLabels[template.video_type]}</Badge>
-                  </div>
-                  <CardTitle className="text-base">{template.name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                    {template.script_text.substring(0, 100)}...
-                  </p>
-                  <Button
-                    className="w-full"
-                    onClick={() => handleGenerateVideo(template.id)}
-                    disabled={generating === template.id}
-                  >
-                    {generating === template.id ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Video className="h-4 w-4 mr-2" />
-                        Generate Video
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <div className="space-y-6">
+          {/* Product Videos */}
+          {templates.filter(t => t.video_type === 'product').length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Product Videos</h2>
+              <p className="text-sm text-muted-foreground">Videos for selling to customers</p>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {templates.filter(t => t.video_type === 'product').map(template => (
+                  <Card key={template.id} className="hover:border-primary/50 transition-colors border-blue-500/30">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <Badge className="bg-blue-500/20 text-blue-400">Product</Badge>
+                      </div>
+                      <CardTitle className="text-base">{template.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                        {template.script_text.substring(0, 100)}...
+                      </p>
+                      <Button
+                        className="w-full"
+                        onClick={() => handleGenerateVideo(template.id)}
+                        disabled={generating === template.id}
+                      >
+                        {generating === template.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Video className="h-4 w-4 mr-2" />
+                            Generate Video
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recruiting Videos */}
+          {templates.filter(t => t.video_type === 'recruitment').length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Recruiting Videos</h2>
+              <p className="text-sm text-muted-foreground">Videos for recruiting new affiliates</p>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {templates.filter(t => t.video_type === 'recruitment').map(template => (
+                  <Card key={template.id} className="hover:border-primary/50 transition-colors border-purple-500/30">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <Badge className="bg-purple-500/20 text-purple-400">Recruiting</Badge>
+                      </div>
+                      <CardTitle className="text-base">{template.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                        {template.script_text.substring(0, 100)}...
+                      </p>
+                      <Button
+                        className="w-full"
+                        onClick={() => handleGenerateVideo(template.id)}
+                        disabled={generating === template.id}
+                      >
+                        {generating === template.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Video className="h-4 w-4 mr-2" />
+                            Generate Video
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
