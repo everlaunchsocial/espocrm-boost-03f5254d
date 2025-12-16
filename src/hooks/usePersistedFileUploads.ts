@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -16,7 +16,7 @@ interface PersistedVoice {
 interface DraftState {
   photos: PersistedPhoto[];
   voice: PersistedVoice | null;
-  userId: string; // Store the userId used for paths
+  userId: string;
 }
 
 const STORAGE_KEY_PREFIX = 'avatar-draft-';
@@ -28,6 +28,9 @@ export function usePersistedFileUploads(affiliateId: string | null) {
   const [uploadingPhotoIndex, setUploadingPhotoIndex] = useState<number | null>(null);
   const [isUploadingVoice, setIsUploadingVoice] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  
+  // Prevent double restoration
+  const hasRestoredRef = useRef(false);
 
   const storageKey = affiliateId ? `${STORAGE_KEY_PREFIX}${affiliateId}` : null;
 
@@ -36,39 +39,52 @@ export function usePersistedFileUploads(affiliateId: string | null) {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        console.log('[usePersistedFileUploads] Got userId:', user.id);
         setUserId(user.id);
+      } else {
+        console.warn('[usePersistedFileUploads] No authenticated user found');
+        setIsRestoring(false);
       }
     };
     getUser();
   }, []);
 
-  // Save draft to localStorage
-  const saveDraft = useCallback((newPhotos: PersistedPhoto[], newVoice: PersistedVoice | null) => {
-    if (!storageKey || !userId) return;
-    const draft: DraftState = { photos: newPhotos, voice: newVoice, userId };
-    localStorage.setItem(storageKey, JSON.stringify(draft));
-  }, [storageKey, userId]);
+  // Save draft to localStorage (memoized without external deps that change)
+  const saveDraft = useCallback((newPhotos: PersistedPhoto[], newVoice: PersistedVoice | null, currentUserId: string, currentStorageKey: string) => {
+    if (!currentStorageKey || !currentUserId) return;
+    const draft: DraftState = { photos: newPhotos, voice: newVoice, userId: currentUserId };
+    localStorage.setItem(currentStorageKey, JSON.stringify(draft));
+    console.log('[usePersistedFileUploads] Draft saved:', { photos: newPhotos.length, hasVoice: !!newVoice });
+  }, []);
 
-  // Restore draft from localStorage on mount
+  // Restore draft from localStorage on mount - runs ONCE when deps are ready
   useEffect(() => {
-    if (!storageKey || !affiliateId || !userId) {
-      if (!userId) return; // Wait for userId to load
-      setIsRestoring(false);
+    // Wait for both userId and storageKey to be available
+    if (!userId || !storageKey || !affiliateId) {
       return;
     }
+    
+    // Prevent double restoration
+    if (hasRestoredRef.current) {
+      return;
+    }
+    hasRestoredRef.current = true;
 
     const restoreDraft = async () => {
+      console.log('[usePersistedFileUploads] Starting draft restoration for:', affiliateId);
       try {
         const saved = localStorage.getItem(storageKey);
         if (!saved) {
+          console.log('[usePersistedFileUploads] No saved draft found');
           setIsRestoring(false);
           return;
         }
 
         const draft: DraftState = JSON.parse(saved);
         
-        // If userId changed or doesn't match, clear old draft
+        // If userId doesn't match, clear old draft
         if (draft.userId && draft.userId !== userId) {
+          console.log('[usePersistedFileUploads] UserId mismatch, clearing draft');
           localStorage.removeItem(storageKey);
           setIsRestoring(false);
           return;
@@ -86,9 +102,11 @@ export function usePersistedFileUploads(affiliateId: string | null) {
             
             if (!error && data?.signedUrl) {
               restoredPhotos.push({ path: photo.path, previewUrl: data.signedUrl });
+            } else {
+              console.warn('[usePersistedFileUploads] Failed to restore photo:', photo.path, error);
             }
-          } catch {
-            // File might have been deleted, skip it
+          } catch (e) {
+            console.warn('[usePersistedFileUploads] Error restoring photo:', e);
           }
         }
 
@@ -105,9 +123,11 @@ export function usePersistedFileUploads(affiliateId: string | null) {
                 previewUrl: data.signedUrl, 
                 duration: draft.voice.duration 
               };
+            } else {
+              console.warn('[usePersistedFileUploads] Failed to restore voice:', error);
             }
-          } catch {
-            // File might have been deleted, skip it
+          } catch (e) {
+            console.warn('[usePersistedFileUploads] Error restoring voice:', e);
           }
         }
 
@@ -115,74 +135,92 @@ export function usePersistedFileUploads(affiliateId: string | null) {
           setPhotos(restoredPhotos);
           setVoice(restoredVoice);
           // Update localStorage with only valid files
-          saveDraft(restoredPhotos, restoredVoice);
+          saveDraft(restoredPhotos, restoredVoice, userId, storageKey);
           toast.success(`Draft restored: ${restoredPhotos.length} photo(s)${restoredVoice ? ' + voice' : ''}`);
+          console.log('[usePersistedFileUploads] Draft restored successfully');
         }
       } catch (e) {
-        console.error('Failed to restore draft:', e);
+        console.error('[usePersistedFileUploads] Failed to restore draft:', e);
       } finally {
         setIsRestoring(false);
       }
     };
 
     restoreDraft();
-  }, [affiliateId, storageKey, saveDraft, userId]);
+  }, [affiliateId, storageKey, userId, saveDraft]);
 
   // Upload a photo immediately (uses userId for RLS compliance)
   const uploadPhoto = useCallback(async (file: File, index: number): Promise<boolean> => {
     if (!userId) {
+      console.error('[usePersistedFileUploads] uploadPhoto failed: No userId');
       toast.error('User not authenticated');
+      return false;
+    }
+    if (!storageKey) {
+      console.error('[usePersistedFileUploads] uploadPhoto failed: No storageKey');
+      toast.error('Missing affiliate context');
       return false;
     }
 
     setUploadingPhotoIndex(index);
+    console.log('[usePersistedFileUploads] Uploading photo', index, 'for userId:', userId);
+    
     try {
       const ext = file.name.split('.').pop() || 'jpg';
-      // Use userId (auth.uid()) as folder path - RLS requires this
       const path = `${userId}/draft-photo-${index}.${ext}`;
 
       const { error } = await supabase.storage
         .from('affiliate-photos')
         .upload(path, file, { upsert: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[usePersistedFileUploads] Storage upload error:', error);
+        if (error.message?.includes('row-level security')) {
+          toast.error('Permission denied. Please try logging out and back in.');
+        } else {
+          toast.error(`Upload failed: ${error.message}`);
+        }
+        return false;
+      }
 
       const { data: urlData, error: signedError } = await supabase.storage
         .from('affiliate-photos')
         .createSignedUrl(path, 3600);
 
-      if (signedError || !urlData?.signedUrl) throw signedError || new Error('Failed to get signed URL');
+      if (signedError || !urlData?.signedUrl) {
+        console.error('[usePersistedFileUploads] Signed URL error:', signedError);
+        throw signedError || new Error('Failed to get signed URL');
+      }
 
       const newPhoto: PersistedPhoto = { path, previewUrl: urlData.signedUrl };
       
       setPhotos(prev => {
         const updated = [...prev];
-        // Find if we already have a photo at this index by path pattern
         const existingIdx = updated.findIndex(p => p.path.includes(`draft-photo-${index}`));
         if (existingIdx >= 0) {
           updated[existingIdx] = newPhoto;
         } else {
           updated.push(newPhoto);
         }
-        // Sort by index in path
         updated.sort((a, b) => {
           const aIdx = parseInt(a.path.match(/draft-photo-(\d+)/)?.[1] || '0');
           const bIdx = parseInt(b.path.match(/draft-photo-(\d+)/)?.[1] || '0');
           return aIdx - bIdx;
         });
-        saveDraft(updated, voice);
+        saveDraft(updated, voice, userId, storageKey);
         return updated;
       });
 
       toast.success(`Photo ${index + 1} saved`);
       return true;
     } catch (error: any) {
+      console.error('[usePersistedFileUploads] Upload exception:', error);
       toast.error(`Failed to upload photo: ${error.message}`);
       return false;
     } finally {
       setUploadingPhotoIndex(null);
     }
-  }, [userId, voice, saveDraft]);
+  }, [userId, storageKey, voice, saveDraft]);
 
   // Remove a photo
   const removePhoto = useCallback(async (index: number) => {
@@ -197,49 +235,70 @@ export function usePersistedFileUploads(affiliateId: string | null) {
 
     setPhotos(prev => {
       const updated = prev.filter((_, i) => i !== index);
-      saveDraft(updated, voice);
+      if (userId && storageKey) {
+        saveDraft(updated, voice, userId, storageKey);
+      }
       return updated;
     });
-  }, [photos, voice, saveDraft]);
+  }, [photos, voice, userId, storageKey, saveDraft]);
 
   // Upload voice immediately (uses userId for RLS compliance)
   const uploadVoice = useCallback(async (file: File, duration: number): Promise<boolean> => {
     if (!userId) {
+      console.error('[usePersistedFileUploads] uploadVoice failed: No userId');
       toast.error('User not authenticated');
+      return false;
+    }
+    if (!storageKey) {
+      console.error('[usePersistedFileUploads] uploadVoice failed: No storageKey');
+      toast.error('Missing affiliate context');
       return false;
     }
 
     setIsUploadingVoice(true);
+    console.log('[usePersistedFileUploads] Uploading voice for userId:', userId);
+    
     try {
       const ext = file.name.split('.').pop() || 'webm';
-      // Use userId (auth.uid()) as folder path - RLS requires this
       const path = `${userId}/draft-voice.${ext}`;
 
       const { error } = await supabase.storage
         .from('affiliate-voices')
         .upload(path, file, { upsert: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[usePersistedFileUploads] Voice upload error:', error);
+        if (error.message?.includes('row-level security')) {
+          toast.error('Permission denied. Please try logging out and back in.');
+        } else {
+          toast.error(`Upload failed: ${error.message}`);
+        }
+        return false;
+      }
 
       const { data: urlData, error: signedError } = await supabase.storage
         .from('affiliate-voices')
         .createSignedUrl(path, 3600);
 
-      if (signedError || !urlData?.signedUrl) throw signedError || new Error('Failed to get signed URL');
+      if (signedError || !urlData?.signedUrl) {
+        console.error('[usePersistedFileUploads] Voice signed URL error:', signedError);
+        throw signedError || new Error('Failed to get signed URL');
+      }
 
       const newVoice: PersistedVoice = { path, previewUrl: urlData.signedUrl, duration };
       setVoice(newVoice);
-      saveDraft(photos, newVoice);
+      saveDraft(photos, newVoice, userId, storageKey);
 
       toast.success('Voice saved');
       return true;
     } catch (error: any) {
+      console.error('[usePersistedFileUploads] Voice upload exception:', error);
       toast.error(`Failed to upload voice: ${error.message}`);
       return false;
     } finally {
       setIsUploadingVoice(false);
     }
-  }, [userId, photos, saveDraft]);
+  }, [userId, storageKey, photos, saveDraft]);
 
   // Clear voice
   const clearVoice = useCallback(async () => {
@@ -251,8 +310,10 @@ export function usePersistedFileUploads(affiliateId: string | null) {
       }
     }
     setVoice(null);
-    saveDraft(photos, null);
-  }, [voice, photos, saveDraft]);
+    if (userId && storageKey) {
+      saveDraft(photos, null, userId, storageKey);
+    }
+  }, [voice, photos, userId, storageKey, saveDraft]);
 
   // Clear entire draft
   const clearDraft = useCallback(async () => {
