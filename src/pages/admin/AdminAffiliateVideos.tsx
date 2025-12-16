@@ -44,6 +44,7 @@ interface AffiliateVideo {
   video_type: string;
   status: string;
   landing_page_slug: string | null;
+  heygen_video_url: string | null;
   estimated_cost_usd: number | null;
   created_at: string;
   affiliates: { username: string };
@@ -88,7 +89,7 @@ export default function AdminAffiliateVideos() {
       // Fetch videos
       const { data: videosData } = await supabase
         .from('affiliate_videos')
-        .select('id, video_name, video_type, status, landing_page_slug, estimated_cost_usd, created_at, affiliates(username)')
+        .select('id, video_name, video_type, status, landing_page_slug, heygen_video_url, estimated_cost_usd, created_at, affiliates(username)')
         .order('created_at', { ascending: false });
 
       setVideos((videosData as any[]) || []);
@@ -361,6 +362,7 @@ export default function AdminAffiliateVideos() {
                     <TableHead>Status</TableHead>
                     <TableHead>Cost</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -378,11 +380,23 @@ export default function AdminAffiliateVideos() {
                         {video.estimated_cost_usd ? `$${video.estimated_cost_usd.toFixed(2)}` : '-'}
                       </TableCell>
                       <TableCell>{new Date(video.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        {video.heygen_video_url && video.status === 'ready' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(video.heygen_video_url!, '_blank')}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Preview
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                   {videos.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                         No videos generated yet
                       </TableCell>
                     </TableRow>
