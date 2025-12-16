@@ -210,16 +210,49 @@ export function useAffiliateVideos() {
     return analytics[videoId] || { video_id: videoId, views: 0, cta_clicks: 0 };
   };
 
+  const deleteProfile = async () => {
+    if (!profile) {
+      toast.error('No profile to delete');
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('affiliate_avatar_profiles')
+        .delete()
+        .eq('id', profile.id);
+
+      if (error) {
+        toast.error(`Failed to delete profile: ${error.message}`);
+        return false;
+      }
+
+      toast.success('Avatar profile deleted');
+      setProfile(null);
+      await fetchData();
+      return true;
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete profile');
+      return false;
+    }
+  };
+
+  // Check if profile is broken (status=ready but missing HeyGen IDs)
+  const isProfileBroken = profile?.status === 'ready' && 
+    (!profile.heygen_avatar_id || !profile.heygen_avatar_group_id);
+
   return {
     profile,
     videos,
     templates,
     isLoading: isLoading || affiliateLoading,
     hasProfile: !!profile,
-    profileReady: profile?.status === 'ready',
+    profileReady: profile?.status === 'ready' && !!profile.heygen_avatar_id,
+    isProfileBroken,
     createAvatarProfile,
     generateVideo,
     getVideoAnalytics,
+    deleteProfile,
     refetch: fetchData,
   };
 }

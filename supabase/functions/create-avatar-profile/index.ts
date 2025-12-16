@@ -238,10 +238,36 @@ serve(async (req) => {
     const avatarResult = await avatarGroupResponse.json();
     console.log(`[create-avatar-profile] Avatar group response:`, JSON.stringify(avatarResult));
     
-    const avatarGroupId = avatarResult.data?.avatar_group_id || avatarResult.avatar_group_id;
-    const avatarId = avatarResult.data?.avatar_id || avatarResult.avatar_id;
+    // HeyGen returns: data.id (the talking_photo_id) and data.group_id (the avatar group)
+    const avatarGroupId = avatarResult.data?.group_id || avatarResult.group_id;
+    const avatarId = avatarResult.data?.id || avatarResult.id;  // This IS the talking_photo_id
 
-    console.log(`[create-avatar-profile] Avatar created. Group: ${avatarGroupId}, Avatar: ${avatarId}`);
+    // CRITICAL: Validate we got the required IDs
+    if (!avatarGroupId) {
+      console.error(`[create-avatar-profile] No group_id in response:`, avatarResult);
+      await supabase
+        .from('affiliate_avatar_profiles')
+        .update({ 
+          status: 'failed', 
+          error_message: 'HeyGen did not return group_id' 
+        })
+        .eq('id', profileId);
+      throw new Error('HeyGen did not return group_id');
+    }
+
+    if (!avatarId) {
+      console.error(`[create-avatar-profile] No id (talking_photo_id) in response:`, avatarResult);
+      await supabase
+        .from('affiliate_avatar_profiles')
+        .update({ 
+          status: 'failed', 
+          error_message: 'HeyGen did not return id (talking_photo_id)' 
+        })
+        .eq('id', profileId);
+      throw new Error('HeyGen did not return id (talking_photo_id)');
+    }
+
+    console.log(`[create-avatar-profile] Avatar created. Group: ${avatarGroupId}, TalkingPhoto: ${avatarId}`);
 
     // ============================================
     // STEP 2b: Add additional looks (remaining photos)
