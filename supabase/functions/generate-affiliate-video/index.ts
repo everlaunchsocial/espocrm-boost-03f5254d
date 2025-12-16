@@ -250,8 +250,8 @@ serve(async (req) => {
         },
       ],
       dimension: {
-        width: 1920,
-        height: 1080,
+        width: 1280,
+        height: 720,
       },
       callback_url: `${supabaseUrl}/functions/v1/heygen-webhook`,
     };
