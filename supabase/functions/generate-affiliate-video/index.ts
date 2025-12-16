@@ -238,6 +238,7 @@ serve(async (req) => {
           character: {
             type: 'talking_photo',
             talking_photo_id: profile.heygen_avatar_id,
+            scale: 1.0,
           },
           voice: {
             type: 'audio',
