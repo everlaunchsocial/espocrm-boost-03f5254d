@@ -1,6 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
+// Helper function to detect image MIME type from URL
+function getImageMimeType(url: string): string {
+  const lowerUrl = url.toLowerCase();
+
+  if (lowerUrl.includes('.png')) {
+    return 'image/png';
+  } else if (lowerUrl.includes('.webp')) {
+    return 'image/webp';
+  } else if (lowerUrl.includes('.gif')) {
+    return 'image/gif';
+  } else if (lowerUrl.includes('.jpg') || lowerUrl.includes('.jpeg')) {
+    return 'image/jpeg';
+  }
+
+  // Default to JPEG
+  return 'image/jpeg';
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -111,7 +129,7 @@ serve(async (req) => {
     for (let i = 0; i < photo_urls.length; i++) {
       const photoUrl = photo_urls[i];
       console.log(`[create-avatar-profile] Uploading photo ${i + 1}/5 to HeyGen...`);
-      
+
       // Download photo from Supabase storage
       const photoResponse = await fetch(photoUrl);
       if (!photoResponse.ok) {
@@ -121,17 +139,22 @@ serve(async (req) => {
       // Get raw binary data
       const photoArrayBuffer = await photoResponse.arrayBuffer();
 
+      // Detect correct MIME type from URL
+      const mimeType = getImageMimeType(photoUrl);
+
       console.log('[create-avatar-profile] Uploading photo to HeyGen:', {
         photoIndex: i + 1,
-        byteLength: photoArrayBuffer.byteLength
+        byteLength: photoArrayBuffer.byteLength,
+        mimeType,
+        url: photoUrl,
       });
 
-      // Send RAW BINARY to HeyGen (not FormData!)
+      // Send RAW BINARY to HeyGen with correct Content-Type
       const heygenUploadResponse = await fetch('https://upload.heygen.com/v1/asset', {
         method: 'POST',
         headers: {
           'X-Api-Key': heygenApiKey,
-          'Content-Type': 'image/jpeg',
+          'Content-Type': mimeType,
           'Accept': 'application/json',
         },
         body: photoArrayBuffer,
@@ -139,29 +162,30 @@ serve(async (req) => {
 
       console.log('[create-avatar-profile] HeyGen response:', {
         status: heygenUploadResponse.status,
-        statusText: heygenUploadResponse.statusText
+        statusText: heygenUploadResponse.statusText,
       });
 
       if (!heygenUploadResponse.ok) {
         const errorText = await heygenUploadResponse.text();
-        console.error(`[create-avatar-profile] HeyGen upload failed:`, {
+        console.error('[create-avatar-profile] HeyGen upload failed:', {
+          photoIndex: i + 1,
           status: heygenUploadResponse.status,
           statusText: heygenUploadResponse.statusText,
-          body: errorText
+          error: errorText,
         });
-        throw new Error(`Failed to upload photo ${i + 1} to HeyGen: ${heygenUploadResponse.status} ${heygenUploadResponse.statusText}`);
+        throw new Error(`Failed to upload photo ${i + 1}: ${errorText}`);
       }
 
       const uploadResult = await heygenUploadResponse.json();
       console.log(`[create-avatar-profile] Photo ${i + 1} upload response:`, JSON.stringify(uploadResult));
-      
+
       // HeyGen returns the asset ID in data.image_key or data.asset_id
       const assetId = uploadResult.data?.image_key || uploadResult.data?.asset_id || uploadResult.image_key || uploadResult.asset_id;
       if (!assetId) {
         console.error(`[create-avatar-profile] No asset ID in response:`, uploadResult);
         throw new Error(`No asset ID returned for photo ${i + 1}`);
       }
-      
+
       uploadedAssetIds.push(assetId);
       console.log(`[create-avatar-profile] Photo ${i + 1} uploaded, asset_id: ${assetId}`);
     }
