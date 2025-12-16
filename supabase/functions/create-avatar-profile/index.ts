@@ -247,31 +247,35 @@ serve(async (req) => {
     // STEP 2b: Add additional looks (remaining photos)
     // ============================================
     if (uploadedAssetIds.length > 1) {
-      console.log(`[create-avatar-profile] Adding ${uploadedAssetIds.length - 1} additional looks...`);
+      const additionalImageKeys = uploadedAssetIds.slice(1); // All except first
+      console.log(`[create-avatar-profile] Adding ${additionalImageKeys.length} additional looks to avatar group ${avatarGroupId}...`);
       
-      for (let i = 1; i < uploadedAssetIds.length; i++) {
-        const addLookResponse = await fetch('https://api.heygen.com/v2/photo_avatar/add_look', {
-          method: 'POST',
-          headers: {
-            'X-Api-Key': heygenApiKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            avatar_group_id: avatarGroupId,
-            image_key: uploadedAssetIds[i],
-          }),
-        });
+      // Correct endpoint: /v2/photo_avatar/avatar_group/add with image_keys array
+      const addLooksResponse = await fetch('https://api.heygen.com/v2/photo_avatar/avatar_group/add', {
+        method: 'POST',
+        headers: {
+          'X-Api-Key': heygenApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          group_id: avatarGroupId,
+          image_keys: additionalImageKeys,
+        }),
+      });
 
-        if (!addLookResponse.ok) {
-          const errorText = await addLookResponse.text();
-          console.warn(`[create-avatar-profile] Failed to add look ${i + 1}:`, {
-            status: addLookResponse.status,
-            body: errorText
-          });
-          // Continue anyway - the avatar will work with just one look
-        } else {
-          console.log(`[create-avatar-profile] Added look ${i + 1} to avatar group`);
-        }
+      if (!addLooksResponse.ok) {
+        const errorText = await addLooksResponse.text();
+        console.warn(`[create-avatar-profile] Failed to add additional looks:`, {
+          status: addLooksResponse.status,
+          statusText: addLooksResponse.statusText,
+          body: errorText,
+          group_id: avatarGroupId,
+          image_keys: additionalImageKeys,
+        });
+        // Continue anyway - the avatar will work with just one look
+      } else {
+        const addLooksResult = await addLooksResponse.json();
+        console.log(`[create-avatar-profile] Successfully added ${additionalImageKeys.length} looks:`, JSON.stringify(addLooksResult));
       }
     }
 

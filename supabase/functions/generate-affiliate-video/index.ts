@@ -145,19 +145,24 @@ serve(async (req) => {
     // ============================================
     // CALL HEYGEN VIDEO GENERATE API
     // ============================================
-    // Background image URL - hosted on deployed site
+    // Background image URL - hosted in Supabase storage
     const videoBackgroundUrl = Deno.env.get('VIDEO_BACKGROUND_URL') || 'https://mrcfpbkoulldnkqzzprb.supabase.co/storage/v1/object/public/assets/video-background.png';
     
+    console.log(`[generate-affiliate-video] Using background: ${videoBackgroundUrl}`);
+    console.log(`[generate-affiliate-video] Using avatar_id: ${profile.heygen_avatar_id}`);
+    console.log(`[generate-affiliate-video] Using ElevenLabs voice_id: ${profile.elevenlabs_voice_id}`);
+    
+    // For photo avatars, use talking_photo type for proper background removal
     const heygenPayload = {
       video_inputs: [
         {
           character: {
-            type: 'avatar',
-            avatar_id: profile.heygen_avatar_id,
+            type: 'talking_photo',
+            talking_photo_id: profile.heygen_avatar_id,
           },
           voice: {
-            type: 'audio',
-            audio_url: profile.voice_audio_url,
+            type: 'elevenlabs',
+            voice_id: profile.elevenlabs_voice_id,
           },
           script: {
             type: 'text',
@@ -175,6 +180,8 @@ serve(async (req) => {
       },
       callback_url: `${supabaseUrl}/functions/v1/heygen-webhook`,
     };
+    
+    console.log(`[generate-affiliate-video] HeyGen payload:`, JSON.stringify(heygenPayload, null, 2));
 
     const heygenResponse = await fetch('https://api.heygen.com/v2/video/generate', {
       method: 'POST',
