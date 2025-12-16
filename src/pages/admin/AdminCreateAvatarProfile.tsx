@@ -12,18 +12,18 @@ import {
   Camera,
   Check,
   ChevronLeft,
+  ChevronRight,
   Loader2,
   Mic,
-  Play,
-  Square,
   Upload,
   X,
+  FileAudio,
 } from "lucide-react";
 
 const STEPS = [
   { id: 1, title: "Requirements", description: "Review what you need" },
   { id: 2, title: "Photos", description: "Upload 5 photos" },
-  { id: 3, title: "Voice", description: "Record your voice" },
+  { id: 3, title: "Voice", description: "Upload your voice" },
   { id: 4, title: "Submit", description: "Create your avatar" },
 ];
 
@@ -33,6 +33,14 @@ const PHOTO_REQUIREMENTS = [
   "Neutral expression",
   "No sunglasses or hats",
   "Professional attire recommended",
+];
+
+const VOICE_REQUIREMENTS = [
+  "MP3 or WAV format (192kbps+ recommended)",
+  "1-2 minutes of clear speech",
+  "Quiet environment, no background noise",
+  "Consistent volume and natural pace",
+  "Single speaker only",
 ];
 
 export default function AdminCreateAvatarProfile() {
@@ -55,26 +63,14 @@ export default function AdminCreateAvatarProfile() {
   } = usePersistedFileUploads(affiliateId);
 
   const [step, setStep] = useState(1);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const voiceInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.title = "Create Avatar Profile | Admin";
   }, []);
-
-  // Restore recording time from persisted voice
-  useEffect(() => {
-    if (voice?.duration) {
-      setRecordingTime(voice.duration);
-    }
-  }, [voice?.duration]);
 
   // If profile already exists and is training/ready, go back to admin list
   useEffect(() => {
@@ -104,46 +100,6 @@ export default function AdminCreateAvatarProfile() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        audioChunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const file = new File([blob], "voice-recording.webm", { type: "audio/webm" });
-        stream.getTracks().forEach((track) => track.stop());
-        
-        // Upload immediately after recording stops
-        await uploadVoice(file, recordingTime);
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-
-      timerRef.current = window.setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-    } catch {
-      toast.error("Could not access microphone");
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      if (timerRef.current) window.clearInterval(timerRef.current);
-    }
-  };
-
   const handleVoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -158,7 +114,6 @@ export default function AdminCreateAvatarProfile() {
     audio.src = URL.createObjectURL(file);
     audio.onloadedmetadata = async () => {
       const duration = Math.round(audio.duration);
-      setRecordingTime(duration);
       await uploadVoice(file, duration);
       URL.revokeObjectURL(audio.src);
     };
@@ -166,7 +121,6 @@ export default function AdminCreateAvatarProfile() {
 
   const handleClearVoice = async () => {
     await clearVoice();
-    setRecordingTime(0);
   };
 
   const handleSubmit = async () => {
@@ -209,7 +163,7 @@ export default function AdminCreateAvatarProfile() {
       case 2:
         return photos.length === 5;
       case 3:
-        return !!voice && (voice.duration >= 30 || recordingTime >= 30);
+        return !!voice && voice.duration >= 30;
       case 4:
         return photos.length === 5 && !!voice;
       default:
@@ -319,18 +273,15 @@ export default function AdminCreateAvatarProfile() {
                 </div>
                 <div className="space-y-3">
                   <h3 className="font-semibold flex items-center gap-2">
-                    <Mic className="h-5 w-5 text-primary" />Voice Recording
+                    <Mic className="h-5 w-5 text-primary" />Voice Recording Upload
                   </h3>
                   <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-start gap-2">
-                      <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />Minimum 30 seconds
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />Clear audio, minimal background noise
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />Natural speaking pace
-                    </li>
+                    {VOICE_REQUIREMENTS.map((req, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                        {req}
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -391,63 +342,86 @@ export default function AdminCreateAvatarProfile() {
             </div>
           )}
 
+          {/* Step 3: Voice Upload */}
           {step === 3 && (
             <div className="space-y-6">
               {voice ? (
                 <div className="space-y-4">
                   <div className="p-4 rounded-lg bg-muted flex items-center gap-4">
+                    <FileAudio className="h-8 w-8 text-primary shrink-0" />
                     <audio src={voice.previewUrl} controls className="flex-1" />
                     <Button variant="ghost" size="icon" onClick={handleClearVoice}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground text-center">
-                    Duration: {formatTime(voice.duration || recordingTime)}
-                    {(voice.duration || recordingTime) < 30 && <span className="text-destructive ml-2">(Minimum 30 seconds required)</span>}
+                    Duration: {formatTime(voice.duration || 0)}
+                    {(voice.duration || 0) < 30 && <span className="text-destructive ml-2">(Minimum 30 seconds required)</span>}
                   </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => voiceInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Different Audio
+                  </Button>
                 </div>
               ) : isUploadingVoice ? (
                 <div className="flex flex-col items-center gap-4 py-8">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="text-muted-foreground">Saving voice recording...</p>
+                  <p className="text-muted-foreground">Uploading voice file...</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="flex flex-col items-center gap-4 py-8">
-                    <div className={`h-24 w-24 rounded-full flex items-center justify-center transition-colors ${isRecording ? "bg-destructive/20" : "bg-primary/20"}`}>
-                      <Mic className={`h-12 w-12 ${isRecording ? "text-destructive" : "text-primary"}`} />
+                <div className="space-y-6">
+                  {/* Upload Zone */}
+                  <div 
+                    className="border-2 border-dashed border-primary/30 rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer bg-primary/5"
+                    onClick={() => voiceInputRef.current?.click()}
+                  >
+                    <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                      <Upload className="h-8 w-8 text-primary" />
                     </div>
-                    {isRecording && <p className="text-2xl font-mono">{formatTime(recordingTime)}</p>}
-                    <div className="flex gap-2">
-                      {isRecording ? (
-                        <Button variant="destructive" onClick={stopRecording}>
-                          <Square className="h-4 w-4 mr-2" />Stop Recording
-                        </Button>
-                      ) : (
-                        <Button onClick={startRecording}>
-                          <Play className="h-4 w-4 mr-2" />Start Recording
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-2">Or upload an audio file</p>
-                    <input ref={voiceInputRef} type="file" accept="audio/*" onChange={handleVoiceUpload} className="hidden" />
-                    <Button variant="outline" onClick={() => voiceInputRef.current?.click()}>
-                      <Upload className="h-4 w-4 mr-2" />Upload Audio
+                    <p className="font-medium text-lg mb-2">Upload Your Voice Recording</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      MP3, WAV, or M4A • 1-2 minutes • Max 50MB
+                    </p>
+                    <Button>
+                      <FileAudio className="h-4 w-4 mr-2" />
+                      Select Audio File
                     </Button>
+                  </div>
+
+                  {/* How to Record Guide */}
+                  <div className="p-4 rounded-lg bg-muted space-y-3">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Mic className="h-4 w-4 text-primary" />
+                      How to Record Your Voice
+                    </h4>
+                    <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                      <li>Use <strong>Voice Memos</strong> (iPhone), <strong>Sound Recorder</strong> (Windows), or <strong>Audacity</strong> (free)</li>
+                      <li>Find a quiet room with no echo or background noise</li>
+                      <li>Speak naturally at a consistent volume for 1-2 minutes</li>
+                      <li>Export as MP3 (192kbps+) or WAV for best quality</li>
+                    </ol>
+                  </div>
+
+                  {/* Sample Script */}
+                  <div className="p-4 rounded-lg border bg-card">
+                    <p className="font-medium mb-2 text-sm">Sample script to read:</p>
+                    <p className="text-sm text-muted-foreground italic">
+                      "Hi, I'm excited to introduce you to EverLaunch, the AI-powered receptionist that can transform how your business handles customer calls. 
+                      Imagine having a professional, friendly assistant available 24/7 to capture leads, answer questions, and schedule appointments. 
+                      That's exactly what EverLaunch provides. Let me show you how it works and how it can help grow your business."
+                    </p>
                   </div>
                 </div>
               )}
 
-              <div className="p-4 rounded-lg bg-muted text-sm text-muted-foreground">
-                <p className="font-medium mb-2">Sample script to read:</p>
-                <p className="italic">
-                  "Hi, I'm excited to introduce you to EverLaunch, the AI-powered receptionist that can transform how your business handles customer calls..."
-                </p>
-              </div>
+              <input ref={voiceInputRef} type="file" accept="audio/*" onChange={handleVoiceUpload} className="hidden" />
+              
               <p className="text-xs text-muted-foreground text-center">
-                Voice recording is saved automatically. You can safely switch tabs and return.
+                Voice file is saved automatically. You can safely switch tabs and return.
               </p>
             </div>
           )}
@@ -461,7 +435,7 @@ export default function AdminCreateAvatarProfile() {
                 </div>
                 <div className="p-4 rounded-lg bg-muted">
                   <p className="font-medium mb-2">Voice</p>
-                  <p className="text-sm text-muted-foreground">{voice ? `${formatTime(voice.duration || recordingTime)} recorded` : "Not provided"}</p>
+                  <p className="text-sm text-muted-foreground">{voice ? `${formatTime(voice.duration || 0)} uploaded` : "Not provided"}</p>
                 </div>
               </div>
 
@@ -495,7 +469,7 @@ export default function AdminCreateAvatarProfile() {
         {step < 4 ? (
           <Button onClick={() => setStep((s) => Math.min(4, s + 1))} disabled={!canProceed()}>
             Next
-            <ChevronLeft className="h-4 w-4 ml-1 rotate-180" />
+            <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         ) : null}
       </div>
