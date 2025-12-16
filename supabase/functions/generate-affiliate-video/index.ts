@@ -15,9 +15,13 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const heygenApiKey = Deno.env.get('HEYGEN_API_KEY');
+    const elevenlabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
 
     if (!heygenApiKey) {
       throw new Error('Missing HEYGEN_API_KEY');
+    }
+    if (!elevenlabsApiKey) {
+      throw new Error('Missing ELEVENLABS_API_KEY');
     }
 
     const authHeader = req.headers.get('Authorization');
@@ -69,6 +73,14 @@ serve(async (req) => {
 
     if (profile.status !== 'ready') {
       throw new Error('Avatar profile is not ready. Please wait for training to complete.');
+    }
+
+    if (!profile.elevenlabs_voice_id) {
+      throw new Error('Avatar profile has no ElevenLabs voice ID');
+    }
+
+    if (!profile.heygen_avatar_id) {
+      throw new Error('Avatar profile has no HeyGen avatar ID');
     }
 
     // ============================================
@@ -143,16 +155,83 @@ serve(async (req) => {
     console.log(`[generate-affiliate-video] Creating video ${videoRecord.id} for affiliate ${affiliate.id}`);
 
     // ============================================
-    // CALL HEYGEN VIDEO GENERATE API
+    // STEP 1: GENERATE AUDIO VIA ELEVENLABS TTS
     // ============================================
-    // Background image URL - hosted in Supabase storage
+    console.log(`[generate-affiliate-video] Generating audio with ElevenLabs voice: ${profile.elevenlabs_voice_id}`);
+    
+    const ttsResponse = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${profile.elevenlabs_voice_id}`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': elevenlabsApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: template.script_text,
+          model_id: 'eleven_multilingual_v2',
+          output_format: 'mp3_44100_128',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          },
+        }),
+      }
+    );
+
+    if (!ttsResponse.ok) {
+      const errorText = await ttsResponse.text();
+      console.error(`[generate-affiliate-video] ElevenLabs TTS failed: ${errorText}`);
+      
+      await supabase
+        .from('affiliate_videos')
+        .update({
+          status: 'failed',
+          error_message: `ElevenLabs audio generation failed: ${ttsResponse.statusText}`,
+        })
+        .eq('id', videoRecord.id);
+      
+      throw new Error(`ElevenLabs audio generation failed: ${ttsResponse.statusText}`);
+    }
+
+    const audioBuffer = await ttsResponse.arrayBuffer();
+    console.log(`[generate-affiliate-video] Audio generated, size: ${audioBuffer.byteLength} bytes`);
+
+    // ============================================
+    // STEP 2: UPLOAD AUDIO TO SUPABASE STORAGE
+    // ============================================
+    const audioFileName = `${videoRecord.id}.mp3`;
+    const audioPath = `video-audio/${affiliate.id}/${audioFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('affiliate-voices')
+      .upload(audioPath, audioBuffer, {
+        contentType: 'audio/mpeg',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error(`[generate-affiliate-video] Failed to upload audio: ${uploadError.message}`);
+      throw new Error(`Failed to upload audio: ${uploadError.message}`);
+    }
+
+    // Get public URL for the audio
+    const { data: audioUrlData } = supabase.storage
+      .from('affiliate-voices')
+      .getPublicUrl(audioPath);
+
+    const audioUrl = audioUrlData.publicUrl;
+    console.log(`[generate-affiliate-video] Audio uploaded to: ${audioUrl}`);
+
+    // ============================================
+    // STEP 3: CALL HEYGEN VIDEO GENERATE API
+    // ============================================
     const videoBackgroundUrl = Deno.env.get('VIDEO_BACKGROUND_URL') || 'https://mrcfpbkoulldnkqzzprb.supabase.co/storage/v1/object/public/assets/video-background.png';
     
     console.log(`[generate-affiliate-video] Using background: ${videoBackgroundUrl}`);
     console.log(`[generate-affiliate-video] Using avatar_id: ${profile.heygen_avatar_id}`);
-    console.log(`[generate-affiliate-video] Using ElevenLabs voice_id: ${profile.elevenlabs_voice_id}`);
     
-    // For photo avatars, use talking_photo type for proper background removal
+    // Use audio type instead of elevenlabs type
     const heygenPayload = {
       video_inputs: [
         {
@@ -161,12 +240,8 @@ serve(async (req) => {
             talking_photo_id: profile.heygen_avatar_id,
           },
           voice: {
-            type: 'elevenlabs',
-            voice_id: profile.elevenlabs_voice_id,
-          },
-          script: {
-            type: 'text',
-            input: template.script_text,
+            type: 'audio',
+            audio_url: audioUrl,
           },
           background: {
             type: 'image',
