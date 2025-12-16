@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -221,12 +222,20 @@ export default function AdminAffiliateVideos() {
     );
   }
 
+  const navigate = useNavigate();
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Affiliate Videos Admin</h1>
-        <p className="text-muted-foreground">Manage avatar profiles, videos, and templates</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Affiliate Videos Admin</h1>
+          <p className="text-muted-foreground">Manage avatar profiles, videos, and templates</p>
+        </div>
+        <Button onClick={() => navigate('/affiliate/create-profile')}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Avatar Profile
+        </Button>
       </div>
 
       {/* Stats */}
