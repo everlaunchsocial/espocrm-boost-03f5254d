@@ -84,8 +84,8 @@ serve(async (req) => {
       });
     }
 
-    // Handle video completion
-    if (eventType === 'video.completed' || eventType === 'video_completed' || status === 'completed' || status === 'ready') {
+    // Handle video completion (HeyGen uses avatar_video.success for talking photo videos)
+    if (eventType === 'avatar_video.success' || eventType === 'video.completed' || eventType === 'video_completed' || status === 'completed' || status === 'ready') {
       console.log(`[heygen-webhook] Video ${video.id} completed. URL: ${videoUrl}`);
 
       // Generate slug if not exists
