@@ -118,21 +118,28 @@ serve(async (req) => {
         throw new Error(`Failed to fetch photo ${i + 1}: ${photoResponse.statusText}`);
       }
 
+      // Get raw binary data
       const photoArrayBuffer = await photoResponse.arrayBuffer();
-      const photoFile = new File([photoArrayBuffer], `photo_${i + 1}.jpg`, {
-        type: 'image/jpeg',
+
+      console.log('[create-avatar-profile] Uploading photo to HeyGen:', {
+        photoIndex: i + 1,
+        byteLength: photoArrayBuffer.byteLength
       });
 
-      // Upload to HeyGen - FIXED: Use upload.heygen.com
-      const formData = new FormData();
-      formData.append('file', photoFile);
-
+      // Send RAW BINARY to HeyGen (not FormData!)
       const heygenUploadResponse = await fetch('https://upload.heygen.com/v1/asset', {
         method: 'POST',
         headers: {
           'X-Api-Key': heygenApiKey,
+          'Content-Type': 'image/jpeg',
+          'Accept': 'application/json',
         },
-        body: formData,
+        body: photoArrayBuffer,
+      });
+
+      console.log('[create-avatar-profile] HeyGen response:', {
+        status: heygenUploadResponse.status,
+        statusText: heygenUploadResponse.statusText
       });
 
       if (!heygenUploadResponse.ok) {
