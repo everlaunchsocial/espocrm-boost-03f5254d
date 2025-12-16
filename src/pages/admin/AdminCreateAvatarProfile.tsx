@@ -252,15 +252,30 @@ export default function AdminCreateAvatarProfile() {
     );
   }
 
+  const handleClearDraft = async () => {
+    if (confirm('Clear all uploaded photos and voice? This cannot be undone.')) {
+      await clearDraft();
+      toast.success('Draft cleared');
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
-      <div>
-        <Button variant="ghost" onClick={() => navigate("/admin/affiliate-videos")} className="mb-4">
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Back to Affiliate Videos Admin
-        </Button>
-        <h1 className="text-2xl font-bold">Create AI Avatar</h1>
-        <p className="text-muted-foreground">Set up your personalized AI avatar for video creation</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <Button variant="ghost" onClick={() => navigate("/admin/affiliate-videos")} className="mb-4">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Affiliate Videos Admin
+          </Button>
+          <h1 className="text-2xl font-bold">Create AI Avatar</h1>
+          <p className="text-muted-foreground">Set up your personalized AI avatar for video creation</p>
+        </div>
+        {(photos.length > 0 || voice) && (
+          <Button variant="ghost" size="sm" onClick={handleClearDraft} className="text-destructive hover:text-destructive">
+            <X className="h-4 w-4 mr-1" />
+            Clear Draft
+          </Button>
+        )}
       </div>
 
       <div className="space-y-2">
