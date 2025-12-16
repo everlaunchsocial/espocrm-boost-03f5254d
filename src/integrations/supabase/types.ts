@@ -112,6 +112,7 @@ export type Database = {
           error_message: string | null
           heygen_avatar_group_id: string | null
           heygen_avatar_id: string | null
+          heygen_voice_id: string | null
           id: string
           photo_urls: string[]
           status: Database["public"]["Enums"]["avatar_profile_status"]
@@ -125,6 +126,7 @@ export type Database = {
           error_message?: string | null
           heygen_avatar_group_id?: string | null
           heygen_avatar_id?: string | null
+          heygen_voice_id?: string | null
           id?: string
           photo_urls?: string[]
           status?: Database["public"]["Enums"]["avatar_profile_status"]
@@ -138,6 +140,7 @@ export type Database = {
           error_message?: string | null
           heygen_avatar_group_id?: string | null
           heygen_avatar_id?: string | null
+          heygen_voice_id?: string | null
           id?: string
           photo_urls?: string[]
           status?: Database["public"]["Enums"]["avatar_profile_status"]

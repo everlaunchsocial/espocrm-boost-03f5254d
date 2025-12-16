@@ -33,10 +33,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const heygenApiKey = Deno.env.get('HEYGEN_API_KEY');
-    const elevenlabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
 
-    if (!heygenApiKey || !elevenlabsApiKey) {
-      throw new Error('Missing required API keys (HEYGEN_API_KEY or ELEVENLABS_API_KEY)');
+    if (!heygenApiKey) {
+      throw new Error('Missing required API key: HEYGEN_API_KEY');
     }
 
     const authHeader = req.headers.get('Authorization');
@@ -306,9 +305,10 @@ serve(async (req) => {
     }
 
     // ============================================
-    // STEP 3: Clone voice with ElevenLabs
+    // STEP 3: Clone voice with HeyGen Instant Voice
+    // (Replaced ElevenLabs - better quality, lower cost)
     // ============================================
-    console.log(`[create-avatar-profile] Cloning voice with ElevenLabs...`);
+    console.log(`[create-avatar-profile] Cloning voice with HeyGen Instant Voice...`);
     
     // Download voice file from Supabase storage
     const voiceResponse = await fetch(voice_audio_url);
@@ -316,30 +316,26 @@ serve(async (req) => {
       throw new Error(`Failed to fetch voice file: ${voiceResponse.statusText}`);
     }
 
-    const voiceArrayBuffer = await voiceResponse.arrayBuffer();
-    const voiceFile = new File([voiceArrayBuffer], 'voice.mp3', {
-      type: 'audio/mpeg',
-    });
-
-    // Clone voice with ElevenLabs
+    const voiceBlob = await voiceResponse.blob();
+    
+    // Create form data for HeyGen voice clone
     const voiceFormData = new FormData();
-    voiceFormData.append('name', `${affiliate.username}_voice`);
-    voiceFormData.append('files', voiceFile);
-    voiceFormData.append('description', `Voice clone for affiliate ${affiliate.username}`);
-
-    const elevenlabsResponse = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+    voiceFormData.append('file', voiceBlob, 'voice_sample.mp3');
+    voiceFormData.append('voice_name', `${affiliate.username}_voice`);
+    
+    const heygenVoiceResponse = await fetch('https://api.heygen.com/v1/voice/instant', {
       method: 'POST',
       headers: {
-        'xi-api-key': elevenlabsApiKey,
+        'X-Api-Key': heygenApiKey,
       },
       body: voiceFormData,
     });
 
-    if (!elevenlabsResponse.ok) {
-      const errorText = await elevenlabsResponse.text();
-      console.error(`[create-avatar-profile] ElevenLabs voice clone failed:`, {
-        status: elevenlabsResponse.status,
-        statusText: elevenlabsResponse.statusText,
+    if (!heygenVoiceResponse.ok) {
+      const errorText = await heygenVoiceResponse.text();
+      console.error(`[create-avatar-profile] HeyGen voice clone failed:`, {
+        status: heygenVoiceResponse.status,
+        statusText: heygenVoiceResponse.statusText,
         body: errorText
       });
       
@@ -347,17 +343,29 @@ serve(async (req) => {
         .from('affiliate_avatar_profiles')
         .update({ 
           status: 'failed', 
-          error_message: `ElevenLabs voice clone failed: ${elevenlabsResponse.status} - ${errorText}` 
+          error_message: `HeyGen voice clone failed: ${heygenVoiceResponse.status} - ${errorText}` 
         })
         .eq('id', profileId);
       
-      throw new Error(`Failed to clone voice: ${elevenlabsResponse.status} ${elevenlabsResponse.statusText}`);
+      throw new Error(`Failed to clone voice: ${heygenVoiceResponse.status} ${heygenVoiceResponse.statusText}`);
     }
 
-    const voiceResult = await elevenlabsResponse.json();
-    const elevenlabsVoiceId = voiceResult.voice_id;
+    const voiceResult = await heygenVoiceResponse.json();
+    const heygenVoiceId = voiceResult.data?.voice_id || voiceResult.voice_id;
 
-    console.log(`[create-avatar-profile] Voice cloned. ElevenLabs ID: ${elevenlabsVoiceId}`);
+    if (!heygenVoiceId) {
+      console.error(`[create-avatar-profile] No voice_id in HeyGen response:`, voiceResult);
+      await supabase
+        .from('affiliate_avatar_profiles')
+        .update({ 
+          status: 'failed', 
+          error_message: 'HeyGen voice clone did not return voice_id' 
+        })
+        .eq('id', profileId);
+      throw new Error('HeyGen voice clone did not return voice_id');
+    }
+
+    console.log(`[create-avatar-profile] Voice cloned. HeyGen Voice ID: ${heygenVoiceId}`);
 
     // ============================================
     // STEP 4: Update profile with all IDs
@@ -367,16 +375,17 @@ serve(async (req) => {
       .update({
         heygen_avatar_group_id: avatarGroupId,
         heygen_avatar_id: avatarId,
-        elevenlabs_voice_id: elevenlabsVoiceId,
+        heygen_voice_id: heygenVoiceId,
         status: 'ready',
         error_message: null,
       })
       .eq('id', profileId);
 
     // ============================================
-    // STEP 5: Log estimated costs
+    // STEP 5: Log estimated costs (HeyGen only)
     // ============================================
-    // Estimated costs: HeyGen avatar creation ~$10-15, ElevenLabs voice clone ~$5-15
+    // HeyGen avatar creation: ~9 credits (~$4.50)
+    // HeyGen voice clone: included/minimal cost
     await supabase
       .from('video_cost_log')
       .insert([
@@ -384,17 +393,17 @@ serve(async (req) => {
           affiliate_id: affiliate.id,
           operation_type: 'avatar_creation',
           provider: 'heygen',
-          estimated_credits: 1,
-          estimated_cost_usd: 12.00,
+          estimated_credits: 9,
+          estimated_cost_usd: 4.50,
           metadata: { profile_id: profileId, avatar_group_id: avatarGroupId },
         },
         {
           affiliate_id: affiliate.id,
           operation_type: 'voice_clone',
-          provider: 'elevenlabs',
-          estimated_credits: 1,
-          estimated_cost_usd: 8.00,
-          metadata: { profile_id: profileId, voice_id: elevenlabsVoiceId },
+          provider: 'heygen',
+          estimated_credits: 0,
+          estimated_cost_usd: 0.00, // HeyGen instant voice is included
+          metadata: { profile_id: profileId, voice_id: heygenVoiceId },
         },
       ]);
 
@@ -406,7 +415,7 @@ serve(async (req) => {
       status: 'ready',
       heygen_avatar_id: avatarId,
       heygen_avatar_group_id: avatarGroupId,
-      elevenlabs_voice_id: elevenlabsVoiceId,
+      heygen_voice_id: heygenVoiceId,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
