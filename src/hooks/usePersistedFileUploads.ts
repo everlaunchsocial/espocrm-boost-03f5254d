@@ -16,6 +16,7 @@ interface PersistedVoice {
 interface DraftState {
   photos: PersistedPhoto[];
   voice: PersistedVoice | null;
+  userId: string; // Store the userId used for paths
 }
 
 const STORAGE_KEY_PREFIX = 'avatar-draft-';
@@ -26,19 +27,32 @@ export function usePersistedFileUploads(affiliateId: string | null) {
   const [isRestoring, setIsRestoring] = useState(true);
   const [uploadingPhotoIndex, setUploadingPhotoIndex] = useState<number | null>(null);
   const [isUploadingVoice, setIsUploadingVoice] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const storageKey = affiliateId ? `${STORAGE_KEY_PREFIX}${affiliateId}` : null;
 
+  // Get current user's auth UID (RLS requires auth.uid() as folder name)
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    getUser();
+  }, []);
+
   // Save draft to localStorage
   const saveDraft = useCallback((newPhotos: PersistedPhoto[], newVoice: PersistedVoice | null) => {
-    if (!storageKey) return;
-    const draft: DraftState = { photos: newPhotos, voice: newVoice };
+    if (!storageKey || !userId) return;
+    const draft: DraftState = { photos: newPhotos, voice: newVoice, userId };
     localStorage.setItem(storageKey, JSON.stringify(draft));
-  }, [storageKey]);
+  }, [storageKey, userId]);
 
   // Restore draft from localStorage on mount
   useEffect(() => {
-    if (!storageKey || !affiliateId) {
+    if (!storageKey || !affiliateId || !userId) {
+      if (!userId) return; // Wait for userId to load
       setIsRestoring(false);
       return;
     }
@@ -52,6 +66,14 @@ export function usePersistedFileUploads(affiliateId: string | null) {
         }
 
         const draft: DraftState = JSON.parse(saved);
+        
+        // If userId changed or doesn't match, clear old draft
+        if (draft.userId && draft.userId !== userId) {
+          localStorage.removeItem(storageKey);
+          setIsRestoring(false);
+          return;
+        }
+        
         let restoredPhotos: PersistedPhoto[] = [];
         let restoredVoice: PersistedVoice | null = null;
 
@@ -104,16 +126,20 @@ export function usePersistedFileUploads(affiliateId: string | null) {
     };
 
     restoreDraft();
-  }, [affiliateId, storageKey, saveDraft]);
+  }, [affiliateId, storageKey, saveDraft, userId]);
 
-  // Upload a photo immediately
+  // Upload a photo immediately (uses userId for RLS compliance)
   const uploadPhoto = useCallback(async (file: File, index: number): Promise<boolean> => {
-    if (!affiliateId) return false;
+    if (!userId) {
+      toast.error('User not authenticated');
+      return false;
+    }
 
     setUploadingPhotoIndex(index);
     try {
       const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${affiliateId}/draft-photo-${index}.${ext}`;
+      // Use userId (auth.uid()) as folder path - RLS requires this
+      const path = `${userId}/draft-photo-${index}.${ext}`;
 
       const { error } = await supabase.storage
         .from('affiliate-photos')
@@ -156,7 +182,7 @@ export function usePersistedFileUploads(affiliateId: string | null) {
     } finally {
       setUploadingPhotoIndex(null);
     }
-  }, [affiliateId, voice, saveDraft]);
+  }, [userId, voice, saveDraft]);
 
   // Remove a photo
   const removePhoto = useCallback(async (index: number) => {
@@ -176,14 +202,18 @@ export function usePersistedFileUploads(affiliateId: string | null) {
     });
   }, [photos, voice, saveDraft]);
 
-  // Upload voice immediately
+  // Upload voice immediately (uses userId for RLS compliance)
   const uploadVoice = useCallback(async (file: File, duration: number): Promise<boolean> => {
-    if (!affiliateId) return false;
+    if (!userId) {
+      toast.error('User not authenticated');
+      return false;
+    }
 
     setIsUploadingVoice(true);
     try {
       const ext = file.name.split('.').pop() || 'webm';
-      const path = `${affiliateId}/draft-voice.${ext}`;
+      // Use userId (auth.uid()) as folder path - RLS requires this
+      const path = `${userId}/draft-voice.${ext}`;
 
       const { error } = await supabase.storage
         .from('affiliate-voices')
@@ -209,7 +239,7 @@ export function usePersistedFileUploads(affiliateId: string | null) {
     } finally {
       setIsUploadingVoice(false);
     }
-  }, [affiliateId, photos, saveDraft]);
+  }, [userId, photos, saveDraft]);
 
   // Clear voice
   const clearVoice = useCallback(async () => {
@@ -249,9 +279,9 @@ export function usePersistedFileUploads(affiliateId: string | null) {
     }
   }, [photos, voice, storageKey]);
 
-  // Get final signed URLs for submission (re-upload to final paths)
+  // Get final signed URLs for submission (uses userId for RLS compliance)
   const getFinalUrls = useCallback(async (): Promise<{ photoUrls: string[], voiceUrl: string | null }> => {
-    if (!affiliateId) return { photoUrls: [], voiceUrl: null };
+    if (!userId) return { photoUrls: [], voiceUrl: null };
 
     const photoUrls: string[] = [];
 
@@ -259,7 +289,8 @@ export function usePersistedFileUploads(affiliateId: string | null) {
     for (let i = 0; i < photos.length; i++) {
       const photo = photos[i];
       const ext = photo.path.split('.').pop() || 'jpg';
-      const finalPath = `${affiliateId}/photo-${i + 1}.${ext}`;
+      // Use userId (auth.uid()) as folder path - RLS requires this
+      const finalPath = `${userId}/photo-${i + 1}.${ext}`;
 
       // Download the draft file
       const { data: fileData, error: downloadError } = await supabase.storage
@@ -289,7 +320,8 @@ export function usePersistedFileUploads(affiliateId: string | null) {
     let voiceUrl: string | null = null;
     if (voice) {
       const ext = voice.path.split('.').pop() || 'webm';
-      const finalPath = `${affiliateId}/voice.${ext}`;
+      // Use userId (auth.uid()) as folder path - RLS requires this
+      const finalPath = `${userId}/voice.${ext}`;
 
       // Download the draft file
       const { data: fileData, error: downloadError } = await supabase.storage
@@ -317,7 +349,7 @@ export function usePersistedFileUploads(affiliateId: string | null) {
     }
 
     return { photoUrls, voiceUrl };
-  }, [affiliateId, photos, voice]);
+  }, [userId, photos, voice]);
 
   return {
     photos,
