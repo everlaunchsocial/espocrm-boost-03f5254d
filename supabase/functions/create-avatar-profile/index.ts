@@ -106,7 +106,7 @@ serve(async (req) => {
     // ============================================
     // STEP 1: Upload photos to HeyGen Asset API
     // ============================================
-    const uploadedPhotoIds: string[] = [];
+    const uploadedAssetIds: string[] = [];
     
     for (let i = 0; i < photo_urls.length; i++) {
       const photoUrl = photo_urls[i];
@@ -119,12 +119,11 @@ serve(async (req) => {
       }
       const photoBlob = await photoResponse.blob();
 
-      // Upload to HeyGen
-      // TODO: Verify exact HeyGen Asset API endpoint and payload format from docs
+      // Upload to HeyGen - FIXED: Use upload.heygen.com
       const formData = new FormData();
       formData.append('file', photoBlob, `photo_${i + 1}.jpg`);
 
-      const heygenUploadResponse = await fetch('https://api.heygen.com/v1/asset', {
+      const heygenUploadResponse = await fetch('https://upload.heygen.com/v1/asset', {
         method: 'POST',
         headers: {
           'X-Api-Key': heygenApiKey,
@@ -134,15 +133,29 @@ serve(async (req) => {
 
       if (!heygenUploadResponse.ok) {
         const errorText = await heygenUploadResponse.text();
-        console.error(`[create-avatar-profile] HeyGen upload failed: ${errorText}`);
-        throw new Error(`Failed to upload photo ${i + 1} to HeyGen: ${heygenUploadResponse.statusText}`);
+        console.error(`[create-avatar-profile] HeyGen upload failed:`, {
+          status: heygenUploadResponse.status,
+          statusText: heygenUploadResponse.statusText,
+          body: errorText
+        });
+        throw new Error(`Failed to upload photo ${i + 1} to HeyGen: ${heygenUploadResponse.status} ${heygenUploadResponse.statusText}`);
       }
 
       const uploadResult = await heygenUploadResponse.json();
-      uploadedPhotoIds.push(uploadResult.data?.asset_id || uploadResult.asset_id);
+      console.log(`[create-avatar-profile] Photo ${i + 1} upload response:`, JSON.stringify(uploadResult));
+      
+      // HeyGen returns the asset ID in data.image_key or data.asset_id
+      const assetId = uploadResult.data?.image_key || uploadResult.data?.asset_id || uploadResult.image_key || uploadResult.asset_id;
+      if (!assetId) {
+        console.error(`[create-avatar-profile] No asset ID in response:`, uploadResult);
+        throw new Error(`No asset ID returned for photo ${i + 1}`);
+      }
+      
+      uploadedAssetIds.push(assetId);
+      console.log(`[create-avatar-profile] Photo ${i + 1} uploaded, asset_id: ${assetId}`);
     }
 
-    console.log(`[create-avatar-profile] Photos uploaded. Asset IDs:`, uploadedPhotoIds);
+    console.log(`[create-avatar-profile] All photos uploaded. Asset IDs:`, uploadedAssetIds);
 
     // Update status to training
     await supabase
@@ -155,8 +168,8 @@ serve(async (req) => {
     // ============================================
     console.log(`[create-avatar-profile] Creating HeyGen avatar group...`);
     
-    // TODO: Verify exact HeyGen Photo Avatar API endpoint from docs
-    const avatarGroupResponse = await fetch('https://api.heygen.com/v2/photo_avatar', {
+    // FIXED: Correct endpoint and use image_key from uploaded asset
+    const avatarGroupResponse = await fetch('https://api.heygen.com/v2/photo_avatar/avatar_group/create', {
       method: 'POST',
       headers: {
         'X-Api-Key': heygenApiKey,
@@ -164,32 +177,68 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         name: `${affiliate.username}_avatar`,
-        image_urls: photo_urls, // HeyGen may accept URLs directly
-        // OR use uploaded asset IDs:
-        // asset_ids: uploadedPhotoIds,
+        image_key: uploadedAssetIds[0], // Use the first uploaded asset ID
       }),
     });
 
     if (!avatarGroupResponse.ok) {
       const errorText = await avatarGroupResponse.text();
-      console.error(`[create-avatar-profile] HeyGen avatar creation failed: ${errorText}`);
+      console.error(`[create-avatar-profile] HeyGen avatar creation failed:`, {
+        status: avatarGroupResponse.status,
+        statusText: avatarGroupResponse.statusText,
+        body: errorText
+      });
       
       await supabase
         .from('affiliate_avatar_profiles')
         .update({ 
           status: 'failed', 
-          error_message: `HeyGen avatar creation failed: ${avatarGroupResponse.statusText}` 
+          error_message: `HeyGen avatar creation failed: ${avatarGroupResponse.status} - ${errorText}` 
         })
         .eq('id', profileId);
       
-      throw new Error(`Failed to create HeyGen avatar: ${avatarGroupResponse.statusText}`);
+      throw new Error(`Failed to create HeyGen avatar: ${avatarGroupResponse.status} ${avatarGroupResponse.statusText}`);
     }
 
     const avatarResult = await avatarGroupResponse.json();
+    console.log(`[create-avatar-profile] Avatar group response:`, JSON.stringify(avatarResult));
+    
     const avatarGroupId = avatarResult.data?.avatar_group_id || avatarResult.avatar_group_id;
     const avatarId = avatarResult.data?.avatar_id || avatarResult.avatar_id;
 
     console.log(`[create-avatar-profile] Avatar created. Group: ${avatarGroupId}, Avatar: ${avatarId}`);
+
+    // ============================================
+    // STEP 2b: Add additional looks (remaining photos)
+    // ============================================
+    if (uploadedAssetIds.length > 1) {
+      console.log(`[create-avatar-profile] Adding ${uploadedAssetIds.length - 1} additional looks...`);
+      
+      for (let i = 1; i < uploadedAssetIds.length; i++) {
+        const addLookResponse = await fetch('https://api.heygen.com/v2/photo_avatar/add_look', {
+          method: 'POST',
+          headers: {
+            'X-Api-Key': heygenApiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            avatar_group_id: avatarGroupId,
+            image_key: uploadedAssetIds[i],
+          }),
+        });
+
+        if (!addLookResponse.ok) {
+          const errorText = await addLookResponse.text();
+          console.warn(`[create-avatar-profile] Failed to add look ${i + 1}:`, {
+            status: addLookResponse.status,
+            body: errorText
+          });
+          // Continue anyway - the avatar will work with just one look
+        } else {
+          console.log(`[create-avatar-profile] Added look ${i + 1} to avatar group`);
+        }
+      }
+    }
 
     // ============================================
     // STEP 3: Clone voice with ElevenLabs
@@ -219,17 +268,21 @@ serve(async (req) => {
 
     if (!elevenlabsResponse.ok) {
       const errorText = await elevenlabsResponse.text();
-      console.error(`[create-avatar-profile] ElevenLabs voice clone failed: ${errorText}`);
+      console.error(`[create-avatar-profile] ElevenLabs voice clone failed:`, {
+        status: elevenlabsResponse.status,
+        statusText: elevenlabsResponse.statusText,
+        body: errorText
+      });
       
       await supabase
         .from('affiliate_avatar_profiles')
         .update({ 
           status: 'failed', 
-          error_message: `ElevenLabs voice clone failed: ${elevenlabsResponse.statusText}` 
+          error_message: `ElevenLabs voice clone failed: ${elevenlabsResponse.status} - ${errorText}` 
         })
         .eq('id', profileId);
       
-      throw new Error(`Failed to clone voice: ${elevenlabsResponse.statusText}`);
+      throw new Error(`Failed to clone voice: ${elevenlabsResponse.status} ${elevenlabsResponse.statusText}`);
     }
 
     const voiceResult = await elevenlabsResponse.json();
@@ -283,6 +336,7 @@ serve(async (req) => {
       profile_id: profileId,
       status: 'ready',
       heygen_avatar_id: avatarId,
+      heygen_avatar_group_id: avatarGroupId,
       elevenlabs_voice_id: elevenlabsVoiceId,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
