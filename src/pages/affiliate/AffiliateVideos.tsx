@@ -6,6 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Video,
   Plus,
   Copy,
@@ -17,6 +28,7 @@ import {
   Clock,
   User,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -40,8 +52,9 @@ const videoTypeLabels: Record<VideoType, string> = {
 
 export default function AffiliateVideos() {
   const navigate = useNavigate();
-  const { profile, videos, templates, isLoading, profileReady, getVideoAnalytics, generateVideo } = useAffiliateVideos();
+  const { profile, videos, templates, isLoading, profileReady, isProfileBroken, getVideoAnalytics, generateVideo, deleteProfile } = useAffiliateVideos();
   const [generating, setGenerating] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleCopyLink = (slug: string) => {
     const url = `${window.location.origin}/v/${slug}`;
@@ -53,6 +66,15 @@ export default function AffiliateVideos() {
     setGenerating(templateId);
     await generateVideo(templateId);
     setGenerating(null);
+  };
+
+  const handleDeleteProfile = async () => {
+    setDeleting(true);
+    const success = await deleteProfile();
+    setDeleting(false);
+    if (success) {
+      navigate('/affiliate/videos/create-profile');
+    }
   };
 
   if (isLoading) {
@@ -138,6 +160,38 @@ export default function AffiliateVideos() {
                 </Button>
               </>
             )}
+          </CardContent>
+        </Card>
+      ) : isProfileBroken ? (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="flex items-center gap-4 py-6">
+            <AlertCircle className="h-8 w-8 text-destructive" />
+            <div className="flex-1">
+              <h3 className="font-semibold">Avatar Profile Incomplete</h3>
+              <p className="text-sm text-muted-foreground">
+                Your avatar profile was created but the HeyGen avatar was not properly generated. Please delete and recreate your profile.
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={deleting}>
+                  {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                  Delete & Recreate
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Avatar Profile?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will delete your current avatar profile. You'll need to re-upload your photos and voice recording to create a new one.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteProfile}>Delete & Recreate</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
       ) : (
