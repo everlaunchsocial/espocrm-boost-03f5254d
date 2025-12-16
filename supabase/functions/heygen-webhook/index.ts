@@ -57,9 +57,11 @@ serve(async (req) => {
     // PROCESS WEBHOOK EVENT
     // ============================================
     const eventType = payload.event || payload.type || payload.event_type;
-    const videoId = payload.data?.video_id || payload.video_id;
-    const videoUrl = payload.data?.video_url || payload.video_url;
-    const status = payload.data?.status || payload.status;
+    // HeyGen sends video_id in event_data for avatar_video events
+    const videoId = payload.event_data?.video_id || payload.data?.video_id || payload.video_id;
+    const videoUrl = payload.event_data?.video_url || payload.data?.video_url || payload.video_url;
+    const status = payload.event_data?.status || payload.data?.status || payload.status;
+    const errorMsg = payload.event_data?.msg || payload.data?.error || payload.error;
 
     if (!videoId) {
       console.warn('[heygen-webhook] No video_id in payload');
@@ -113,8 +115,8 @@ serve(async (req) => {
     }
 
     // Handle video failure
-    if (eventType === 'video.failed' || eventType === 'video_failed' || status === 'failed' || status === 'error') {
-      const errorMessage = payload.data?.error || payload.error || 'Video generation failed';
+    if (eventType === 'avatar_video.fail' || eventType === 'video.failed' || eventType === 'video_failed' || status === 'failed' || status === 'error') {
+      const errorMessage = errorMsg || payload.data?.error || payload.error || 'Video generation failed';
       console.error(`[heygen-webhook] Video ${video.id} failed: ${errorMessage}`);
 
       await supabase
