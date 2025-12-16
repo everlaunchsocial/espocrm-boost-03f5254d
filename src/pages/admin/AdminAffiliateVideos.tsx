@@ -59,6 +59,7 @@ interface VideoTemplate {
 }
 
 export default function AdminAffiliateVideos() {
+  const navigate = useNavigate();
   const [profiles, setProfiles] = useState<AvatarProfile[]>([]);
   const [videos, setVideos] = useState<AffiliateVideo[]>([]);
   const [templates, setTemplates] = useState<VideoTemplate[]>([]);
@@ -221,8 +222,6 @@ export default function AdminAffiliateVideos() {
       </div>
     );
   }
-
-  const navigate = useNavigate();
 
   return (
     <div className="p-6 space-y-6">
