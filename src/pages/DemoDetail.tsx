@@ -11,6 +11,7 @@ import { useDemos, Demo, DemoStatus } from '@/hooks/useDemos';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { EmailPreview } from '@/components/demos/EmailPreview';
+import { getPublicDemoUrl } from '@/utils/subdomainRouting';
 
 const statusColors: Record<DemoStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
@@ -159,7 +160,7 @@ export default function DemoDetail() {
     const result = await sendDemoEmail(demo.id, toEmail.trim(), {
       toName: toName.trim() || undefined,
       fromName: fromName.trim(),
-      baseUrl: window.location.origin,
+      baseUrl: 'https://tryeverlaunch.com',
     });
     
     setSending(false);
@@ -183,7 +184,7 @@ export default function DemoDetail() {
   const handleCopyLink = async () => {
     if (!demo) return;
     
-    const demoUrl = `${window.location.origin}/demo/${demo.id}`;
+    const demoUrl = getPublicDemoUrl(demo.id);
     
     try {
       await navigator.clipboard.writeText(demoUrl);
@@ -230,7 +231,7 @@ export default function DemoDetail() {
     );
   }
 
-  const demoUrl = `${window.location.origin}/demo/${demo.id}`;
+  const demoUrl = getPublicDemoUrl(demo.id);
   const alreadySent = demo.status !== 'draft';
 
   return (

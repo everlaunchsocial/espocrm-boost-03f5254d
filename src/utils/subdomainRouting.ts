@@ -51,6 +51,13 @@ export function getReplicatedUrl(username: string): string {
 }
 
 /**
+ * Get the public demo URL (always on the replicated domain)
+ */
+export function getPublicDemoUrl(demoId: string): string {
+  return `https://${REPLICATED_DOMAIN}/demo/${demoId}`;
+}
+
+/**
  * Get the replicated domain constant
  */
 export function getReplicatedDomain(): string {

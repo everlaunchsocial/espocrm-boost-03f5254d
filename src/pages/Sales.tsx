@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, Phone, MessageSquare, Clock, Star, ArrowRight, Zap, Shield, Users, Play, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getPublicDemoUrl } from '@/utils/subdomainRouting';
 import { PagePreview } from '@/components/demos/PagePreview';
 import { VoiceEmployeeCard } from '@/components/demos/VoiceEmployeeCard';
 import { VapiPhoneCard } from '@/components/demos/VapiPhoneCard';
@@ -274,7 +275,7 @@ const Sales = () => {
                 isSpeaking={false}
                 onStartCall={() => {
                   if (demoData) {
-                    window.open(`/demo/${demoData.id}`, '_blank');
+                    window.open(getPublicDemoUrl(demoData.id), '_blank');
                   }
                 }}
                 onEndCall={() => {}}
