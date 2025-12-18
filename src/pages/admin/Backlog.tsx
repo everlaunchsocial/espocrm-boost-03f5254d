@@ -18,6 +18,7 @@ import { BacklogBoard } from '@/components/backlog/BacklogBoard';
 import { BacklogItemModal } from '@/components/backlog/BacklogItemModal';
 import { CreateItemModal } from '@/components/backlog/CreateItemModal';
 import { AbandonModal } from '@/components/backlog/AbandonModal';
+import { BrainNotes } from '@/components/backlog/BrainNotes';
 import type { BacklogItemWithRelations, BacklogFilters, BacklogPriority } from '@/types/backlog';
 
 export default function Backlog() {
@@ -169,7 +170,11 @@ export default function Backlog() {
             <Button variant="ghost" size="icon" onClick={refresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
+          {/* Brain Notes */}
+          <div className="max-w-md">
+            <BrainNotes />
           </div>
+        </div>
         </div>
 
         {/* Board */}
