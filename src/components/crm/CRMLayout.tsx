@@ -77,6 +77,7 @@ const adminNavigation = [
   { name: 'Comp Plans', href: '/admin/comp-plans', icon: Percent },
   { name: 'Genealogy', href: '/admin/genealogy', icon: Network, superAdminOnly: true },
   { name: 'Feature Backlog', href: '/admin/backlog', icon: Lightbulb, superAdminOnly: true },
+  { name: 'Testing', href: '/admin/testing', icon: ClipboardCheck, superAdminOnly: true },
 ];
 
 const customerNavigation = [
