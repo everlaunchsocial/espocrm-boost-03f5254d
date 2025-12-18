@@ -525,6 +525,403 @@ export type Database = {
           },
         ]
       }
+      backlog_assignees: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          item_id: string
+          user_id: string | null
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          item_id: string
+          user_id?: string | null
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          item_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlog_assignees_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "backlog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlog_attachments: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          item_id: string
+          metadata: Json | null
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          item_id: string
+          metadata?: Json | null
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          item_id?: string
+          metadata?: Json | null
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlog_attachments_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "backlog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlog_chat_links: {
+        Row: {
+          chat_platform: string | null
+          chat_session_id: string | null
+          chat_snapshot: Json | null
+          created_at: string
+          id: string
+          item_id: string
+          linked_by: string | null
+          summary: string | null
+        }
+        Insert: {
+          chat_platform?: string | null
+          chat_session_id?: string | null
+          chat_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          item_id: string
+          linked_by?: string | null
+          summary?: string | null
+        }
+        Update: {
+          chat_platform?: string | null
+          chat_session_id?: string | null
+          chat_snapshot?: Json | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          linked_by?: string | null
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlog_chat_links_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "backlog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlog_comments: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          is_resolution: boolean | null
+          item_id: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_resolution?: boolean | null
+          item_id: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          is_resolution?: boolean | null
+          item_id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlog_comments_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "backlog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlog_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "backlog_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlog_history: {
+        Row: {
+          action: Database["public"]["Enums"]["backlog_action"]
+          actor_email: string | null
+          actor_id: string | null
+          after_values: Json | null
+          before_values: Json | null
+          changed_fields: Json | null
+          created_at: string
+          id: string
+          item_id: string
+          reason: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["backlog_action"]
+          actor_email?: string | null
+          actor_id?: string | null
+          after_values?: Json | null
+          before_values?: Json | null
+          changed_fields?: Json | null
+          created_at?: string
+          id?: string
+          item_id: string
+          reason?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["backlog_action"]
+          actor_email?: string | null
+          actor_id?: string | null
+          after_values?: Json | null
+          before_values?: Json | null
+          changed_fields?: Json | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlog_history_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "backlog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlog_item_tags: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlog_item_tags_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "backlog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlog_item_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "backlog_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlog_items: {
+        Row: {
+          abandoned_at: string | null
+          abandoned_reason: string | null
+          actual_hours: number | null
+          conversation_context: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          is_abandoned: boolean | null
+          metadata: Json | null
+          position: number
+          priority: Database["public"]["Enums"]["backlog_priority"]
+          search_vector: unknown
+          status_id: string
+          story_points: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          abandoned_at?: string | null
+          abandoned_reason?: string | null
+          actual_hours?: number | null
+          conversation_context?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          is_abandoned?: boolean | null
+          metadata?: Json | null
+          position?: number
+          priority?: Database["public"]["Enums"]["backlog_priority"]
+          search_vector?: unknown
+          status_id: string
+          story_points?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          abandoned_at?: string | null
+          abandoned_reason?: string | null
+          actual_hours?: number | null
+          conversation_context?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          is_abandoned?: boolean | null
+          metadata?: Json | null
+          position?: number
+          priority?: Database["public"]["Enums"]["backlog_priority"]
+          search_vector?: unknown
+          status_id?: string
+          story_points?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlog_items_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "backlog_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlog_statuses: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_archived_state: boolean | null
+          is_default: boolean | null
+          is_done_state: boolean | null
+          name: string
+          position: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived_state?: boolean | null
+          is_default?: boolean | null
+          is_done_state?: boolean | null
+          name: string
+          position?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived_state?: boolean | null
+          is_default?: boolean | null
+          is_done_state?: boolean | null
+          name?: string
+          position?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      backlog_tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       billing_subscriptions: {
         Row: {
           affiliate_id: string | null
@@ -3324,6 +3721,19 @@ export type Database = {
         | "training"
         | "ready"
         | "failed"
+      backlog_action:
+        | "create"
+        | "update"
+        | "delete"
+        | "comment"
+        | "attach"
+        | "move"
+        | "assign"
+        | "tag"
+        | "link_chat"
+        | "archive"
+        | "restore"
+      backlog_priority: "low" | "medium" | "high" | "critical"
       video_event_type: "view" | "phone_cta" | "chat_cta" | "voice_cta"
       video_status: "draft" | "generating" | "ready" | "failed"
       video_type:
@@ -3467,6 +3877,20 @@ export const Constants = {
         "ready",
         "failed",
       ],
+      backlog_action: [
+        "create",
+        "update",
+        "delete",
+        "comment",
+        "attach",
+        "move",
+        "assign",
+        "tag",
+        "link_chat",
+        "archive",
+        "restore",
+      ],
+      backlog_priority: ["low", "medium", "high", "critical"],
       video_event_type: ["view", "phone_cta", "chat_cta", "voice_cta"],
       video_status: ["draft", "generating", "ready", "failed"],
       video_type: [

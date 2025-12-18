@@ -82,6 +82,7 @@ import TestAnalyzer from "./pages/admin/TestAnalyzer";
 import QualityInsights from "./pages/admin/QualityInsights";
 import UsageDashboard from "./pages/admin/UsageDashboard";
 import ExpensesDashboard from "./pages/admin/ExpensesDashboard";
+import Backlog from "./pages/admin/Backlog";
 
 // Customer Portal pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -239,6 +240,7 @@ const App = () => (
             <Route path="/admin/quality-insights" element={<QualityInsights />} />
             <Route path="/admin/usage" element={<UsageDashboard />} />
             <Route path="/admin/expenses" element={<ExpensesDashboard />} />
+            <Route path="/admin/backlog" element={<Backlog />} />
             <Route path="/admin/affiliate-videos" element={<AdminAffiliateVideos />} />
             <Route path="/admin/affiliate-videos/create-profile" element={<AdminCreateAvatarProfile />} />
             <Route path="/admin/affiliate-videos/create-video" element={<AdminCreateVideo />} />
