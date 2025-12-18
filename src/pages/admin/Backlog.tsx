@@ -95,7 +95,7 @@ export default function Backlog() {
   const abandonedCount = board.reduce((sum, col) => sum + col.items.filter((i) => i.is_abandoned).length, 0);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex flex-col gap-4 p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex items-center justify-between">
