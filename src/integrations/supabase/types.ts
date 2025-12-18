@@ -2957,6 +2957,136 @@ export type Database = {
         }
         Relationships: []
       }
+      test_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_step_index: number
+          id: string
+          notes: string | null
+          started_at: string
+          status: string
+          suite_id: string
+          tester_user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_index?: number
+          id?: string
+          notes?: string | null
+          started_at?: string
+          status?: string
+          suite_id: string
+          tester_user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_step_index?: number
+          id?: string
+          notes?: string | null
+          started_at?: string
+          status?: string
+          suite_id?: string
+          tester_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_runs_suite_id_fkey"
+            columns: ["suite_id"]
+            isOneToOne: false
+            referencedRelation: "test_suites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_step_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          notes: string | null
+          result: string
+          run_id: string
+          screenshot_url: string | null
+          step_id: string
+          step_index: number
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          notes?: string | null
+          result: string
+          run_id: string
+          screenshot_url?: string | null
+          step_id: string
+          step_index: number
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          notes?: string | null
+          result?: string
+          run_id?: string
+          screenshot_url?: string | null
+          step_id?: string
+          step_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_step_completions_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "test_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_suites: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          estimated_duration_minutes: number | null
+          id: string
+          is_active: boolean
+          name: string
+          position: number
+          prerequisites: string[] | null
+          steps: Json
+          test_credentials: Json | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          position?: number
+          prerequisites?: string[] | null
+          steps?: Json
+          test_credentials?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          position?: number
+          prerequisites?: string[] | null
+          steps?: Json
+          test_credentials?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       training_categories: {
         Row: {
           created_at: string
