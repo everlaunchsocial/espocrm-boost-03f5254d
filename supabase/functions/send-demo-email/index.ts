@@ -112,22 +112,8 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Found demo:", { id: demo.id, business_name: demo.business_name, status: demo.status, passcode: demo.passcode });
 
-    // Build demo URL - use baseUrl from request, or PUBLIC_DEMO_BASE_URL env var
-    let publicBaseUrl = baseUrl;
-    if (!publicBaseUrl) {
-      publicBaseUrl = Deno.env.get("PUBLIC_DEMO_BASE_URL");
-    }
-    if (!publicBaseUrl) {
-      // Fallback: try to construct from Supabase project ID
-      const projectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
-      if (projectRef) {
-        publicBaseUrl = `https://${projectRef}.lovable.app`;
-      } else {
-        publicBaseUrl = "https://everlaunch.ai";
-      }
-    }
-    
-    const demoUrl = `${publicBaseUrl.replace(/\/$/, '')}/demo/${demoId}`;
+    // Demo URL - always use production domain
+    const demoUrl = `https://tryeverlaunch.com/demo/${demoId}`;
     console.log("Demo URL:", demoUrl);
     
     // Get passcode for phone demo
