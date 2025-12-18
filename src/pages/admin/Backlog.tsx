@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { CRMLayout } from '@/components/crm/CRMLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -95,8 +94,7 @@ export default function Backlog() {
   const abandonedCount = board.reduce((sum, col) => sum + col.items.filter((i) => i.is_abandoned).length, 0);
 
   return (
-    <CRMLayout>
-      <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex flex-col gap-4 p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex items-center justify-between">
@@ -226,7 +224,6 @@ export default function Backlog() {
           onConfirm={handleConfirmAbandon}
           itemTitle={abandonTarget?.title}
         />
-      </div>
-    </CRMLayout>
+    </div>
   );
 }
