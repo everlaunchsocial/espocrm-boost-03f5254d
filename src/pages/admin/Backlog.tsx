@@ -170,11 +170,12 @@ export default function Backlog() {
             <Button variant="ghost" size="icon" onClick={refresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
+          </div>
+
           {/* Brain Notes */}
           <div className="max-w-md">
             <BrainNotes />
           </div>
-        </div>
         </div>
 
         {/* Board */}
