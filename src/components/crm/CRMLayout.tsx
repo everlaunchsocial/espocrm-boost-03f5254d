@@ -66,19 +66,17 @@ const crmNavigation = [
 ];
 
 const adminNavigation = [
+  { name: 'Operations', href: '/admin/operations', icon: FolderOpen, superAdminOnly: true },
   { name: 'Affiliates', href: '/admin/affiliates', icon: Users },
   { name: 'Affiliate Videos', href: '/admin/affiliate-videos', icon: Video },
   { name: 'Payouts', href: '/admin/payouts', icon: DollarSign },
   { name: 'Customer Usage', href: '/admin/customer-usage', icon: BarChart3 },
   { name: 'AI Usage & Costs', href: '/admin/usage', icon: DollarSign },
-  { name: 'Expenses', href: '/admin/expenses', icon: Receipt },
   { name: 'Quality Insights', href: '/admin/quality-insights', icon: Phone },
   { name: 'Signup Analytics', href: '/admin/signup-analytics', icon: UserPlus },
   { name: 'Training', href: '/admin/training', icon: GraduationCap },
   { name: 'Comp Plans', href: '/admin/comp-plans', icon: Percent },
   { name: 'Genealogy', href: '/admin/genealogy', icon: Network, superAdminOnly: true },
-  { name: 'Feature Backlog', href: '/admin/backlog', icon: Lightbulb, superAdminOnly: true },
-  { name: 'Testing', href: '/admin/testing', icon: ClipboardCheck, superAdminOnly: true },
 ];
 
 const customerNavigation = [
