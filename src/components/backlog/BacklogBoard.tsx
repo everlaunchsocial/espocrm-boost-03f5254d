@@ -111,8 +111,8 @@ export function BacklogBoard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <ScrollArea className="w-full">
-        <div className="flex gap-4 p-4 min-h-[calc(100vh-200px)]">
+      <ScrollArea className="w-full h-full">
+        <div className="flex gap-4 p-4 pb-24">
           {columns.map((column) => (
             <BacklogColumn
               key={column.id}
@@ -127,6 +127,7 @@ export function BacklogBoard({
           ))}
         </div>
         <ScrollBar orientation="horizontal" />
+        <ScrollBar orientation="vertical" />
       </ScrollArea>
 
       <DragOverlay>
