@@ -1024,18 +1024,21 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          search_vector: unknown
           updated_at: string
         }
         Insert: {
           content: string
           created_at?: string
           id?: string
+          search_vector?: unknown
           updated_at?: string
         }
         Update: {
           content?: string
           created_at?: string
           id?: string
+          search_vector?: unknown
           updated_at?: string
         }
         Relationships: []
@@ -3741,6 +3744,51 @@ export type Database = {
           },
         ]
       }
+      workspace_documents: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          name: string
+          search_vector: unknown
+          storage_path: string
+          tags: string[] | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          name: string
+          search_vector?: unknown
+          storage_path: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          name?: string
+          search_vector?: unknown
+          storage_path?: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       customer_minutes_summary: {
@@ -3849,6 +3897,17 @@ export type Database = {
       populate_genealogy_for_affiliate: {
         Args: { p_affiliate_id: string }
         Returns: undefined
+      }
+      search_operations: {
+        Args: { p_query: string; p_scope?: string }
+        Returns: {
+          created_at: string
+          rank: number
+          result_id: string
+          result_type: string
+          snippet: string
+          title: string
+        }[]
       }
       test_add_minutes_for_customer: {
         Args: { p_customer_id: string; p_minutes: number }
