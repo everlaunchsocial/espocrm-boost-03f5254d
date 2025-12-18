@@ -18,7 +18,7 @@ import { BacklogBoard } from '@/components/backlog/BacklogBoard';
 import { BacklogItemModal } from '@/components/backlog/BacklogItemModal';
 import { CreateItemModal } from '@/components/backlog/CreateItemModal';
 import { AbandonModal } from '@/components/backlog/AbandonModal';
-import { BrainNotes } from '@/components/backlog/BrainNotes';
+import { BrainNotesWidget } from '@/components/backlog/BrainNotesWidget';
 import type { BacklogItemWithRelations, BacklogFilters, BacklogPriority } from '@/types/backlog';
 
 export default function Backlog() {
@@ -225,6 +225,9 @@ export default function Backlog() {
           onConfirm={handleConfirmAbandon}
           itemTitle={abandonTarget?.title}
         />
+
+        {/* Floating Brain Notes Widget */}
+        <BrainNotesWidget />
     </div>
   );
 }
