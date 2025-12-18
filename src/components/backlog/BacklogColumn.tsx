@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Lightbulb, ClipboardList, Code, TestTube, CheckCircle, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { BacklogCard } from './BacklogCard';
+import { SortableBacklogCard } from './SortableBacklogCard';
 import type { BacklogColumn as BacklogColumnType, BacklogItemWithRelations } from '@/types/backlog';
 
 const COLUMN_ICONS: Record<string, typeof Lightbulb> = {
@@ -38,6 +40,10 @@ export function BacklogColumn({
   const [isAdding, setIsAdding] = useState(false);
   const [quickTitle, setQuickTitle] = useState('');
 
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+  });
+
   const Icon = COLUMN_ICONS[column.icon] || Lightbulb;
 
   // Filter items based on abandoned status
@@ -57,7 +63,13 @@ export function BacklogColumn({
   };
 
   return (
-    <div className="flex flex-col h-full min-w-[280px] w-[280px] bg-muted/30 rounded-lg">
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'flex flex-col h-full min-w-[280px] w-[280px] bg-muted/30 rounded-lg transition-colors',
+        isOver && 'bg-primary/10 ring-2 ring-primary/30'
+      )}
+    >
       {/* Column Header */}
       <div
         className="flex items-center justify-between p-3 border-b"
@@ -131,23 +143,28 @@ export function BacklogColumn({
 
       {/* Cards */}
       <ScrollArea className="flex-1 p-2">
-        <div className="space-y-2">
-          {visibleItems.map((item) => (
-            <BacklogCard
-              key={item.id}
-              item={item}
-              onOpen={onOpenItem}
-              onAbandon={onAbandonItem}
-              onRestore={onRestoreItem}
-              onDelete={onDeleteItem}
-            />
-          ))}
-          {visibleItems.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              No items
-            </div>
-          )}
-        </div>
+        <SortableContext
+          items={visibleItems.map((i) => i.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+            {visibleItems.map((item) => (
+              <SortableBacklogCard
+                key={item.id}
+                item={item}
+                onOpen={onOpenItem}
+                onAbandon={onAbandonItem}
+                onRestore={onRestoreItem}
+                onDelete={onDeleteItem}
+              />
+            ))}
+            {visibleItems.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No items
+              </div>
+            )}
+          </div>
+        </SortableContext>
       </ScrollArea>
     </div>
   );

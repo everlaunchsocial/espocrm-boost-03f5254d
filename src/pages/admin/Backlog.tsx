@@ -56,6 +56,10 @@ export default function Backlog() {
     await createItem({ title, status_id: statusId });
   };
 
+  const handleMoveItem = async (itemId: string, newStatusId: string, newPosition: number) => {
+    await moveItem(itemId, { status_id: newStatusId, position: newPosition });
+  };
+
   const handleAbandon = (id: string) => {
     const item = board.flatMap((c) => c.items).find((i) => i.id === id);
     if (item) {
@@ -190,6 +194,7 @@ export default function Backlog() {
               onAbandonItem={handleAbandon}
               onRestoreItem={handleRestore}
               onDeleteItem={handleDelete}
+              onMoveItem={handleMoveItem}
               showAbandoned={showAbandoned}
             />
           )}

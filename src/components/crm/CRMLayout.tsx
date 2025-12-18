@@ -30,6 +30,7 @@ import {
   LogOut,
   GraduationCap,
   Video,
+  Lightbulb,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,6 +76,7 @@ const adminNavigation = [
   { name: 'Training', href: '/admin/training', icon: GraduationCap },
   { name: 'Comp Plans', href: '/admin/comp-plans', icon: Percent },
   { name: 'Genealogy', href: '/admin/genealogy', icon: Network, superAdminOnly: true },
+  { name: 'Feature Backlog', href: '/admin/backlog', icon: Lightbulb, superAdminOnly: true },
 ];
 
 const customerNavigation = [
