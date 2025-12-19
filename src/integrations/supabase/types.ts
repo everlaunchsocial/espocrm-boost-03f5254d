@@ -2728,6 +2728,62 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_templates: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          parent_version_id: string | null
+          prompt_content: string
+          research_notes: string | null
+          search_vector: unknown
+          updated_at: string
+          use_case: string
+          variables: Json | null
+          version: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_version_id?: string | null
+          prompt_content: string
+          research_notes?: string | null
+          search_vector?: unknown
+          updated_at?: string
+          use_case?: string
+          variables?: Json | null
+          version?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_version_id?: string | null
+          prompt_content?: string
+          research_notes?: string | null
+          search_vector?: unknown
+          updated_at?: string
+          use_case?: string
+          variables?: Json | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_templates_parent_version_id_fkey"
+            columns: ["parent_version_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sender_addresses: {
         Row: {
           created_at: string
