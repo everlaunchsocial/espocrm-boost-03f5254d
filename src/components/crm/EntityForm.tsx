@@ -21,6 +21,7 @@ interface Field {
   label: string;
   type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'select' | 'textarea';
   placeholder?: string;
+  helperText?: string;
   required?: boolean;
   options?: { value: string; label: string }[];
 }
@@ -98,6 +99,9 @@ export function EntityForm({
                   placeholder={field.placeholder}
                   required={field.required}
                 />
+              )}
+              {field.helperText && (
+                <p className="text-xs text-muted-foreground">{field.helperText}</p>
               )}
             </div>
           ))}
