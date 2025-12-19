@@ -3193,6 +3193,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          latest_video_path: string | null
           pain_points: Json
           script: string
           script_version: number
@@ -3209,6 +3210,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          latest_video_path?: string | null
           pain_points?: Json
           script: string
           script_version?: number
@@ -3225,6 +3227,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          latest_video_path?: string | null
           pain_points?: Json
           script?: string
           script_version?: number

@@ -142,14 +142,12 @@ export default function AdminTrainingVideos() {
 
       const { data, error } = await supabase.functions.invoke('generate-training-video', {
         body: {
+          training_library_id: selectedTraining.id,
           avatar_id: selectedAvatar.avatar_id,
           avatar_name: selectedAvatar.name,
           voice_id: selectedVoice.voice_id,
           voice_name: selectedVoice.name,
-          script_text: selectedTraining.script,
-          title: selectedTraining.title,
-          vertical: selectedTraining.vertical_key || null,
-          training_library_id: selectedTraining.id,
+          // Script loaded server-side from training_library
         },
       });
 

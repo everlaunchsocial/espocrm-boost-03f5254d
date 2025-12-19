@@ -30,9 +30,9 @@ export function useTrainingLibrary() {
     },
   });
 
-  // Create a new training entry
+  // Create a new training entry (latest_video_path is managed by the system)
   const createEntry = useMutation({
-    mutationFn: async (entry: Omit<TrainingLibraryEntry, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (entry: Omit<TrainingLibraryEntry, 'id' | 'created_at' | 'updated_at' | 'latest_video_path'>) => {
       const { data, error } = await supabase
         .from('training_library')
         .insert([entry])
