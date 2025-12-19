@@ -93,6 +93,9 @@ serve(async (req) => {
 
     console.log(`Training video record created/updated: ${videoRecord.id}`);
 
+    // Standard branded background for all training videos
+    const TRAINING_VIDEO_BACKGROUND_URL = 'https://mrcfpbkoulldnkqzzprb.supabase.co/storage/v1/object/public/assets/training-video-background.png';
+
     // Call HeyGen to generate the video
     const heygenPayload = {
       video_inputs: [
@@ -106,6 +109,10 @@ serve(async (req) => {
             type: 'text',
             input_text: script_text,
             voice_id: voice_id,
+          },
+          background: {
+            type: 'image',
+            url: TRAINING_VIDEO_BACKGROUND_URL,
           },
         },
       ],
