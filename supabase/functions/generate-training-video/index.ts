@@ -137,8 +137,8 @@ serve(async (req) => {
         },
       ],
       dimension: {
-        width: 1920,
-        height: 1080,
+        width: 1280,
+        height: 720,
       },
       callback_id: `training_video_${videoRecord.id}`,
     };
