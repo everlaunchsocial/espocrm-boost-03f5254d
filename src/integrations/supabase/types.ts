@@ -3311,6 +3311,7 @@ export type Database = {
           estimated_cost_usd: number | null
           heygen_video_id: string | null
           id: string
+          linked_vertical_id: string | null
           script_text: string
           status: string
           title: string
@@ -3329,6 +3330,7 @@ export type Database = {
           estimated_cost_usd?: number | null
           heygen_video_id?: string | null
           id?: string
+          linked_vertical_id?: string | null
           script_text: string
           status?: string
           title: string
@@ -3347,6 +3349,7 @@ export type Database = {
           estimated_cost_usd?: number | null
           heygen_video_id?: string | null
           id?: string
+          linked_vertical_id?: string | null
           script_text?: string
           status?: string
           title?: string
@@ -3356,7 +3359,15 @@ export type Database = {
           voice_id?: string
           voice_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "training_videos_linked_vertical_id_fkey"
+            columns: ["linked_vertical_id"]
+            isOneToOne: false
+            referencedRelation: "vertical_training"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       twilio_numbers: {
         Row: {
