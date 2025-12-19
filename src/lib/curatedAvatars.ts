@@ -12,12 +12,12 @@ export interface CuratedAvatar {
 
 export const CURATED_AVATARS: CuratedAvatar[] = [
   {
-    avatar_id: '3753eb6917c14bb1b7f6cf94ede992fb',
-    name: 'Professional Desk',
+    avatar_id: 'Abigail_standing_office_front',
+    name: 'Abigail Office Front',
     gender: 'female',
-    preview_image_url: 'https://files.heygen.ai/avatar/v3/3753eb6917c14bb1b7f6cf94ede992fb/preview_target.webp',
-    useNativeBackground: true, // Has built-in professional desk background
-    description: 'Professional setting with desk background',
+    preview_image_url: 'https://files2.heygen.ai/avatar/v3/463208b6cad140d2b263535826838e3a_39240/preview_target.webp',
+    useNativeBackground: true,
+    description: 'Professional female presenter in office setting',
   },
 ];
 
