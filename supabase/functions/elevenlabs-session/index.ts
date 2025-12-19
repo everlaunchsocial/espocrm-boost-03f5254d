@@ -1,9 +1,48 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Helper to fetch prompt from prompt_templates
+async function fetchPromptFromLibrary(supabase: any, category: string, useCase: string): Promise<string | null> {
+  try {
+    let { data } = await supabase
+      .from('prompt_templates')
+      .select('prompt_content')
+      .eq('category', category)
+      .eq('use_case', useCase)
+      .eq('is_active', true)
+      .in('channel', ['web_voice', 'universal'])
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data?.prompt_content) {
+      console.log(`Found web_voice prompt for category: ${category}`);
+      return data.prompt_content;
+    }
+
+    // Fallback to universal
+    const { data: universalData } = await supabase
+      .from('prompt_templates')
+      .select('prompt_content')
+      .eq('category', 'universal')
+      .eq('use_case', useCase)
+      .eq('is_active', true)
+      .in('channel', ['web_voice', 'universal'])
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    return universalData?.prompt_content || null;
+  } catch (error) {
+    console.error('Error fetching prompt from library:', error);
+    return null;
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -15,6 +54,11 @@ serve(async (req) => {
     if (!ELEVENLABS_API_KEY) {
       throw new Error('ELEVENLABS_API_KEY is not configured');
     }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { businessInfo, agentId } = await req.json();
 
@@ -46,30 +90,42 @@ serve(async (req) => {
       });
     }
 
-    // Build dynamic prompt based on business info
-    let systemPrompt = "You are a friendly, professional AI receptionist. ";
+    // Try to fetch from prompt library first
+    let systemPrompt = await fetchPromptFromLibrary(supabase, 'universal', 'system_prompt');
     
-    if (businessInfo?.businessName) {
-      systemPrompt += `You work for ${businessInfo.businessName}. `;
-    }
+    if (systemPrompt) {
+      // Replace variables
+      systemPrompt = systemPrompt
+        .replace(/\{\{business_name\}\}/g, businessInfo?.businessName || 'the business')
+        .replace(/\{\{business_phone\}\}/g, businessInfo?.phone || '')
+        .replace(/\{\{business_address\}\}/g, businessInfo?.address || '')
+        .replace(/\{\{business_services\}\}/g, businessInfo?.services?.join(', ') || '')
+        .replace(/\{\{business_description\}\}/g, businessInfo?.description?.substring(0, 500) || '');
+    } else {
+      // Fallback to building dynamic prompt
+      systemPrompt = "You are a friendly, professional AI receptionist. ";
+      
+      if (businessInfo?.businessName) {
+        systemPrompt += `You work for ${businessInfo.businessName}. `;
+      }
 
-    if (businessInfo?.services && businessInfo.services.length > 0) {
-      systemPrompt += `The business specializes in ${businessInfo.services.join(', ')}. `;
-    }
+      if (businessInfo?.services && businessInfo.services.length > 0) {
+        systemPrompt += `The business specializes in ${businessInfo.services.join(', ')}. `;
+      }
 
-    if (businessInfo?.description) {
-      systemPrompt += `About the business: ${businessInfo.description.substring(0, 500)}. `;
-    }
+      if (businessInfo?.description) {
+        systemPrompt += `About the business: ${businessInfo.description.substring(0, 500)}. `;
+      }
 
-    if (businessInfo?.phone) {
-      systemPrompt += `The business phone number is ${businessInfo.phone}. `;
-    }
+      if (businessInfo?.phone) {
+        systemPrompt += `The business phone number is ${businessInfo.phone}. `;
+      }
 
-    if (businessInfo?.address) {
-      systemPrompt += `The business is located at ${businessInfo.address}. `;
-    }
+      if (businessInfo?.address) {
+        systemPrompt += `The business is located at ${businessInfo.address}. `;
+      }
 
-    systemPrompt += `
+      systemPrompt += `
 Your job is to:
 - Greet callers warmly and professionally
 - Answer questions about the business and services
@@ -85,6 +141,7 @@ IMPORTANT - You have tools available to help callers:
 
 If you don't know specific details, politely say you'd be happy to have someone call them back with that information.
 `;
+    }
 
     const firstMessage = businessInfo?.businessName 
       ? `Hello! Thanks for calling ${businessInfo.businessName}. How can I help you today?`

@@ -1,10 +1,49 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Helper to fetch prompt from prompt_templates
+async function fetchPromptFromLibrary(supabase: any, category: string, useCase: string): Promise<string | null> {
+  try {
+    let { data } = await supabase
+      .from('prompt_templates')
+      .select('prompt_content')
+      .eq('category', category)
+      .eq('use_case', useCase)
+      .eq('is_active', true)
+      .in('channel', ['web_voice', 'universal'])
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data?.prompt_content) {
+      console.log(`Found web_voice prompt for category: ${category}`);
+      return data.prompt_content;
+    }
+
+    // Fallback to universal
+    const { data: universalData } = await supabase
+      .from('prompt_templates')
+      .select('prompt_content')
+      .eq('category', 'universal')
+      .eq('use_case', useCase)
+      .eq('is_active', true)
+      .in('channel', ['web_voice', 'universal'])
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    return universalData?.prompt_content || null;
+  } catch (error) {
+    console.error('Error fetching prompt from library:', error);
+    return null;
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,14 +56,32 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not configured');
     }
 
-const { businessInfo, prospectName } = await req.json();
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { businessInfo, prospectName } = await req.json();
 
     // Build 5-phase guided conversation system prompt
     const businessName = businessInfo?.businessName || 'the business';
     const aiPersonaName = businessInfo?.aiPersonaName || 'Jenna';
     const prospectFirstName = prospectName || 'there';
     
-    const systemPrompt = `You are ${aiPersonaName}, a friendly AI assistant at EverLaunch AI.
+    // Try to fetch from prompt library first
+    let systemPrompt = await fetchPromptFromLibrary(supabase, 'universal', 'system_prompt');
+    
+    if (systemPrompt) {
+      // Replace variables
+      systemPrompt = systemPrompt
+        .replace(/\{\{ai_persona_name\}\}/g, aiPersonaName)
+        .replace(/\{\{business_name\}\}/g, businessName)
+        .replace(/\{\{prospect_name\}\}/g, prospectFirstName)
+        .replace(/\{\{website_url\}\}/g, businessInfo?.url || '')
+        .replace(/\{\{business_description\}\}/g, businessInfo?.description?.substring(0, 300) || '');
+    } else {
+      // Fallback to hardcoded prompt
+      systemPrompt = `You are ${aiPersonaName}, a friendly AI assistant at EverLaunch AI.
 
 YOUR MISSION: Guide prospects through a structured voice demo that shows how an AI voice assistant would work for THEIR specific business.
 
@@ -103,6 +160,7 @@ TOOLS AVAILABLE:
 - When someone wants a callback, use the schedule_callback tool
 - For business info, use get_business_info tool
 - Use collect_contact_info AFTER verbally confirming phone and email`;
+    }
 
     console.log('Creating realtime session with tools...');
 

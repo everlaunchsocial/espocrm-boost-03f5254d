@@ -11,6 +11,50 @@ interface ChatMessage {
   content: string;
 }
 
+// Helper to fetch prompt from prompt_templates
+async function fetchPromptFromLibrary(supabase: any, category: string, useCase: string): Promise<string | null> {
+  try {
+    // First try category-specific prompt
+    let { data, error } = await supabase
+      .from('prompt_templates')
+      .select('prompt_content')
+      .eq('category', category)
+      .eq('use_case', useCase)
+      .eq('is_active', true)
+      .in('channel', ['chat', 'universal'])
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data?.prompt_content) {
+      console.log(`Found prompt for category: ${category}, use_case: ${useCase}`);
+      return data.prompt_content;
+    }
+
+    // Fallback to universal prompt
+    const { data: universalData } = await supabase
+      .from('prompt_templates')
+      .select('prompt_content')
+      .eq('category', 'universal')
+      .eq('use_case', useCase)
+      .eq('is_active', true)
+      .in('channel', ['chat', 'universal'])
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (universalData?.prompt_content) {
+      console.log(`Using universal prompt for use_case: ${useCase}`);
+      return universalData.prompt_content;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error fetching prompt from library:', error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -54,8 +98,25 @@ serve(async (req) => {
       );
     }
 
-    // Build system prompt with 5-phase guided conversation flow
-    const systemPrompt = demo.ai_prompt || `You are ${demo.ai_persona_name || 'Jenna'}, a friendly AI assistant at EverLaunch AI.
+    // Try to get prompt from library first, then fall back to demo.ai_prompt or default
+    let systemPrompt = demo.ai_prompt;
+    
+    if (!systemPrompt) {
+      // Try fetching from prompt_templates
+      const libraryPrompt = await fetchPromptFromLibrary(supabase, 'universal', 'system_prompt');
+      
+      if (libraryPrompt) {
+        // Replace variables in the prompt
+        systemPrompt = libraryPrompt
+          .replace(/\{\{business_name\}\}/g, demo.business_name || 'the business')
+          .replace(/\{\{website_url\}\}/g, demo.website_url || '')
+          .replace(/\{\{ai_persona_name\}\}/g, demo.ai_persona_name || 'Jenna');
+      }
+    }
+    
+    // Final fallback to hardcoded default
+    if (!systemPrompt) {
+      systemPrompt = `You are ${demo.ai_persona_name || 'Jenna'}, a friendly AI assistant at EverLaunch AI.
 
 YOUR MISSION: Guide prospects through a structured demo that shows how an AI voice assistant would work for THEIR specific business.
 
@@ -100,6 +161,7 @@ IMPORTANT RULES:
 - Remember the prospect's name and use it occasionally
 - Track where you are in the conversation and don't skip phases
 - If they want to skip ahead or try something specific, adapt flexibly`;
+    }
 
     // Get API key
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');

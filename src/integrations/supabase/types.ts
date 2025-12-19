@@ -2731,7 +2731,9 @@ export type Database = {
       prompt_templates: {
         Row: {
           category: string
+          channel: string
           created_at: string
+          deployed_at: string | null
           id: string
           is_active: boolean
           name: string
@@ -2739,6 +2741,7 @@ export type Database = {
           prompt_content: string
           research_notes: string | null
           search_vector: unknown
+          sync_status: string
           updated_at: string
           use_case: string
           variables: Json | null
@@ -2746,7 +2749,9 @@ export type Database = {
         }
         Insert: {
           category?: string
+          channel?: string
           created_at?: string
+          deployed_at?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -2754,6 +2759,7 @@ export type Database = {
           prompt_content: string
           research_notes?: string | null
           search_vector?: unknown
+          sync_status?: string
           updated_at?: string
           use_case?: string
           variables?: Json | null
@@ -2761,7 +2767,9 @@ export type Database = {
         }
         Update: {
           category?: string
+          channel?: string
           created_at?: string
+          deployed_at?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -2769,6 +2777,7 @@ export type Database = {
           prompt_content?: string
           research_notes?: string | null
           search_vector?: unknown
+          sync_status?: string
           updated_at?: string
           use_case?: string
           variables?: Json | null

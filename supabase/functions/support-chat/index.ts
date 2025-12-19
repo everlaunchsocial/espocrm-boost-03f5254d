@@ -1,9 +1,48 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Helper to fetch prompt from prompt_templates
+async function fetchPromptFromLibrary(supabase: any, category: string, useCase: string): Promise<string | null> {
+  try {
+    let { data } = await supabase
+      .from('prompt_templates')
+      .select('prompt_content')
+      .eq('category', category)
+      .eq('use_case', useCase)
+      .eq('is_active', true)
+      .in('channel', ['support', 'universal'])
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data?.prompt_content) {
+      console.log(`Found support prompt for category: ${category}`);
+      return data.prompt_content;
+    }
+
+    // Fallback to universal
+    const { data: universalData } = await supabase
+      .from('prompt_templates')
+      .select('prompt_content')
+      .eq('category', 'universal')
+      .eq('use_case', useCase)
+      .eq('is_active', true)
+      .in('channel', ['support', 'universal'])
+      .order('version', { ascending: false })
+      .limit(1)
+      .single();
+
+    return universalData?.prompt_content || null;
+  } catch (error) {
+    console.error('Error fetching prompt from library:', error);
+    return null;
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -18,11 +57,25 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Build role-specific system prompt
-    let systemPrompt = `You are a friendly and knowledgeable EverLaunch support assistant. Be helpful, concise, and professional.`;
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Try to fetch role-specific prompt from library
+    const roleCategory = user_role === 'affiliate' ? 'support-affiliate' 
+                       : user_role === 'customer' ? 'support-customer'
+                       : user_role === 'admin' ? 'support-admin'
+                       : 'support';
     
-    if (user_role === 'affiliate') {
-      systemPrompt += `
+    let systemPrompt = await fetchPromptFromLibrary(supabase, roleCategory, 'system_prompt');
+
+    // Fallback to hardcoded prompts if not found in library
+    if (!systemPrompt) {
+      systemPrompt = `You are a friendly and knowledgeable EverLaunch support assistant. Be helpful, concise, and professional.`;
+      
+      if (user_role === 'affiliate') {
+        systemPrompt += `
 
 You are helping an EverLaunch affiliate. You can assist with:
 - Commission structure (30% Tier 1, 15% Tier 2, 5% Tier 3)
@@ -34,8 +87,8 @@ You are helping an EverLaunch affiliate. You can assist with:
 - Payout schedules and status
 
 Be encouraging about their business growth and offer actionable advice.`;
-    } else if (user_role === 'customer') {
-      systemPrompt += `
+      } else if (user_role === 'customer') {
+        systemPrompt += `
 
 You are helping an EverLaunch customer using the AI receptionist product. You can assist with:
 - Voice AI settings (voice selection, speed, greeting)
@@ -47,8 +100,8 @@ You are helping an EverLaunch customer using the AI receptionist product. You ca
 - Billing and usage questions (plans: Starter $149/mo, Growth $249/mo, Professional $399/mo)
 
 Guide them step-by-step and suggest relevant settings pages when appropriate.`;
-    } else if (user_role === 'admin') {
-      systemPrompt += `
+      } else if (user_role === 'admin') {
+        systemPrompt += `
 
 You are helping an EverLaunch admin. You can assist with:
 - System troubleshooting
@@ -56,14 +109,15 @@ You are helping an EverLaunch admin. You can assist with:
 - Commission and payout processing
 - Platform configuration
 - Analytics and reporting`;
-    }
+      }
 
-    systemPrompt += `
+      systemPrompt += `
 
 If you don't know the answer, say so honestly and suggest they contact support@everlaunch.ai for further assistance.
 Keep responses concise but helpful. Use bullet points for lists.`;
+    }
 
-    console.log('Support chat request:', { user_role, messageCount: messages?.length });
+    console.log('Support chat request:', { user_role, messageCount: messages?.length, usingLibraryPrompt: !!systemPrompt });
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
