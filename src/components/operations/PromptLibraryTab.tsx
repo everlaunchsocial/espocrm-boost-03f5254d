@@ -8,11 +8,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, FileText, History, AlertCircle, Check, Pencil, Trash2 } from 'lucide-react';
-import { usePromptLibrary, PromptTemplate, USE_CASE_LABELS, UseCase } from '@/hooks/usePromptLibrary';
+import { Search, Plus, FileText, History, AlertCircle, Check, Pencil, Trash2, Phone, MessageSquare, Headphones, Globe } from 'lucide-react';
+import { usePromptLibrary, PromptTemplate, USE_CASE_LABELS, UseCase, CHANNEL_LABELS, PromptChannel } from '@/hooks/usePromptLibrary';
 import { verticalConfig, VerticalKey } from '@/lib/verticalConfig';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const CHANNEL_ICONS: Record<PromptChannel, React.ReactNode> = {
+  phone: <Phone className="h-3 w-3" />,
+  web_voice: <Headphones className="h-3 w-3" />,
+  chat: <MessageSquare className="h-3 w-3" />,
+  support: <MessageSquare className="h-3 w-3" />,
+  universal: <Globe className="h-3 w-3" />,
+};
+
+const CHANNEL_COLORS: Record<PromptChannel, string> = {
+  phone: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+  web_voice: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
+  chat: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50',
+  support: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50',
+  universal: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
+};
 
 const VERTICAL_COLORS: Record<string, string> = {
   'universal': 'border-l-blue-500',
@@ -36,11 +52,14 @@ export function PromptLibraryTab() {
   const {
     promptsByCategory,
     categories,
+    channels,
     isLoading,
     searchQuery,
     setSearchQuery,
     selectedCategory,
     setSelectedCategory,
+    selectedChannel,
+    setSelectedChannel,
     createPrompt,
     updatePrompt,
     createNewVersion,
@@ -56,6 +75,7 @@ export function PromptLibraryTab() {
     name: '',
     category: 'universal',
     use_case: 'system_prompt' as UseCase,
+    channel: 'universal' as PromptChannel,
     prompt_content: '',
     research_notes: '',
   });
@@ -93,7 +113,7 @@ export function PromptLibraryTab() {
       is_active: true,
       parent_version_id: null,
       research_notes: newPromptForm.research_notes || null,
-      channel: 'universal',
+      channel: newPromptForm.channel,
       sync_status: 'synced',
       deployed_at: null,
     });
@@ -102,6 +122,7 @@ export function PromptLibraryTab() {
       name: '',
       category: 'universal',
       use_case: 'system_prompt',
+      channel: 'universal',
       prompt_content: '',
       research_notes: '',
     });
@@ -131,11 +152,13 @@ export function PromptLibraryTab() {
     );
   }
 
+  const hasActiveFilters = searchQuery || selectedCategory || selectedChannel;
+
   return (
     <div className="space-y-4">
       {/* Search and Filter Bar */}
-      <div className="flex gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search prompts..."
@@ -146,16 +169,32 @@ export function PromptLibraryTab() {
         </div>
         <Select value={selectedCategory || 'all'} onValueChange={(v) => setSelectedCategory(v === 'all' ? null : v)}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="All Categories" />
+            <SelectValue placeholder="All Verticals" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="all">All Verticals</SelectItem>
             {sortedCategories.filter(c => categories.includes(c)).map((cat) => (
               <SelectItem key={cat} value={cat}>{getCategoryName(cat)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Button onClick={() => setIsCreating(true)}>
+        <Select value={selectedChannel || 'all'} onValueChange={(v) => setSelectedChannel(v === 'all' ? null : v as PromptChannel)}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="All Channels" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Channels</SelectItem>
+            {Object.entries(CHANNEL_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                <span className="flex items-center gap-2">
+                  {CHANNEL_ICONS[key as PromptChannel]}
+                  {label}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={() => setIsCreating(true)} className="shrink-0">
           <Plus className="h-4 w-4 mr-2" />
           New Prompt
         </Button>
@@ -166,7 +205,32 @@ export function PromptLibraryTab() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No prompts found. Create your first prompt to get started.</p>
+            {hasActiveFilters ? (
+              <>
+                <p className="font-medium">No prompts match your filters</p>
+                <p className="text-sm mt-1">
+                  {searchQuery && `Search: "${searchQuery}"`}
+                  {searchQuery && (selectedCategory || selectedChannel) && ' · '}
+                  {selectedCategory && `Vertical: ${getCategoryName(selectedCategory)}`}
+                  {selectedCategory && selectedChannel && ' · '}
+                  {selectedChannel && `Channel: ${CHANNEL_LABELS[selectedChannel]}`}
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-4"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory(null);
+                    setSelectedChannel(null);
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </>
+            ) : (
+              <p>No prompts found. Create your first prompt to get started.</p>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -204,6 +268,10 @@ export function PromptLibraryTab() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium">{prompt.name}</span>
+                            <Badge className={cn("text-xs gap-1", CHANNEL_COLORS[prompt.channel])}>
+                              {CHANNEL_ICONS[prompt.channel]}
+                              {CHANNEL_LABELS[prompt.channel]}
+                            </Badge>
                             <Badge variant="outline" className="text-xs">
                               {USE_CASE_LABELS[prompt.use_case as UseCase] || prompt.use_case}
                             </Badge>
@@ -272,8 +340,12 @@ export function PromptLibraryTab() {
                     </Button>
                   </div>
                 </div>
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   <Badge>{getCategoryName(selectedPrompt.category)}</Badge>
+                  <Badge className={cn("gap-1", CHANNEL_COLORS[selectedPrompt.channel])}>
+                    {CHANNEL_ICONS[selectedPrompt.channel]}
+                    {CHANNEL_LABELS[selectedPrompt.channel]}
+                  </Badge>
                   <Badge variant="outline">
                     {USE_CASE_LABELS[selectedPrompt.use_case as UseCase] || selectedPrompt.use_case}
                   </Badge>
@@ -381,21 +453,43 @@ export function PromptLibraryTab() {
               </div>
 
               <div>
-                <Label>Use Case</Label>
+                <Label>Channel</Label>
                 <Select
-                  value={newPromptForm.use_case}
-                  onValueChange={(v) => setNewPromptForm({ ...newPromptForm, use_case: v as UseCase })}
+                  value={newPromptForm.channel}
+                  onValueChange={(v) => setNewPromptForm({ ...newPromptForm, channel: v as PromptChannel })}
                 >
                   <SelectTrigger className="mt-1.5">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(USE_CASE_LABELS).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    {Object.entries(CHANNEL_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        <span className="flex items-center gap-2">
+                          {CHANNEL_ICONS[key as PromptChannel]}
+                          {label}
+                        </span>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div>
+              <Label>Use Case</Label>
+              <Select
+                value={newPromptForm.use_case}
+                onValueChange={(v) => setNewPromptForm({ ...newPromptForm, use_case: v as UseCase })}
+              >
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(USE_CASE_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
