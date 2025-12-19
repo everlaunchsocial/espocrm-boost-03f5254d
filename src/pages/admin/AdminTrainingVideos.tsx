@@ -28,6 +28,7 @@ import {
 import { useTrainingLibrary } from "@/hooks/useTrainingLibrary";
 import { TrainingLibraryEntry, TRAINING_TYPE_LABELS, TRAINING_TYPE_COLORS } from "@/types/trainingLibrary";
 import { CURATED_AVATARS, CuratedAvatar } from "@/lib/curatedAvatars";
+import { AvatarPreviewImage } from "@/components/admin/training/AvatarPreviewImage";
 
 interface Voice {
   voice_id: string;
@@ -453,14 +454,12 @@ export default function AdminTrainingVideos() {
                         onClick={() => setSelectedAvatar(avatar)}
                       >
                         <div className="aspect-square bg-muted relative">
-                          <img
-                            src={avatar.preview_image_url}
+                          <AvatarPreviewImage
+                            avatarId={avatar.avatar_id}
+                            initialUrl={avatar.preview_image_url}
                             alt={avatar.name}
                             loading="lazy"
                             className="absolute inset-0 w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/placeholder.svg';
-                            }}
                           />
 
                           {selectedAvatar?.avatar_id === avatar.avatar_id && (
@@ -505,13 +504,12 @@ export default function AdminTrainingVideos() {
                   {selectedAvatar ? (
                     <div className="flex items-center gap-3">
                       <div className="h-16 w-16 rounded-lg overflow-hidden bg-muted">
-                        <img
-                          src={selectedAvatar.preview_image_url}
+                        <AvatarPreviewImage
+                          avatarId={selectedAvatar.avatar_id}
+                          initialUrl={selectedAvatar.preview_image_url}
                           alt={selectedAvatar.name}
+                          loading="eager"
                           className="h-full w-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/placeholder.svg';
-                          }}
                         />
                       </div>
                       <div>
