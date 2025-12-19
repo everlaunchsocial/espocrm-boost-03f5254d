@@ -3301,6 +3301,63 @@ export type Database = {
           },
         ]
       }
+      training_videos: {
+        Row: {
+          avatar_id: string
+          avatar_name: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          estimated_cost_usd: number | null
+          heygen_video_id: string | null
+          id: string
+          script_text: string
+          status: string
+          title: string
+          updated_at: string
+          vertical: string | null
+          video_url: string | null
+          voice_id: string
+          voice_name: string | null
+        }
+        Insert: {
+          avatar_id: string
+          avatar_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          heygen_video_id?: string | null
+          id?: string
+          script_text: string
+          status?: string
+          title: string
+          updated_at?: string
+          vertical?: string | null
+          video_url?: string | null
+          voice_id: string
+          voice_name?: string | null
+        }
+        Update: {
+          avatar_id?: string
+          avatar_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          heygen_video_id?: string | null
+          id?: string
+          script_text?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          vertical?: string | null
+          video_url?: string | null
+          voice_id?: string
+          voice_name?: string | null
+        }
+        Relationships: []
+      }
       twilio_numbers: {
         Row: {
           created_at: string
