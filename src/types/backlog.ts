@@ -44,6 +44,7 @@ export interface BacklogItem {
   abandoned_reason: string | null;
   deleted_at: string | null;
   conversation_context: string | null;
+  research_notes: string | null;
   metadata: unknown;
   created_at: string;
   updated_at: string;
@@ -149,6 +150,7 @@ export interface UpdateBacklogItemPayload {
   is_abandoned?: boolean;
   abandoned_reason?: string;
   conversation_context?: string;
+  research_notes?: string;
 }
 
 export interface MoveBacklogItemPayload {

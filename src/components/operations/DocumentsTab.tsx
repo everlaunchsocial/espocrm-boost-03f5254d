@@ -15,10 +15,12 @@ import {
   Search,
   Grid,
   List,
-  Loader2
+  Loader2,
+  Eye,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { DocumentViewer } from './DocumentViewer';
 
 function getFileIcon(fileType: string | null) {
   if (!fileType) return File;
@@ -40,6 +42,7 @@ export function DocumentsTab() {
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isDragging, setIsDragging] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState<WorkspaceDocument | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredDocs = documents.filter(doc => 
@@ -66,8 +69,15 @@ export function DocumentsTab() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleView = (doc: WorkspaceDocument) => {
+    setViewingDoc(doc);
+  };
+
   const handleDownload = (doc: WorkspaceDocument) => {
-    window.open(doc.file_url, '_blank');
+    const link = document.createElement('a');
+    link.href = doc.file_url;
+    link.download = doc.name;
+    link.click();
   };
 
   const handleDelete = async (doc: WorkspaceDocument) => {
@@ -77,8 +87,8 @@ export function DocumentsTab() {
   };
 
   return (
+    <>
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -162,10 +172,14 @@ export function DocumentsTab() {
             const isImage = doc.file_type?.startsWith('image/');
             
             return (
-              <Card key={doc.id} className="group hover:border-primary/50 transition-colors overflow-hidden">
+              <Card 
+                key={doc.id} 
+                className="group hover:border-primary/50 transition-colors overflow-hidden cursor-pointer"
+                onClick={() => handleView(doc)}
+              >
                 <CardContent className="p-3">
                   {/* Preview */}
-                  <div className="aspect-square rounded-lg bg-muted flex items-center justify-center mb-3 overflow-hidden">
+                  <div className="aspect-square rounded-lg bg-muted flex items-center justify-center mb-3 overflow-hidden relative">
                     {isImage ? (
                       <img 
                         src={doc.file_url} 
@@ -175,6 +189,9 @@ export function DocumentsTab() {
                     ) : (
                       <Icon className="h-12 w-12 text-muted-foreground" />
                     )}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Eye className="h-6 w-6 text-white" />
+                    </div>
                   </div>
                   
                   {/* Info */}
@@ -198,10 +215,13 @@ export function DocumentsTab() {
                   
                   {/* Actions */}
                   <div className="flex gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="sm" className="flex-1" onClick={() => handleDownload(doc)}>
+                    <Button variant="ghost" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); handleView(doc); }}>
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}>
                       <Download className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="flex-1 text-destructive" onClick={() => handleDelete(doc)}>
+                    <Button variant="ghost" size="sm" className="flex-1 text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
@@ -218,7 +238,8 @@ export function DocumentsTab() {
             return (
               <div 
                 key={doc.id} 
-                className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 transition-colors group"
+                className="flex items-center gap-4 p-3 rounded-lg border hover:border-primary/50 transition-colors group cursor-pointer"
+                onClick={() => handleView(doc)}
               >
                 <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                   <Icon className="h-5 w-5 text-muted-foreground" />
@@ -239,10 +260,13 @@ export function DocumentsTab() {
                   </div>
                 )}
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)}>
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleView(doc); }}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}>
                     <Download className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(doc)}>
+                  <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(doc); }}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -252,5 +276,13 @@ export function DocumentsTab() {
         </div>
       )}
     </div>
+    
+    {/* Document Viewer Modal */}
+    <DocumentViewer
+      document={viewingDoc}
+      isOpen={!!viewingDoc}
+      onClose={() => setViewingDoc(null)}
+    />
+    </>
   );
 }

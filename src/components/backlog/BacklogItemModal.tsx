@@ -31,6 +31,7 @@ import {
   Save,
   X,
   Send,
+  Search,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -90,6 +91,7 @@ export function BacklogItemModal({
         story_points: item.story_points || undefined,
         estimated_hours: item.estimated_hours || undefined,
         conversation_context: item.conversation_context || '',
+        research_notes: item.research_notes || '',
       });
       setSelectedTags(item.tags?.map((t) => t.id) || []);
     }
@@ -273,6 +275,31 @@ export function BacklogItemModal({
                   placeholder="Key discussion points from AI chat that led to this idea..."
                   rows={3}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-amber-500" />
+                  Research Needed
+                </Label>
+                <Textarea
+                  value={editedItem.research_notes || ''}
+                  onChange={(e) =>
+                    setEditedItem({ ...editedItem, research_notes: e.target.value })
+                  }
+                  placeholder="Document references, external resources to review, questions to investigate...&#10;&#10;Example:&#10;- Review 'EverLaunch AI Industry Playbook' for top 50 verticals&#10;- Compare with competitor onboarding flows&#10;- Research compliance requirements per industry"
+                  rows={4}
+                  className={cn(
+                    "border-amber-500/30 focus:border-amber-500",
+                    editedItem.research_notes && "bg-amber-500/5"
+                  )}
+                />
+                {editedItem.research_notes && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Search className="h-3 w-3" />
+                    This item is flagged as needing research
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
