@@ -10,6 +10,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   AlertTriangle,
   ArrowUp,
   Equal,
@@ -21,6 +26,7 @@ import {
   Trash2,
   RotateCcw,
   GripVertical,
+  Search,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -147,6 +153,21 @@ export function BacklogCard({
           </div>
         )}
 
+        {/* Research Needed Indicator */}
+        {item.research_notes && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1.5 p-1.5 bg-amber-500/10 border border-amber-500/20 rounded text-amber-600 dark:text-amber-400">
+                <Search className="h-3 w-3 flex-shrink-0" />
+                <span className="text-[10px] font-medium line-clamp-1">Research Needed</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="text-xs whitespace-pre-wrap">{item.research_notes}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
         {/* Footer: Metadata */}
         <div className="flex items-center justify-between pt-1 border-t border-border/50">
           <div className="flex items-center gap-2 text-muted-foreground">
@@ -160,6 +181,11 @@ export function BacklogCard({
               <span className="flex items-center gap-0.5 text-[10px]">
                 <Paperclip className="h-3 w-3" />
                 {item.attachment_count}
+              </span>
+            )}
+            {item.research_notes && (
+              <span className="flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400">
+                <Search className="h-3 w-3" />
               </span>
             )}
             {item.story_points && (

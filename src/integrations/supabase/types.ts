@@ -795,6 +795,7 @@ export type Database = {
           metadata: Json | null
           position: number
           priority: Database["public"]["Enums"]["backlog_priority"]
+          research_notes: string | null
           search_vector: unknown
           status_id: string
           story_points: number | null
@@ -816,6 +817,7 @@ export type Database = {
           metadata?: Json | null
           position?: number
           priority?: Database["public"]["Enums"]["backlog_priority"]
+          research_notes?: string | null
           search_vector?: unknown
           status_id: string
           story_points?: number | null
@@ -837,6 +839,7 @@ export type Database = {
           metadata?: Json | null
           position?: number
           priority?: Database["public"]["Enums"]["backlog_priority"]
+          research_notes?: string | null
           search_vector?: unknown
           status_id?: string
           story_points?: number | null
