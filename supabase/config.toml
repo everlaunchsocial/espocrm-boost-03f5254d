@@ -158,3 +158,12 @@ verify_jwt = false
 
 [functions.track-video-analytics]
 verify_jwt = false
+
+[functions.heygen-list-avatars]
+verify_jwt = true
+
+[functions.heygen-list-voices]
+verify_jwt = true
+
+[functions.generate-training-video]
+verify_jwt = true

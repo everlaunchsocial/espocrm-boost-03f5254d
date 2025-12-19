@@ -75,6 +75,7 @@ const adminNavigation = [
   { name: 'Quality Insights', href: '/admin/quality-insights', icon: Phone },
   { name: 'Signup Analytics', href: '/admin/signup-analytics', icon: UserPlus },
   { name: 'Training', href: '/admin/training', icon: GraduationCap },
+  { name: 'Training Videos', href: '/admin/training-videos', icon: Video },
   { name: 'Comp Plans', href: '/admin/comp-plans', icon: Percent },
   { name: 'Genealogy', href: '/admin/genealogy', icon: Network, superAdminOnly: true },
 ];
