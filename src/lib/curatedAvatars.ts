@@ -15,7 +15,7 @@ export const CURATED_AVATARS: CuratedAvatar[] = [
     avatar_id: '3753eb6917c14bb1b7f6cf94ede992fb',
     name: 'Professional Desk',
     gender: 'female',
-    preview_image_url: 'https://files.heygen.ai/avatar/v3/3753eb6917c14bb1b7f6cf94ede992fb/preview.webp',
+    preview_image_url: 'https://resource.heygen.ai/avatar/v3/3753eb6917c14bb1b7f6cf94ede992fb/preview_target.webp',
     useNativeBackground: true, // Has built-in professional desk background
     description: 'Professional setting with desk background',
   },
