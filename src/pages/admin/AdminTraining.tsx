@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, GripVertical, Video, FileText, File, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Pencil, Trash2, GripVertical, Video, FileText, File, HelpCircle, BookOpen, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -102,6 +103,22 @@ export default function AdminTraining() {
         <h1 className="text-2xl font-bold text-foreground">Training Management</h1>
         <p className="text-muted-foreground">Manage training categories and modules for affiliates</p>
       </div>
+
+      {/* Affiliate View: Vertical Training Library */}
+      <Link to="/admin/affiliate-training/verticals">
+        <Card className="bg-gradient-to-r from-blue-500/20 to-indigo-500/10 border-blue-500/30 hover:border-blue-500/50 transition-colors cursor-pointer">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BookOpen className="h-6 w-6 text-blue-500" />
+              <div>
+                <h3 className="font-semibold text-foreground">Vertical Training Library</h3>
+                <p className="text-sm text-muted-foreground">Preview what affiliates see — 20+ industry training videos</p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </Link>
 
       <Tabs defaultValue="modules" className="space-y-4">
         <TabsList>

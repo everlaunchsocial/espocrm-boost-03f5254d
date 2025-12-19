@@ -239,6 +239,7 @@ const App = () => (
             <Route path="/admin/customer-usage" element={<AdminCustomerUsage />} />
             <Route path="/admin/signup-analytics" element={<SignupAnalytics />} />
 <Route path="/admin/training" element={<AdminTraining />} />
+            <Route path="/admin/affiliate-training/verticals" element={<VerticalTrainingLibrary />} />
             <Route path="/admin/training-videos" element={<AdminTrainingVideos />} />
             <Route path="/admin/test-analyzer" element={<TestAnalyzer />} />
             <Route path="/admin/quality-insights" element={<QualityInsights />} />
