@@ -171,6 +171,38 @@ export default function AdminTrainingVideos() {
     },
   });
 
+  // Check video status mutation
+  const checkStatusMutation = useMutation({
+    mutationFn: async (videoId: string) => {
+      const { data, error } = await supabase.functions.invoke('check-heygen-video-status', {
+        body: { training_video_id: videoId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data.status === 'ready') {
+        toast.success('Video is ready!', {
+          description: 'The video has been processed and uploaded.',
+        });
+      } else if (data.status === 'failed') {
+        toast.error('Video generation failed', {
+          description: data.error || 'Unknown error',
+        });
+      } else {
+        toast.info(`Video status: ${data.status}`, {
+          description: data.message,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['training-videos'] });
+    },
+    onError: (error) => {
+      toast.error('Failed to check status', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    },
+  });
+
   // Filter avatars
   const filteredAvatars = (avatarsData || []).filter((avatar) => {
     if (genderFilter !== 'all' && avatar.gender !== genderFilter) return false;
@@ -797,6 +829,20 @@ export default function AdminTrainingVideos() {
                         <Badge className={getStatusColor(video.status)}>
                           {video.status}
                         </Badge>
+                        {video.status === 'processing' && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => checkStatusMutation.mutate(video.id)}
+                            disabled={checkStatusMutation.isPending}
+                          >
+                            {checkStatusMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                         {video.video_url && (
                           <Button size="sm" variant="outline" asChild>
                             <a href={video.video_url} target="_blank" rel="noopener noreferrer">
