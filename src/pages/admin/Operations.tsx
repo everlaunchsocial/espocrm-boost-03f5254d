@@ -3,12 +3,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, FolderKanban, Brain, Receipt, ClipboardCheck, Search, X } from 'lucide-react';
+import { FileText, FolderKanban, Brain, Receipt, ClipboardCheck, Search, X, Sparkles } from 'lucide-react';
 import { DocumentsTab } from '@/components/operations/DocumentsTab';
 import { ProjectsTab } from '@/components/operations/ProjectsTab';
 import { BrainNotesTab } from '@/components/operations/BrainNotesTab';
 import { ExpensesTab } from '@/components/operations/ExpensesTab';
 import { TestingTab } from '@/components/operations/TestingTab';
+import { PromptLibraryTab } from '@/components/operations/PromptLibraryTab';
 import { BrainNotesWidget } from '@/components/backlog/BrainNotesWidget';
 import { useOperationsSearch, SearchScope, SearchResult } from '@/hooks/useOperationsSearch';
 import { cn } from '@/lib/utils';
@@ -119,6 +120,9 @@ export default function Operations() {
           <TabsTrigger value="testing" className="gap-2">
             <ClipboardCheck className="h-4 w-4" />Testing
           </TabsTrigger>
+          <TabsTrigger value="prompts" className="gap-2">
+            <Sparkles className="h-4 w-4" />Prompts
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="documents" className="flex-1 mt-6">
@@ -135,6 +139,9 @@ export default function Operations() {
         </TabsContent>
         <TabsContent value="testing" className="flex-1 mt-6">
           <TestingTab />
+        </TabsContent>
+        <TabsContent value="prompts" className="flex-1 mt-6">
+          <PromptLibraryTab />
         </TabsContent>
       </Tabs>
 
