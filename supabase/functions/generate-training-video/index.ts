@@ -31,7 +31,8 @@ serve(async (req) => {
       voice_name,
       script_text, 
       title,
-      vertical
+      vertical,
+      linked_vertical_id
     } = await req.json();
 
     if (!avatar_id || !voice_id || !script_text || !title) {
@@ -41,6 +42,7 @@ serve(async (req) => {
     console.log(`Generating training video: ${title}`);
     console.log(`Avatar: ${avatar_id}, Voice: ${voice_id}`);
     console.log(`Script length: ${script_text.length} characters`);
+    console.log(`Linked vertical ID: ${linked_vertical_id || 'none'}`);
 
     // Estimate cost (~$0.05 per second, average 150 words/min)
     const wordCount = script_text.split(/\s+/).length;
@@ -61,6 +63,7 @@ serve(async (req) => {
           script_text,
           title,
           vertical,
+          linked_vertical_id: linked_vertical_id || null,
           estimated_cost_usd: estimatedCost,
           error_message: null,
         })
@@ -82,6 +85,7 @@ serve(async (req) => {
           script_text,
           title,
           vertical,
+          linked_vertical_id: linked_vertical_id || null,
           estimated_cost_usd: estimatedCost,
         })
         .select()
@@ -169,6 +173,7 @@ serve(async (req) => {
         training_video_id: videoRecord.id,
         heygen_video_id: heygenVideoId,
         estimated_cost_usd: estimatedCost,
+        linked_vertical_id: linked_vertical_id || null,
         message: 'Video generation started. You will be notified when complete.',
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

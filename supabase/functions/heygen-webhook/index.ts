@@ -37,7 +37,6 @@ serve(async (req) => {
       }
 
       // Verify HMAC signature
-      // TODO: Verify exact HeyGen signature format from docs
       const expectedSignature = createHmac('sha256', webhookSecret)
         .update(rawBody)
         .digest('hex');
@@ -57,11 +56,11 @@ serve(async (req) => {
     // PROCESS WEBHOOK EVENT
     // ============================================
     const eventType = payload.event || payload.type || payload.event_type;
-    // HeyGen sends video_id in event_data for avatar_video events
     const videoId = payload.event_data?.video_id || payload.data?.video_id || payload.video_id;
     const videoUrl = payload.event_data?.video_url || payload.data?.video_url || payload.video_url;
     const status = payload.event_data?.status || payload.data?.status || payload.status;
     const errorMsg = payload.event_data?.msg || payload.data?.error || payload.error;
+    const callbackId = payload.callback_id || payload.event_data?.callback_id || payload.data?.callback_id;
 
     if (!videoId) {
       console.warn('[heygen-webhook] No video_id in payload');
@@ -70,7 +69,115 @@ serve(async (req) => {
       });
     }
 
-    // Find video by heygen_video_id
+    // ============================================
+    // CHECK IF THIS IS A TRAINING VIDEO
+    // ============================================
+    if (callbackId && callbackId.startsWith('training_video_')) {
+      const trainingVideoId = callbackId.replace('training_video_', '');
+      console.log(`[heygen-webhook] Processing training video callback: ${trainingVideoId}`);
+      
+      // Handle training video completion
+      if (eventType === 'avatar_video.success' || eventType === 'video.completed' || eventType === 'video_completed' || status === 'completed' || status === 'ready') {
+        console.log(`[heygen-webhook] Training video ${trainingVideoId} completed. URL: ${videoUrl}`);
+        
+        // Get the training video record to find the vertical
+        const { data: trainingVideo, error: tvError } = await supabase
+          .from('training_videos')
+          .select('id, vertical, linked_vertical_id, title')
+          .eq('id', trainingVideoId)
+          .single();
+        
+        if (tvError || !trainingVideo) {
+          console.warn(`[heygen-webhook] Training video not found: ${trainingVideoId}`);
+        } else {
+          // Update training video with completed status and URL
+          await supabase
+            .from('training_videos')
+            .update({
+              status: 'ready',
+              video_url: videoUrl,
+              error_message: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', trainingVideoId);
+          
+          console.log(`[heygen-webhook] Training video ${trainingVideoId} marked as ready`);
+          
+          // AUTO-LINK: If linked_vertical_id is set, update vertical_training.video_path
+          if (trainingVideo.linked_vertical_id) {
+            await supabase
+              .from('vertical_training')
+              .update({
+                video_path: videoUrl,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', trainingVideo.linked_vertical_id);
+            
+            console.log(`[heygen-webhook] Auto-linked video to vertical_training: ${trainingVideo.linked_vertical_id}`);
+          }
+          // FALLBACK: Try to match by vertical name if no linked_vertical_id
+          else if (trainingVideo.vertical) {
+            // Try to find matching vertical_training by industry_name (case-insensitive)
+            const { data: matchingVertical } = await supabase
+              .from('vertical_training')
+              .select('id, industry_name')
+              .ilike('industry_name', `%${trainingVideo.vertical}%`)
+              .limit(1)
+              .single();
+            
+            if (matchingVertical) {
+              // Update vertical_training with the video path
+              await supabase
+                .from('vertical_training')
+                .update({
+                  video_path: videoUrl,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', matchingVertical.id);
+              
+              // Also update training_videos with the linked_vertical_id
+              await supabase
+                .from('training_videos')
+                .update({
+                  linked_vertical_id: matchingVertical.id,
+                })
+                .eq('id', trainingVideoId);
+              
+              console.log(`[heygen-webhook] Auto-matched and linked to vertical: ${matchingVertical.industry_name}`);
+            } else {
+              console.log(`[heygen-webhook] No matching vertical found for: ${trainingVideo.vertical}`);
+            }
+          }
+        }
+        
+        return new Response(JSON.stringify({ received: true, training_video_id: trainingVideoId }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // Handle training video failure
+      if (eventType === 'avatar_video.fail' || eventType === 'video.failed' || eventType === 'video_failed' || status === 'failed' || status === 'error') {
+        const errorMessage = errorMsg || 'Video generation failed';
+        console.error(`[heygen-webhook] Training video ${trainingVideoId} failed: ${errorMessage}`);
+        
+        await supabase
+          .from('training_videos')
+          .update({
+            status: 'failed',
+            error_message: errorMessage,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', trainingVideoId);
+        
+        return new Response(JSON.stringify({ received: true, training_video_id: trainingVideoId }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // ============================================
+    // EXISTING AFFILIATE VIDEO HANDLING
+    // ============================================
     const { data: video, error: videoError } = await supabase
       .from('affiliate_videos')
       .select('id, affiliate_id, landing_page_slug')
@@ -84,11 +191,10 @@ serve(async (req) => {
       });
     }
 
-    // Handle video completion (HeyGen uses avatar_video.success for talking photo videos)
+    // Handle video completion
     if (eventType === 'avatar_video.success' || eventType === 'video.completed' || eventType === 'video_completed' || status === 'completed' || status === 'ready') {
       console.log(`[heygen-webhook] Video ${video.id} completed. URL: ${videoUrl}`);
 
-      // Generate slug if not exists
       let slug = video.landing_page_slug;
       if (!slug) {
         const { data: affiliate } = await supabase

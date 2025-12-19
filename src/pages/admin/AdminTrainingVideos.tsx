@@ -18,7 +18,9 @@ import {
   RefreshCw,
   Video,
   ChevronDown,
-  Volume2
+  Volume2,
+  Link2,
+  LinkIcon
 } from "lucide-react";
 
 interface Avatar {
@@ -42,6 +44,12 @@ interface Voice {
   is_premium: boolean;
 }
 
+interface VerticalTraining {
+  id: string;
+  industry_name: string;
+  rank: number;
+}
+
 interface TrainingVideo {
   id: string;
   title: string;
@@ -56,19 +64,9 @@ interface TrainingVideo {
   video_url: string | null;
   error_message: string | null;
   estimated_cost_usd: number | null;
+  linked_vertical_id: string | null;
   created_at: string;
 }
-
-const VERTICALS = [
-  { value: 'general', label: 'General Training' },
-  { value: 'auto_repair', label: 'Auto Repair' },
-  { value: 'med_spa', label: 'Med Spa' },
-  { value: 'dental', label: 'Dental' },
-  { value: 'hvac', label: 'HVAC' },
-  { value: 'plumbing', label: 'Plumbing' },
-  { value: 'real_estate', label: 'Real Estate' },
-  { value: 'insurance', label: 'Insurance' },
-];
 
 export default function AdminTrainingVideos() {
   const queryClient = useQueryClient();
@@ -79,9 +77,22 @@ export default function AdminTrainingVideos() {
   const [visibleCount, setVisibleCount] = useState(12);
   const [scriptText, setScriptText] = useState('');
   const [videoTitle, setVideoTitle] = useState('');
-  const [selectedVertical, setSelectedVertical] = useState('general');
+  const [selectedVerticalId, setSelectedVerticalId] = useState<string>('');
   const [hoveredAvatarId, setHoveredAvatarId] = useState<string | null>(null);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+
+  // Fetch vertical_training entries for dropdown
+  const { data: verticalTrainings } = useQuery({
+    queryKey: ['vertical-trainings-admin'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vertical_training')
+        .select('id, industry_name, rank')
+        .order('rank', { ascending: true });
+      if (error) throw error;
+      return data as VerticalTraining[];
+    },
+  });
 
   // Fetch avatars
   const { data: avatarsData, isLoading: avatarsLoading, refetch: refetchAvatars } = useQuery({
@@ -106,7 +117,7 @@ export default function AdminTrainingVideos() {
   });
 
   // Fetch existing training videos
-  const { data: trainingVideos, isLoading: videosLoading } = useQuery({
+  const { data: trainingVideos, isLoading: videosLoading, refetch: refetchVideos } = useQuery({
     queryKey: ['training-videos'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -125,6 +136,9 @@ export default function AdminTrainingVideos() {
         throw new Error('Please fill in all required fields');
       }
 
+      // Find selected vertical name for the vertical field
+      const selectedVertical = verticalTrainings?.find(v => v.id === selectedVerticalId);
+
       const { data, error } = await supabase.functions.invoke('generate-training-video', {
         body: {
           avatar_id: selectedAvatar.avatar_id,
@@ -133,7 +147,8 @@ export default function AdminTrainingVideos() {
           voice_name: selectedVoice.name,
           script_text: scriptText,
           title: videoTitle,
-          vertical: selectedVertical,
+          vertical: selectedVertical?.industry_name || null,
+          linked_vertical_id: selectedVerticalId || null,
         },
       });
 
@@ -149,9 +164,46 @@ export default function AdminTrainingVideos() {
       // Reset form
       setScriptText('');
       setVideoTitle('');
+      setSelectedVerticalId('');
     },
     onError: (error) => {
       toast.error('Failed to generate video', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    },
+  });
+
+  // Link video to vertical mutation
+  const linkVerticalMutation = useMutation({
+    mutationFn: async ({ videoId, verticalId }: { videoId: string; verticalId: string | null }) => {
+      // Update training_videos with linked_vertical_id
+      const { error: updateError } = await supabase
+        .from('training_videos')
+        .update({ linked_vertical_id: verticalId })
+        .eq('id', videoId);
+      
+      if (updateError) throw updateError;
+
+      // If linking to a vertical, also update vertical_training.video_path
+      if (verticalId) {
+        const video = trainingVideos?.find(v => v.id === videoId);
+        if (video?.video_url) {
+          const { error: verticalError } = await supabase
+            .from('vertical_training')
+            .update({ video_path: video.video_url })
+            .eq('id', verticalId);
+          
+          if (verticalError) throw verticalError;
+        }
+      }
+    },
+    onSuccess: () => {
+      toast.success('Video linked to vertical');
+      queryClient.invalidateQueries({ queryKey: ['training-videos'] });
+      queryClient.invalidateQueries({ queryKey: ['vertical-trainings-admin'] });
+    },
+    onError: (error) => {
+      toast.error('Failed to link video', {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
     },
@@ -200,6 +252,11 @@ export default function AdminTrainingVideos() {
     }
   };
 
+  const getVerticalName = (verticalId: string | null) => {
+    if (!verticalId) return null;
+    return verticalTrainings?.find(v => v.id === verticalId)?.industry_name || null;
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -209,15 +266,25 @@ export default function AdminTrainingVideos() {
             Create training videos using HeyGen stock avatars
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => refetchAvatars()}
-          disabled={avatarsLoading}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${avatarsLoading ? 'animate-spin' : ''}`} />
-          Refresh Avatars
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => refetchVideos()}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Queue
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => refetchAvatars()}
+            disabled={avatarsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${avatarsLoading ? 'animate-spin' : ''}`} />
+            Refresh Avatars
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="generate" className="space-y-6">
@@ -442,26 +509,33 @@ export default function AdminTrainingVideos() {
                   <div>
                     <label className="text-sm font-medium mb-1 block">Title</label>
                     <Input
-                      placeholder="e.g., Auto Repair Vertical Overview"
+                      placeholder="e.g., Core Training — Plumbing"
                       value={videoTitle}
                       onChange={(e) => setVideoTitle(e.target.value)}
                     />
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Vertical</label>
-                    <Select value={selectedVertical} onValueChange={setSelectedVertical}>
+                    <label className="text-sm font-medium mb-1 block">
+                      Link to Vertical Training
+                      <span className="text-muted-foreground font-normal ml-1">(optional)</span>
+                    </label>
+                    <Select value={selectedVerticalId} onValueChange={setSelectedVerticalId}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select a vertical to link..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {VERTICALS.map((v) => (
-                          <SelectItem key={v.value} value={v.value}>
-                            {v.label}
+                        <SelectItem value="">No link</SelectItem>
+                        {(verticalTrainings || []).map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            #{v.rank} — {v.industry_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      When video completes, it will auto-link to this vertical's training page
+                    </p>
                   </div>
 
                   <div>
@@ -530,8 +604,40 @@ export default function AdminTrainingVideos() {
                           {video.avatar_name || video.avatar_id} • {video.voice_name || video.voice_id}
                         </p>
                       </div>
+                      
+                      {/* Vertical Link Control */}
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={video.linked_vertical_id || ''}
+                          onValueChange={(val) => linkVerticalMutation.mutate({ 
+                            videoId: video.id, 
+                            verticalId: val || null 
+                          })}
+                          disabled={video.status !== 'ready'}
+                        >
+                          <SelectTrigger className="w-48">
+                            {video.linked_vertical_id ? (
+                              <div className="flex items-center gap-1">
+                                <LinkIcon className="h-3 w-3 text-green-500" />
+                                <span className="truncate">{getVerticalName(video.linked_vertical_id)}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Link to vertical...</span>
+                            )}
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Unlink</SelectItem>
+                            {(verticalTrainings || []).map((v) => (
+                              <SelectItem key={v.id} value={v.id}>
+                                #{v.rank} — {v.industry_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <div className="flex items-center gap-3">
-                        {video.vertical && (
+                        {video.vertical && !video.linked_vertical_id && (
                           <Badge variant="outline">{video.vertical}</Badge>
                         )}
                         <Badge className={getStatusColor(video.status)}>
