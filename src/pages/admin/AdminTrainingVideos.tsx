@@ -19,6 +19,7 @@ import {
   Video,
   ChevronDown,
   Volume2,
+  VolumeX,
   Link2,
   LinkIcon
 } from "lucide-react";
@@ -80,6 +81,7 @@ export default function AdminTrainingVideos() {
   const [selectedVerticalId, setSelectedVerticalId] = useState<string>('');
   const [hoveredAvatarId, setHoveredAvatarId] = useState<string | null>(null);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
   // Fetch vertical_training entries for dropdown
   const { data: verticalTrainings } = useQuery({
@@ -229,18 +231,38 @@ export default function AdminTrainingVideos() {
     }
   }, [selectedAvatar, voicesData]);
 
-  const playVoicePreview = (voice: Voice) => {
-    if (!voice.preview_audio_url) return;
+  const playVoicePreview = (voice: Voice, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
+    if (!voice.preview_audio_url) {
+      toast.info('No preview available for this voice');
+      return;
+    }
+    
+    // Stop current audio if playing
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+    }
+    
+    // If clicking the same voice, just stop
     if (playingAudioId === voice.voice_id) {
       setPlayingAudioId(null);
+      setCurrentAudio(null);
       return;
     }
 
     const audio = new Audio(voice.preview_audio_url);
-    audio.onended = () => setPlayingAudioId(null);
+    audio.onended = () => {
+      setPlayingAudioId(null);
+      setCurrentAudio(null);
+    };
     audio.play();
     setPlayingAudioId(voice.voice_id);
+    setCurrentAudio(audio);
   };
 
   const getStatusColor = (status: string) => {
@@ -476,27 +498,38 @@ export default function AdminTrainingVideos() {
                     <SelectContent className="max-h-64">
                       {(voicesData || []).map((voice) => (
                         <SelectItem key={voice.voice_id} value={voice.voice_id}>
-                          <div className="flex items-center gap-2">
-                            <span>{voice.name}</span>
-                            <span className="text-xs text-muted-foreground capitalize">
-                              ({voice.gender})
-                            </span>
+                          <div className="flex items-center justify-between w-full gap-3">
+                            <div className="flex items-center gap-2">
+                              <span>{voice.name}</span>
+                              <span className="text-xs text-muted-foreground capitalize">
+                                ({voice.gender})
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => playVoicePreview(voice, e)}
+                              className={`p-1 rounded hover:bg-accent transition-colors ${
+                                playingAudioId === voice.voice_id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                              }`}
+                              title={voice.preview_audio_url ? 'Preview voice' : 'No preview available'}
+                            >
+                              {playingAudioId === voice.voice_id ? (
+                                <VolumeX className="h-4 w-4" />
+                              ) : (
+                                <Volume2 className="h-4 w-4" />
+                              )}
+                            </button>
                           </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
 
-                  {selectedVoice?.preview_audio_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={() => playVoicePreview(selectedVoice)}
-                    >
-                      <Volume2 className="h-4 w-4 mr-2" />
-                      {playingAudioId === selectedVoice.voice_id ? 'Playing...' : 'Preview Voice'}
-                    </Button>
+                  {selectedVoice && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                      <Check className="h-3 w-3 text-green-500" />
+                      Selected: {selectedVoice.name}
+                    </div>
                   )}
                 </CardContent>
               </Card>
