@@ -97,6 +97,7 @@ export default function AdminTrainingVideos() {
       if (!data.success) throw new Error(data.error);
       return data.avatars as Avatar[];
     },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Fetch voices
@@ -567,6 +568,7 @@ export default function AdminTrainingVideos() {
                                 <img
                                   src={avatar.preview_image_url}
                                   alt={avatar.name}
+                                  loading="lazy"
                                   className="absolute inset-0 w-full h-full object-cover"
                                 />
                               ) : (
