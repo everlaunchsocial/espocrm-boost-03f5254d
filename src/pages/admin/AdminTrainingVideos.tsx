@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import { 
   Play, 
   Loader2, 
@@ -21,8 +22,16 @@ import {
   Volume2,
   VolumeX,
   Link2,
-  LinkIcon
+  LinkIcon,
+  BookOpen,
+  FileText,
+  Target,
+  AlertCircle,
+  Lightbulb,
+  MapPin,
 } from "lucide-react";
+import { useTrainingLibrary } from "@/hooks/useTrainingLibrary";
+import { TrainingLibraryEntry, TRAINING_TYPE_LABELS, TRAINING_TYPE_COLORS } from "@/types/trainingLibrary";
 
 interface Avatar {
   avatar_id: string;
@@ -45,12 +54,6 @@ interface Voice {
   is_premium: boolean;
 }
 
-interface VerticalTraining {
-  id: string;
-  industry_name: string;
-  rank: number;
-}
-
 interface TrainingVideo {
   id: string;
   title: string;
@@ -66,35 +69,24 @@ interface TrainingVideo {
   error_message: string | null;
   estimated_cost_usd: number | null;
   linked_vertical_id: string | null;
+  training_library_id: string | null;
   created_at: string;
 }
 
 export default function AdminTrainingVideos() {
   const queryClient = useQueryClient();
+  const { entries: trainingLibraryEntries, isLoading: libraryLoading } = useTrainingLibrary();
+  
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<Voice | null>(null);
+  const [selectedTrainingId, setSelectedTrainingId] = useState<string>('');
+  const [selectedTraining, setSelectedTraining] = useState<TrainingLibraryEntry | null>(null);
   const [genderFilter, setGenderFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(12);
-  const [scriptText, setScriptText] = useState('');
-  const [videoTitle, setVideoTitle] = useState('');
-  const [selectedVerticalId, setSelectedVerticalId] = useState<string>('');
   const [hoveredAvatarId, setHoveredAvatarId] = useState<string | null>(null);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
-
-  // Fetch vertical_training entries for dropdown
-  const { data: verticalTrainings } = useQuery({
-    queryKey: ['vertical-trainings-admin'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('vertical_training')
-        .select('id, industry_name, rank')
-        .order('rank', { ascending: true });
-      if (error) throw error;
-      return data as VerticalTraining[];
-    },
-  });
 
   // Fetch avatars
   const { data: avatarsData, isLoading: avatarsLoading, refetch: refetchAvatars } = useQuery({
@@ -131,15 +123,22 @@ export default function AdminTrainingVideos() {
     },
   });
 
+  // Update selectedTraining when selection changes
+  useEffect(() => {
+    if (selectedTrainingId) {
+      const training = trainingLibraryEntries.find(t => t.id === selectedTrainingId);
+      setSelectedTraining(training || null);
+    } else {
+      setSelectedTraining(null);
+    }
+  }, [selectedTrainingId, trainingLibraryEntries]);
+
   // Generate video mutation
   const generateMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedAvatar || !selectedVoice || !scriptText || !videoTitle) {
-        throw new Error('Please fill in all required fields');
+      if (!selectedAvatar || !selectedVoice || !selectedTraining) {
+        throw new Error('Please select a training and configure avatar/voice');
       }
-
-      // Find selected vertical name for the vertical field
-      const selectedVertical = verticalTrainings?.find(v => v.id === selectedVerticalId);
 
       const { data, error } = await supabase.functions.invoke('generate-training-video', {
         body: {
@@ -147,10 +146,10 @@ export default function AdminTrainingVideos() {
           avatar_name: selectedAvatar.name,
           voice_id: selectedVoice.voice_id,
           voice_name: selectedVoice.name,
-          script_text: scriptText,
-          title: videoTitle,
-          vertical: selectedVertical?.industry_name || null,
-          linked_vertical_id: selectedVerticalId || null,
+          script_text: selectedTraining.script,
+          title: selectedTraining.title,
+          vertical: selectedTraining.vertical_key || null,
+          training_library_id: selectedTraining.id,
         },
       });
 
@@ -163,49 +162,12 @@ export default function AdminTrainingVideos() {
         description: `Estimated cost: $${data.estimated_cost_usd?.toFixed(2)}`,
       });
       queryClient.invalidateQueries({ queryKey: ['training-videos'] });
-      // Reset form
-      setScriptText('');
-      setVideoTitle('');
-      setSelectedVerticalId('');
+      // Reset selection
+      setSelectedTrainingId('');
+      setSelectedTraining(null);
     },
     onError: (error) => {
       toast.error('Failed to generate video', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
-    },
-  });
-
-  // Link video to vertical mutation
-  const linkVerticalMutation = useMutation({
-    mutationFn: async ({ videoId, verticalId }: { videoId: string; verticalId: string | null }) => {
-      // Update training_videos with linked_vertical_id
-      const { error: updateError } = await supabase
-        .from('training_videos')
-        .update({ linked_vertical_id: verticalId })
-        .eq('id', videoId);
-      
-      if (updateError) throw updateError;
-
-      // If linking to a vertical, also update vertical_training.video_path
-      if (verticalId) {
-        const video = trainingVideos?.find(v => v.id === videoId);
-        if (video?.video_url) {
-          const { error: verticalError } = await supabase
-            .from('vertical_training')
-            .update({ video_path: video.video_url })
-            .eq('id', verticalId);
-          
-          if (verticalError) throw verticalError;
-        }
-      }
-    },
-    onSuccess: () => {
-      toast.success('Video linked to vertical');
-      queryClient.invalidateQueries({ queryKey: ['training-videos'] });
-      queryClient.invalidateQueries({ queryKey: ['vertical-trainings-admin'] });
-    },
-    onError: (error) => {
-      toast.error('Failed to link video', {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
     },
@@ -274,10 +236,18 @@ export default function AdminTrainingVideos() {
     }
   };
 
-  const getVerticalName = (verticalId: string | null) => {
-    if (!verticalId) return null;
-    return verticalTrainings?.find(v => v.id === verticalId)?.industry_name || null;
+  const getTrainingName = (libraryId: string | null) => {
+    if (!libraryId) return null;
+    return trainingLibraryEntries.find(t => t.id === libraryId)?.title || null;
   };
+
+  // Group training entries by vertical for dropdown
+  const groupedTrainings = trainingLibraryEntries.reduce((acc, entry) => {
+    const key = entry.vertical_key || '__general__';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(entry);
+    return acc;
+  }, {} as Record<string, TrainingLibraryEntry[]>);
 
   return (
     <div className="p-6 space-y-6">
@@ -285,10 +255,16 @@ export default function AdminTrainingVideos() {
         <div>
           <h1 className="text-2xl font-bold">Training Video Generator</h1>
           <p className="text-muted-foreground">
-            Create training videos using HeyGen stock avatars
+            Create training videos from the Training Library
           </p>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/admin/training-library">
+              <BookOpen className="h-4 w-4 mr-2" />
+              Training Library
+            </Link>
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
@@ -318,12 +294,183 @@ export default function AdminTrainingVideos() {
         </TabsList>
 
         <TabsContent value="generate" className="space-y-6">
+          {/* Step 1: Select Training from Library */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary">1</span>
+                </div>
+                <h2 className="text-lg font-semibold">Select Training from Library</h2>
+                {libraryLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+              </div>
+
+              <Select value={selectedTrainingId} onValueChange={setSelectedTrainingId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a training to generate video for..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-80">
+                  {Object.entries(groupedTrainings)
+                    .sort(([a], [b]) => {
+                      if (a === '__general__') return 1;
+                      if (b === '__general__') return -1;
+                      return a.localeCompare(b);
+                    })
+                    .map(([verticalKey, entries]) => (
+                      <div key={verticalKey}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b">
+                          {verticalKey === '__general__' ? 'General' : verticalKey.replace(/-/g, ' ')}
+                        </div>
+                        {entries.map((entry) => (
+                          <SelectItem key={entry.id} value={entry.id}>
+                            <div className="flex items-center gap-2">
+                              <Badge className={`${TRAINING_TYPE_COLORS[entry.training_type]} text-xs`}>
+                                {TRAINING_TYPE_LABELS[entry.training_type]}
+                              </Badge>
+                              <span>{entry.title}</span>
+                              <span className="text-xs text-muted-foreground">v{entry.script_version}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  {trainingLibraryEntries.length === 0 && (
+                    <div className="p-4 text-center text-muted-foreground">
+                      No training entries found.{' '}
+                      <Link to="/admin/training-library" className="text-primary hover:underline">
+                        Create one first
+                      </Link>
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+
+              {/* Preview Selected Training */}
+              {selectedTraining && (
+                <div className="mt-4 p-4 border rounded-lg space-y-4 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">{selectedTraining.title}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className={TRAINING_TYPE_COLORS[selectedTraining.training_type]}>
+                          {TRAINING_TYPE_LABELS[selectedTraining.training_type]}
+                        </Badge>
+                        {selectedTraining.vertical_key && (
+                          <Badge variant="outline" className="capitalize">
+                            {selectedTraining.vertical_key}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {selectedTraining.script.split(/\s+/).length} words • 
+                          ~${((selectedTraining.script.split(/\s+/).length / 150) * 3).toFixed(2)} estimated
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expandable Sections */}
+                  <Accordion type="multiple" className="w-full">
+                    <AccordionItem value="script">
+                      <AccordionTrigger className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Script Preview
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-48 overflow-y-auto">
+                          {selectedTraining.script}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    {selectedTraining.why_priority.length > 0 && (
+                      <AccordionItem value="priority">
+                        <AccordionTrigger className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <Target className="h-4 w-4" />
+                            Why Priority ({selectedTraining.why_priority.length})
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                            {selectedTraining.why_priority.map((item, i) => (
+                              <li key={i}>{item}</li>
+                            ))}
+                          </ul>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {selectedTraining.pain_points.length > 0 && (
+                      <AccordionItem value="pain">
+                        <AccordionTrigger className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4" />
+                            Pain Points ({selectedTraining.pain_points.length})
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                            {selectedTraining.pain_points.map((item, i) => (
+                              <li key={i}>{item}</li>
+                            ))}
+                          </ul>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {selectedTraining.why_phone_ai_fits.length > 0 && (
+                      <AccordionItem value="fits">
+                        <AccordionTrigger className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <Lightbulb className="h-4 w-4" />
+                            Why Phone AI Fits ({selectedTraining.why_phone_ai_fits.length})
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                            {selectedTraining.why_phone_ai_fits.map((item, i) => (
+                              <li key={i}>{item}</li>
+                            ))}
+                          </ul>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+
+                    {selectedTraining.where_to_find.length > 0 && (
+                      <AccordionItem value="find">
+                        <AccordionTrigger className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            Where to Find ({selectedTraining.where_to_find.length})
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                            {selectedTraining.where_to_find.map((item, i) => (
+                              <li key={i}>{item}</li>
+                            ))}
+                          </ul>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )}
+                  </Accordion>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Step 2 & 3: Avatar + Voice Selection */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Avatar Selection - Left 2/3 */}
             <div className="lg:col-span-2 space-y-4">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4 mb-4">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-sm font-bold text-primary">2</span>
+                    </div>
                     <h2 className="text-lg font-semibold">Select Avatar</h2>
                     
                     {/* Filters */}
@@ -483,7 +630,12 @@ export default function AdminTrainingVideos() {
               {/* Voice Selection */}
               <Card>
                 <CardContent className="pt-6">
-                  <h3 className="font-semibold mb-3">Voice</h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-xs font-bold text-primary">3</span>
+                    </div>
+                    <h3 className="font-semibold">Voice</h3>
+                  </div>
                   <Select
                     value={selectedVoice?.voice_id || ''}
                     onValueChange={(val) => {
@@ -534,64 +686,54 @@ export default function AdminTrainingVideos() {
                 </CardContent>
               </Card>
 
-              {/* Video Details */}
+              {/* Generate Button */}
               <Card>
-                <CardContent className="pt-6 space-y-4">
-                  <h3 className="font-semibold">Video Details</h3>
+                <CardContent className="pt-6">
+                  <h3 className="font-semibold mb-3">Ready to Generate</h3>
                   
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Title</label>
-                    <Input
-                      placeholder="e.g., Core Training — Plumbing"
-                      value={videoTitle}
-                      onChange={(e) => setVideoTitle(e.target.value)}
-                    />
+                  <div className="space-y-2 text-sm mb-4">
+                    <div className="flex items-center gap-2">
+                      {selectedTraining ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                      )}
+                      <span className={selectedTraining ? '' : 'text-muted-foreground'}>
+                        Training selected
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {selectedAvatar ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                      )}
+                      <span className={selectedAvatar ? '' : 'text-muted-foreground'}>
+                        Avatar selected
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {selectedVoice ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                      )}
+                      <span className={selectedVoice ? '' : 'text-muted-foreground'}>
+                        Voice selected
+                      </span>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      Link to Vertical Training
-                      <span className="text-muted-foreground font-normal ml-1">(optional)</span>
-                    </label>
-                    <Select 
-                      value={selectedVerticalId || '__none__'} 
-                      onValueChange={(val) => setSelectedVerticalId(val === '__none__' ? '' : val)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a vertical to link..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">No link</SelectItem>
-                        {(verticalTrainings || []).map((v) => (
-                          <SelectItem key={v.id} value={v.id}>
-                            #{v.rank} — {v.industry_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      When video completes, it will auto-link to this vertical's training page
+                  {selectedTraining && (
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Estimated cost: ~${((selectedTraining.script.split(/\s+/).length / 150) * 3).toFixed(2)}
                     </p>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Script</label>
-                    <Textarea
-                      placeholder="Enter the script for your training video..."
-                      value={scriptText}
-                      onChange={(e) => setScriptText(e.target.value)}
-                      rows={6}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {scriptText.split(/\s+/).filter(Boolean).length} words
-                      {scriptText && ` (~$${((scriptText.split(/\s+/).filter(Boolean).length / 150) * 3).toFixed(2)} estimated)`}
-                    </p>
-                  </div>
+                  )}
 
                   <Button
                     className="w-full"
                     onClick={() => generateMutation.mutate()}
-                    disabled={!selectedAvatar || !selectedVoice || !scriptText || !videoTitle || generateMutation.isPending}
+                    disabled={!selectedAvatar || !selectedVoice || !selectedTraining || generateMutation.isPending}
                   >
                     {generateMutation.isPending ? (
                       <>
@@ -636,44 +778,22 @@ export default function AdminTrainingVideos() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{video.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {video.avatar_name || video.avatar_id} • {video.voice_name || video.voice_id}
-                        </p>
-                      </div>
-                      
-                      {/* Vertical Link Control */}
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={video.linked_vertical_id || '__none__'}
-                          onValueChange={(val) => linkVerticalMutation.mutate({ 
-                            videoId: video.id, 
-                            verticalId: val === '__none__' ? null : val 
-                          })}
-                          disabled={video.status !== 'ready'}
-                        >
-                          <SelectTrigger className="w-48">
-                            {video.linked_vertical_id ? (
-                              <div className="flex items-center gap-1">
-                                <LinkIcon className="h-3 w-3 text-green-500" />
-                                <span className="truncate">{getVerticalName(video.linked_vertical_id)}</span>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">Link to vertical...</span>
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">Unlink</SelectItem>
-                            {(verticalTrainings || []).map((v) => (
-                              <SelectItem key={v.id} value={v.id}>
-                                #{v.rank} — {v.industry_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>{video.avatar_name || video.avatar_id} • {video.voice_name || video.voice_id}</span>
+                          {video.training_library_id && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <LinkIcon className="h-3 w-3" />
+                                {getTrainingName(video.training_library_id) || 'Linked'}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        {video.vertical && !video.linked_vertical_id && (
+                        {video.vertical && (
                           <Badge variant="outline">{video.vertical}</Badge>
                         )}
                         <Badge className={getStatusColor(video.status)}>

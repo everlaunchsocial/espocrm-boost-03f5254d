@@ -3188,6 +3188,57 @@ export type Database = {
         }
         Relationships: []
       }
+      training_library: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          pain_points: Json
+          script: string
+          script_version: number
+          slug: string
+          title: string
+          training_type: Database["public"]["Enums"]["training_type"]
+          updated_at: string
+          vertical_key: string | null
+          where_to_find: Json
+          why_phone_ai_fits: Json
+          why_priority: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          pain_points?: Json
+          script: string
+          script_version?: number
+          slug: string
+          title: string
+          training_type?: Database["public"]["Enums"]["training_type"]
+          updated_at?: string
+          vertical_key?: string | null
+          where_to_find?: Json
+          why_phone_ai_fits?: Json
+          why_priority?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          pain_points?: Json
+          script?: string
+          script_version?: number
+          slug?: string
+          title?: string
+          training_type?: Database["public"]["Enums"]["training_type"]
+          updated_at?: string
+          vertical_key?: string | null
+          where_to_find?: Json
+          why_phone_ai_fits?: Json
+          why_priority?: Json
+        }
+        Relationships: []
+      }
       training_modules: {
         Row: {
           category_id: string | null
@@ -3315,6 +3366,7 @@ export type Database = {
           script_text: string
           status: string
           title: string
+          training_library_id: string | null
           updated_at: string
           vertical: string | null
           video_url: string | null
@@ -3334,6 +3386,7 @@ export type Database = {
           script_text: string
           status?: string
           title: string
+          training_library_id?: string | null
           updated_at?: string
           vertical?: string | null
           video_url?: string | null
@@ -3353,6 +3406,7 @@ export type Database = {
           script_text?: string
           status?: string
           title?: string
+          training_library_id?: string | null
           updated_at?: string
           vertical?: string | null
           video_url?: string | null
@@ -3365,6 +3419,13 @@ export type Database = {
             columns: ["linked_vertical_id"]
             isOneToOne: false
             referencedRelation: "vertical_training"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_videos_training_library_id_fkey"
+            columns: ["training_library_id"]
+            isOneToOne: false
+            referencedRelation: "training_library"
             referencedColumns: ["id"]
           },
         ]
@@ -4116,6 +4177,14 @@ export type Database = {
         | "archive"
         | "restore"
       backlog_priority: "low" | "medium" | "high" | "critical"
+      training_type:
+        | "core"
+        | "advanced"
+        | "bridge_play"
+        | "product"
+        | "process"
+        | "objection"
+        | "generic"
       video_event_type: "view" | "phone_cta" | "chat_cta" | "voice_cta"
       video_status: "draft" | "generating" | "ready" | "failed"
       video_type:
@@ -4273,6 +4342,15 @@ export const Constants = {
         "restore",
       ],
       backlog_priority: ["low", "medium", "high", "critical"],
+      training_type: [
+        "core",
+        "advanced",
+        "bridge_play",
+        "product",
+        "process",
+        "objection",
+        "generic",
+      ],
       video_event_type: ["view", "phone_cta", "chat_cta", "voice_cta"],
       video_status: ["draft", "generating", "ready", "failed"],
       video_type: [
