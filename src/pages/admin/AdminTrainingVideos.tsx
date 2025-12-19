@@ -186,12 +186,16 @@ export default function AdminTrainingVideos() {
           description: 'The video has been processed and uploaded.',
         });
       } else if (data.status === 'failed') {
+        // Handle error object or string
+        const errorMessage = typeof data.error === 'object' && data.error !== null
+          ? data.error.message || data.error.detail || JSON.stringify(data.error)
+          : data.error || 'Unknown error';
         toast.error('Video generation failed', {
-          description: data.error || 'Unknown error',
+          description: errorMessage,
         });
       } else {
         toast.info(`Video status: ${data.status}`, {
-          description: data.message,
+          description: typeof data.message === 'string' ? data.message : 'Status updated',
         });
       }
       queryClient.invalidateQueries({ queryKey: ['training-videos'] });
