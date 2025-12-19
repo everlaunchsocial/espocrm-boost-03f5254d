@@ -173,3 +173,6 @@ verify_jwt = false
 
 [functions.heygen-refresh-avatars]
 verify_jwt = true
+
+[functions.heygen-avatar-details]
+verify_jwt = false
