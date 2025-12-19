@@ -89,17 +89,49 @@ export default function AdminTrainingVideos() {
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
-  // Fetch avatars
+  // Fetch avatars with cache support
+  const [avatarCacheInfo, setAvatarCacheInfo] = useState<{ cached: boolean; cached_at: string; cache_age_hours: string } | null>(null);
+  const [isRefreshingAvatars, setIsRefreshingAvatars] = useState(false);
+
   const { data: avatarsData, isLoading: avatarsLoading, refetch: refetchAvatars } = useQuery({
     queryKey: ['heygen-avatars'],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('heygen-list-avatars');
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
+      setAvatarCacheInfo({
+        cached: data.cached,
+        cached_at: data.cached_at,
+        cache_age_hours: data.cache_age_hours
+      });
       return data.avatars as Avatar[];
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 30 * 60 * 1000, // Cache locally for 30 minutes since DB is cached
   });
+
+  const handleRefreshAvatars = async () => {
+    setIsRefreshingAvatars(true);
+    try {
+      // Force refresh by passing refresh param in body
+      const { data: refreshData, error: refreshError } = await supabase.functions.invoke('heygen-list-avatars', {
+        body: { refresh: true },
+      });
+      if (refreshError) throw refreshError;
+      if (!refreshData.success) throw new Error(refreshData.error);
+      setAvatarCacheInfo({
+        cached: refreshData.cached,
+        cached_at: refreshData.cached_at,
+        cache_age_hours: refreshData.cache_age_hours
+      });
+      await refetchAvatars();
+      toast.success(`Avatars refreshed - loaded ${refreshData.total} avatars`);
+    } catch (err) {
+      console.error('Error refreshing avatars:', err);
+      toast.error("Could not refresh avatars");
+    } finally {
+      setIsRefreshingAvatars(false);
+    }
+  };
 
   // Fetch voices
   const { data: voicesData, isLoading: voicesLoading } = useQuery({
@@ -519,8 +551,25 @@ export default function AdminTrainingVideos() {
                     </div>
                     <h2 className="text-lg font-semibold">Select Avatar</h2>
                     
+                    {/* Cache status */}
+                    {avatarCacheInfo && (
+                      <span className="text-xs text-muted-foreground">
+                        {avatarCacheInfo.cached ? `Cached ${avatarCacheInfo.cache_age_hours}h ago` : 'Fresh'}
+                      </span>
+                    )}
+                    
                     {/* Filters */}
                     <div className="flex items-center gap-2 ml-auto">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRefreshAvatars}
+                        disabled={isRefreshingAvatars}
+                        title="Refresh avatars from HeyGen (takes 10-15s)"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${isRefreshingAvatars ? 'animate-spin' : ''}`} />
+                      </Button>
+                      
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
