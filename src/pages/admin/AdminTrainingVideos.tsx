@@ -1,9 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,14 +13,10 @@ import {
   Play, 
   Loader2, 
   Check, 
-  Search, 
-  Filter, 
   RefreshCw,
   Video,
-  ChevronDown,
   Volume2,
   VolumeX,
-  Link2,
   LinkIcon,
   BookOpen,
   FileText,
@@ -32,18 +27,7 @@ import {
 } from "lucide-react";
 import { useTrainingLibrary } from "@/hooks/useTrainingLibrary";
 import { TrainingLibraryEntry, TRAINING_TYPE_LABELS, TRAINING_TYPE_COLORS } from "@/types/trainingLibrary";
-
-interface Avatar {
-  avatar_id: string;
-  name: string;
-  gender: string;
-  preview_image_url: string | null;
-  preview_video_url: string | null;
-  is_premium: boolean;
-  tags: string[];
-  default_voice_id: string | null;
-  default_voice_name: string | null;
-}
+import { CURATED_AVATARS, CuratedAvatar } from "@/lib/curatedAvatars";
 
 interface Voice {
   voice_id: string;
@@ -77,89 +61,12 @@ export default function AdminTrainingVideos() {
   const queryClient = useQueryClient();
   const { entries: trainingLibraryEntries, isLoading: libraryLoading } = useTrainingLibrary();
   
-  const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
+  const [selectedAvatar, setSelectedAvatar] = useState<CuratedAvatar | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<Voice | null>(null);
   const [selectedTrainingId, setSelectedTrainingId] = useState<string>('');
   const [selectedTraining, setSelectedTraining] = useState<TrainingLibraryEntry | null>(null);
-  const [genderFilter, setGenderFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [visibleCount, setVisibleCount] = useState(12);
-  const [hoveredAvatarId, setHoveredAvatarId] = useState<string | null>(null);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
-
-  // Fetch avatars with cache support
-  const [avatarCacheInfo, setAvatarCacheInfo] = useState<{ 
-    cached: boolean; 
-    cached_at?: string; 
-    cache_age_hours?: string;
-    warming?: boolean;
-    stale?: boolean;
-  } | null>(null);
-  const [isRefreshingAvatars, setIsRefreshingAvatars] = useState(false);
-
-  const { data: avatarsData, isLoading: avatarsLoading, refetch: refetchAvatars } = useQuery({
-    queryKey: ['heygen-avatars'],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('heygen-list-avatars');
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
-      
-      // Store cache info
-      setAvatarCacheInfo({
-        cached: data.cached,
-        cached_at: data.cached_at,
-        cache_age_hours: data.cache_age_hours,
-        warming: data.warming,
-        stale: data.stale,
-      });
-      
-      // If cache is empty (warming) or stale, trigger background refresh
-      if (data.warming || data.stale) {
-        console.log('Cache warming/stale, triggering background refresh...');
-        // Fire-and-forget refresh
-        supabase.functions.invoke('heygen-refresh-avatars').then(({ data: refreshData, error: refreshError }) => {
-          if (refreshError) {
-            console.error('Background refresh error:', refreshError);
-          } else if (refreshData?.success) {
-            console.log(`Background refresh complete: ${refreshData.total} avatars cached`);
-          }
-        });
-      }
-      
-      return data.avatars as Avatar[];
-    },
-    staleTime: 30 * 60 * 1000, // Cache locally for 30 minutes
-    // Auto-refetch if warming (cache is being populated)
-    refetchInterval: (query) => {
-      const cacheInfo = avatarCacheInfo;
-      if (cacheInfo?.warming) {
-        return 3000; // Poll every 3s while warming
-      }
-      return false;
-    },
-  });
-
-  const handleRefreshAvatars = async () => {
-    setIsRefreshingAvatars(true);
-    try {
-      // Call the dedicated refresh function
-      const { data: refreshData, error: refreshError } = await supabase.functions.invoke('heygen-refresh-avatars');
-      if (refreshError) throw refreshError;
-      if (!refreshData.success) throw new Error(refreshData.error);
-      
-      toast.success(`Avatars refreshed - ${refreshData.total} avatars cached in ${refreshData.total_time_ms}ms`);
-      
-      // Refetch from cache to get updated data
-      await refetchAvatars();
-    } catch (err) {
-      console.error('Error refreshing avatars:', err);
-      toast.error("Could not refresh avatars");
-    } finally {
-      setIsRefreshingAvatars(false);
-    }
-  };
 
   // Fetch voices
   const { data: voicesData, isLoading: voicesLoading } = useQuery({
@@ -209,7 +116,7 @@ export default function AdminTrainingVideos() {
           avatar_name: selectedAvatar.name,
           voice_id: selectedVoice.voice_id,
           voice_name: selectedVoice.name,
-          // Script loaded server-side from training_library
+          use_native_background: selectedAvatar.useNativeBackground,
         },
       });
 
@@ -222,7 +129,6 @@ export default function AdminTrainingVideos() {
         description: `Estimated cost: $${data.estimated_cost_usd?.toFixed(2)}`,
       });
       queryClient.invalidateQueries({ queryKey: ['training-videos'] });
-      // Reset selection
       setSelectedTrainingId('');
       setSelectedTraining(null);
     },
@@ -244,21 +150,14 @@ export default function AdminTrainingVideos() {
     },
     onSuccess: (data) => {
       if (data.status === 'ready') {
-        toast.success('Video is ready!', {
-          description: 'The video has been processed and uploaded.',
-        });
+        toast.success('Video is ready!');
       } else if (data.status === 'failed') {
-        // Handle error object or string
         const errorMessage = typeof data.error === 'object' && data.error !== null
           ? data.error.message || data.error.detail || JSON.stringify(data.error)
           : data.error || 'Unknown error';
-        toast.error('Video generation failed', {
-          description: errorMessage,
-        });
+        toast.error('Video generation failed', { description: errorMessage });
       } else {
-        toast.info(`Video status: ${data.status}`, {
-          description: typeof data.message === 'string' ? data.message : 'Status updated',
-        });
+        toast.info(`Video status: ${data.status}`);
       }
       queryClient.invalidateQueries({ queryKey: ['training-videos'] });
     },
@@ -268,36 +167,6 @@ export default function AdminTrainingVideos() {
       });
     },
   });
-
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Memoized filtered avatars for performance
-  const filteredAvatars = useMemo(() => {
-    return (avatarsData || []).filter((avatar) => {
-      if (genderFilter !== 'all' && avatar.gender !== genderFilter) return false;
-      if (debouncedSearch && !avatar.name.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
-      return true;
-    });
-  }, [avatarsData, genderFilter, debouncedSearch]);
-
-  const visibleAvatars = useMemo(() => filteredAvatars.slice(0, visibleCount), [filteredAvatars, visibleCount]);
-  const hasMore = visibleCount < filteredAvatars.length;
-
-  // When avatar is selected, set default voice
-  useEffect(() => {
-    if (selectedAvatar?.default_voice_id && voicesData) {
-      const defaultVoice = voicesData.find(v => v.voice_id === selectedAvatar.default_voice_id);
-      if (defaultVoice) {
-        setSelectedVoice(defaultVoice);
-      }
-    }
-  }, [selectedAvatar, voicesData]);
 
   const playVoicePreview = (voice: Voice, e?: React.MouseEvent) => {
     if (e) {
@@ -310,13 +179,11 @@ export default function AdminTrainingVideos() {
       return;
     }
     
-    // Stop current audio if playing
     if (currentAudio) {
       currentAudio.pause();
       currentAudio.currentTime = 0;
     }
     
-    // If clicking the same voice, just stop
     if (playingAudioId === voice.voice_id) {
       setPlayingAudioId(null);
       setCurrentAudio(null);
@@ -378,15 +245,6 @@ export default function AdminTrainingVideos() {
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh Queue
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => refetchAvatars()}
-            disabled={avatarsLoading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${avatarsLoading ? 'animate-spin' : ''}`} />
-            Refresh Avatars
           </Button>
         </div>
       </div>
@@ -474,8 +332,7 @@ export default function AdminTrainingVideos() {
                     </div>
                   </div>
 
-                  {/* Expandable Sections */}
-                  <Accordion type="multiple" className="w-full">
+                  <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="script">
                       <AccordionTrigger className="text-sm">
                         <div className="flex items-center gap-2">
@@ -578,138 +435,62 @@ export default function AdminTrainingVideos() {
                       <span className="text-sm font-bold text-primary">2</span>
                     </div>
                     <h2 className="text-lg font-semibold">Select Avatar</h2>
-                    
-                    {/* Cache status */}
-                    {avatarCacheInfo && (
-                      <span className="text-xs text-muted-foreground">
-                        {avatarCacheInfo.cached ? `Cached ${avatarCacheInfo.cache_age_hours}h ago` : 'Fresh'}
-                      </span>
-                    )}
-                    
-                    {/* Filters */}
-                    <div className="flex items-center gap-2 ml-auto">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleRefreshAvatars}
-                        disabled={isRefreshingAvatars}
-                        title="Refresh avatars from HeyGen (takes 10-15s)"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${isRefreshingAvatars ? 'animate-spin' : ''}`} />
-                      </Button>
-                      
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search avatars..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-9 w-48"
-                        />
-                      </div>
-                      
-                      <Select value={genderFilter} onValueChange={setGenderFilter}>
-                        <SelectTrigger className="w-32">
-                          <Filter className="h-4 w-4 mr-2" />
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All</SelectItem>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {CURATED_AVATARS.length} curated avatars
+                    </span>
                   </div>
 
-                  {avatarsLoading ? (
-                    <div className="flex items-center justify-center h-64">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : (
-                    <>
-                      {/* 4x3 Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {visibleAvatars.map((avatar) => (
-                          <div
-                            key={avatar.avatar_id}
-                            className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
-                              selectedAvatar?.avatar_id === avatar.avatar_id
-                                ? 'border-primary ring-2 ring-primary/20'
-                                : 'border-border hover:border-primary/50'
-                            }`}
-                            onClick={() => setSelectedAvatar(avatar)}
-                            onMouseEnter={() => setHoveredAvatarId(avatar.avatar_id)}
-                            onMouseLeave={() => setHoveredAvatarId(null)}
-                          >
-                            {/* Preview Image / Video */}
-                            <div className="aspect-square bg-muted relative">
-                              {hoveredAvatarId === avatar.avatar_id && avatar.preview_video_url ? (
-                                <video
-                                  src={avatar.preview_video_url}
-                                  autoPlay
-                                  muted
-                                  loop
-                                  className="absolute inset-0 w-full h-full object-cover"
-                                />
-                              ) : avatar.preview_image_url ? (
-                                <img
-                                  src={avatar.preview_image_url}
-                                  alt={avatar.name}
-                                  loading="lazy"
-                                  className="absolute inset-0 w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <Video className="h-8 w-8 text-muted-foreground" />
-                                </div>
-                              )}
+                  {/* Avatar Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {CURATED_AVATARS.map((avatar) => (
+                      <div
+                        key={avatar.avatar_id}
+                        className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${
+                          selectedAvatar?.avatar_id === avatar.avatar_id
+                            ? 'border-primary ring-2 ring-primary/20'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                        onClick={() => setSelectedAvatar(avatar)}
+                      >
+                        <div className="aspect-square bg-muted relative">
+                          <img
+                            src={avatar.preview_image_url}
+                            alt={avatar.name}
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/placeholder.svg';
+                            }}
+                          />
 
-                              {/* Selected checkmark */}
-                              {selectedAvatar?.avatar_id === avatar.avatar_id && (
-                                <div className="absolute top-2 right-2 bg-primary rounded-full p-1">
-                                  <Check className="h-3 w-3 text-primary-foreground" />
-                                </div>
-                              )}
-
-                              {/* Premium badge */}
-                              {avatar.is_premium && (
-                                <Badge className="absolute top-2 left-2 bg-amber-500/90 text-white text-xs">
-                                  Premium
-                                </Badge>
-                              )}
+                          {selectedAvatar?.avatar_id === avatar.avatar_id && (
+                            <div className="absolute top-2 right-2 bg-primary rounded-full p-1">
+                              <Check className="h-3 w-3 text-primary-foreground" />
                             </div>
+                          )}
 
-                            {/* Info */}
-                            <div className="p-2 bg-card">
-                              <p className="text-sm font-medium truncate">{avatar.name}</p>
-                              <p className="text-xs text-muted-foreground capitalize">
-                                {avatar.gender}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                          {avatar.useNativeBackground && (
+                            <Badge className="absolute top-2 left-2 bg-blue-500/90 text-white text-xs">
+                              Built-in BG
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="p-2 bg-card">
+                          <p className="text-sm font-medium truncate">{avatar.name}</p>
+                          <p className="text-xs text-muted-foreground capitalize">
+                            {avatar.gender}
+                            {avatar.description && ` • ${avatar.description}`}
+                          </p>
+                        </div>
                       </div>
+                    ))}
+                  </div>
 
-                      {/* Load More */}
-                      {hasMore && (
-                        <div className="flex justify-center mt-4">
-                          <Button
-                            variant="outline"
-                            onClick={() => setVisibleCount((c) => c + 12)}
-                          >
-                            <ChevronDown className="h-4 w-4 mr-2" />
-                            Load More ({filteredAvatars.length - visibleCount} remaining)
-                          </Button>
-                        </div>
-                      )}
-
-                      {filteredAvatars.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          No avatars found matching your criteria
-                        </div>
-                      )}
-                    </>
+                  {CURATED_AVATARS.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No curated avatars available
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -724,23 +505,23 @@ export default function AdminTrainingVideos() {
                   {selectedAvatar ? (
                     <div className="flex items-center gap-3">
                       <div className="h-16 w-16 rounded-lg overflow-hidden bg-muted">
-                        {selectedAvatar.preview_image_url ? (
-                          <img
-                            src={selectedAvatar.preview_image_url}
-                            alt={selectedAvatar.name}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center">
-                            <Video className="h-6 w-6 text-muted-foreground" />
-                          </div>
-                        )}
+                        <img
+                          src={selectedAvatar.preview_image_url}
+                          alt={selectedAvatar.name}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.svg';
+                          }}
+                        />
                       </div>
                       <div>
                         <p className="font-medium">{selectedAvatar.name}</p>
                         <p className="text-sm text-muted-foreground capitalize">
                           {selectedAvatar.gender}
                         </p>
+                        {selectedAvatar.useNativeBackground && (
+                          <p className="text-xs text-blue-500">Has built-in background</p>
+                        )}
                       </div>
                     </div>
                   ) : (
