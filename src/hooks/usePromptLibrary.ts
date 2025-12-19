@@ -47,6 +47,7 @@ export function usePromptLibrary() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<PromptChannel | null>(null);
   const { toast } = useToast();
 
   const fetchPrompts = async () => {
@@ -161,15 +162,16 @@ export function usePromptLibrary() {
     }
   };
 
-  // Filter prompts based on search and category
+  // Filter prompts based on search, category, and channel
   const filteredPrompts = prompts.filter((prompt) => {
     const matchesSearch = !searchQuery || 
       prompt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       prompt.prompt_content.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesCategory = !selectedCategory || prompt.category === selectedCategory;
+    const matchesChannel = !selectedChannel || prompt.channel === selectedChannel;
     
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && matchesChannel;
   });
 
   // Group prompts by category
@@ -182,17 +184,23 @@ export function usePromptLibrary() {
 
   // Get unique categories
   const categories = [...new Set(prompts.map((p) => p.category))];
+  
+  // Get unique channels that are in use
+  const channels = [...new Set(prompts.map((p) => p.channel))] as PromptChannel[];
 
   return {
     prompts,
     filteredPrompts,
     promptsByCategory,
     categories,
+    channels,
     isLoading,
     searchQuery,
     setSearchQuery,
     selectedCategory,
     setSelectedCategory,
+    selectedChannel,
+    setSelectedChannel,
     createPrompt,
     updatePrompt,
     createNewVersion,

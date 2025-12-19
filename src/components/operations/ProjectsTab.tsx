@@ -94,14 +94,14 @@ export function ProjectsTab() {
     <div className="flex flex-col h-full -m-6">
       {/* Header */}
       <div className="flex flex-col gap-4 p-4 border-b bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
             <p className="text-sm text-muted-foreground">
               {totalItems} active features
               {abandonedCount > 0 && ` · ${abandonedCount} abandoned`}
             </p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)}>
+          <Button onClick={() => setIsCreateOpen(true)} className="shrink-0">
             <Plus className="h-4 w-4 mr-2" />
             New Feature
           </Button>
