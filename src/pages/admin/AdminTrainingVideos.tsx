@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -83,6 +83,7 @@ export default function AdminTrainingVideos() {
   const [selectedTraining, setSelectedTraining] = useState<TrainingLibraryEntry | null>(null);
   const [genderFilter, setGenderFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(12);
   const [hoveredAvatarId, setHoveredAvatarId] = useState<string | null>(null);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
@@ -208,14 +209,24 @@ export default function AdminTrainingVideos() {
     },
   });
 
-  // Filter avatars
-  const filteredAvatars = (avatarsData || []).filter((avatar) => {
-    if (genderFilter !== 'all' && avatar.gender !== genderFilter) return false;
-    if (searchQuery && !avatar.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const visibleAvatars = filteredAvatars.slice(0, visibleCount);
+  // Memoized filtered avatars for performance
+  const filteredAvatars = useMemo(() => {
+    return (avatarsData || []).filter((avatar) => {
+      if (genderFilter !== 'all' && avatar.gender !== genderFilter) return false;
+      if (debouncedSearch && !avatar.name.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [avatarsData, genderFilter, debouncedSearch]);
+
+  const visibleAvatars = useMemo(() => filteredAvatars.slice(0, visibleCount), [filteredAvatars, visibleCount]);
   const hasMore = visibleCount < filteredAvatars.length;
 
   // When avatar is selected, set default voice
