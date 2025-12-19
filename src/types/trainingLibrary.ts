@@ -15,6 +15,7 @@ export interface TrainingLibraryEntry {
   where_to_find: string[];
   script_version: number;
   is_active: boolean;
+  latest_video_path: string | null;
   created_at: string;
   updated_at: string;
 }

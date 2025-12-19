@@ -22,83 +22,99 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Get request body
+    // Verify caller is authenticated admin/super_admin
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing authorization header');
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      throw new Error('Unauthorized: Invalid token');
+    }
+
+    // Check if user is admin
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('global_role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (profileError || !profile || !['admin', 'super_admin'].includes(profile.global_role)) {
+      throw new Error('Unauthorized: Admin access required');
+    }
+
+    console.log(`[generate-training-video] Authorized admin: ${user.email}`);
+
+    // Get request body - training_library_id is now REQUIRED
     const { 
-      training_video_id,
+      training_library_id,
       avatar_id, 
       avatar_name,
       voice_id, 
       voice_name,
-      script_text, 
-      title,
-      vertical,
-      linked_vertical_id
     } = await req.json();
 
-    if (!avatar_id || !voice_id || !script_text || !title) {
-      throw new Error('Missing required fields: avatar_id, voice_id, script_text, title');
+    if (!training_library_id) {
+      throw new Error('Missing required field: training_library_id');
     }
 
-    console.log(`Generating training video: ${title}`);
-    console.log(`Avatar: ${avatar_id}, Voice: ${voice_id}`);
-    console.log(`Script length: ${script_text.length} characters`);
-    console.log(`Linked vertical ID: ${linked_vertical_id || 'none'}`);
+    if (!avatar_id || !voice_id) {
+      throw new Error('Missing required fields: avatar_id, voice_id');
+    }
+
+    // Load training entry from training_library (server-side, not from client)
+    const { data: trainingEntry, error: trainingError } = await supabase
+      .from('training_library')
+      .select('*')
+      .eq('id', training_library_id)
+      .single();
+
+    if (trainingError || !trainingEntry) {
+      throw new Error(`Training entry not found: ${training_library_id}`);
+    }
+
+    console.log(`[generate-training-video] Loaded training: ${trainingEntry.title}`);
+    console.log(`[generate-training-video] Script version: ${trainingEntry.script_version}`);
+    console.log(`[generate-training-video] Vertical: ${trainingEntry.vertical_key || 'none'}`);
+
+    const script_text = trainingEntry.script;
+    const title = trainingEntry.title;
 
     // Estimate cost (~$0.05 per second, average 150 words/min)
     const wordCount = script_text.split(/\s+/).length;
     const estimatedMinutes = wordCount / 150;
     const estimatedCost = estimatedMinutes * 3; // ~$3 per minute
 
-    // Create or update the training video record
-    let videoRecord;
-    if (training_video_id) {
-      const { data, error } = await supabase
-        .from('training_videos')
-        .update({
-          status: 'processing',
-          avatar_id,
-          avatar_name,
-          voice_id,
-          voice_name,
-          script_text,
-          title,
-          vertical,
-          linked_vertical_id: linked_vertical_id || null,
-          estimated_cost_usd: estimatedCost,
-          error_message: null,
-        })
-        .eq('id', training_video_id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      videoRecord = data;
-    } else {
-      const { data, error } = await supabase
-        .from('training_videos')
-        .insert({
-          status: 'processing',
-          avatar_id,
-          avatar_name,
-          voice_id,
-          voice_name,
-          script_text,
-          title,
-          vertical,
-          linked_vertical_id: linked_vertical_id || null,
-          estimated_cost_usd: estimatedCost,
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      videoRecord = data;
-    }
+    console.log(`[generate-training-video] Avatar: ${avatar_id}, Voice: ${voice_id}`);
+    console.log(`[generate-training-video] Script: ${wordCount} words, ~$${estimatedCost.toFixed(2)} estimated`);
 
-    console.log(`Training video record created/updated: ${videoRecord.id}`);
+    // Create the training video record with training_library_id
+    const { data: videoRecord, error: insertError } = await supabase
+      .from('training_videos')
+      .insert({
+        status: 'processing',
+        avatar_id,
+        avatar_name,
+        voice_id,
+        voice_name,
+        script_text,
+        title,
+        vertical: trainingEntry.vertical_key || null,
+        training_library_id: training_library_id,
+        estimated_cost_usd: estimatedCost,
+      })
+      .select()
+      .single();
+    
+    if (insertError) throw insertError;
+
+    console.log(`[generate-training-video] Training video record created: ${videoRecord.id}`);
 
     // Standard branded background for all training videos
-    const TRAINING_VIDEO_BACKGROUND_URL = 'https://mrcfpbkoulldnkqzzprb.supabase.co/storage/v1/object/public/assets/training-video-background.png';
+    const TRAINING_VIDEO_BACKGROUND_URL = `${SUPABASE_URL}/storage/v1/object/public/assets/training-video-background.png`;
 
     // Call HeyGen to generate the video
     const heygenPayload = {
@@ -127,7 +143,7 @@ serve(async (req) => {
       callback_id: `training_video_${videoRecord.id}`,
     };
 
-    console.log('Calling HeyGen API to generate video...');
+    console.log('[generate-training-video] Calling HeyGen API...');
 
     const heygenResponse = await fetch('https://api.heygen.com/v2/video/generate', {
       method: 'POST',
@@ -140,7 +156,7 @@ serve(async (req) => {
 
     if (!heygenResponse.ok) {
       const errorText = await heygenResponse.text();
-      console.error('HeyGen generation error:', heygenResponse.status, errorText);
+      console.error('[generate-training-video] HeyGen error:', heygenResponse.status, errorText);
       
       // Update record with error
       await supabase
@@ -157,7 +173,7 @@ serve(async (req) => {
     const heygenData = await heygenResponse.json();
     const heygenVideoId = heygenData.data?.video_id;
 
-    console.log(`HeyGen video generation started. Video ID: ${heygenVideoId}`);
+    console.log(`[generate-training-video] HeyGen started. Video ID: ${heygenVideoId}`);
 
     // Update record with HeyGen video ID
     await supabase
@@ -171,23 +187,25 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         training_video_id: videoRecord.id,
+        training_library_id: training_library_id,
         heygen_video_id: heygenVideoId,
         estimated_cost_usd: estimatedCost,
-        linked_vertical_id: linked_vertical_id || null,
+        title: title,
+        script_version: trainingEntry.script_version,
         message: 'Video generation started. You will be notified when complete.',
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error generating training video:', error);
+    console.error('[generate-training-video] Error:', error);
     return new Response(
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       }),
       {
-        status: 500,
+        status: error instanceof Error && error.message.includes('Unauthorized') ? 401 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );

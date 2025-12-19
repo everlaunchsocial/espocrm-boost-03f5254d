@@ -80,77 +80,112 @@ serve(async (req) => {
       if (eventType === 'avatar_video.success' || eventType === 'video.completed' || eventType === 'video_completed' || status === 'completed' || status === 'ready') {
         console.log(`[heygen-webhook] Training video ${trainingVideoId} completed. URL: ${videoUrl}`);
         
-        // Get the training video record to find the vertical
+        // Get the training video record
         const { data: trainingVideo, error: tvError } = await supabase
           .from('training_videos')
-          .select('id, vertical, linked_vertical_id, title')
+          .select('id, vertical, training_library_id, title')
           .eq('id', trainingVideoId)
           .single();
         
         if (tvError || !trainingVideo) {
           console.warn(`[heygen-webhook] Training video not found: ${trainingVideoId}`);
-        } else {
-          // Update training video with completed status and URL
-          await supabase
-            .from('training_videos')
+          return new Response(JSON.stringify({ received: true, error: 'Training video not found' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // ============================================
+        // DOWNLOAD VIDEO AND UPLOAD TO SUPABASE STORAGE
+        // ============================================
+        let storagePath: string | null = null;
+        
+        try {
+          console.log('[heygen-webhook] Downloading video from HeyGen...');
+          const videoResponse = await fetch(videoUrl);
+          
+          if (!videoResponse.ok) {
+            throw new Error(`Failed to download video: ${videoResponse.status}`);
+          }
+          
+          const videoBlob = await videoResponse.blob();
+          const videoBuffer = await videoBlob.arrayBuffer();
+          
+          // Generate storage path: training-videos/{training_library_id}/{timestamp}.mp4
+          const timestamp = Date.now();
+          const fileName = `${trainingVideo.training_library_id || 'orphan'}/${timestamp}.mp4`;
+          storagePath = fileName;
+          
+          console.log(`[heygen-webhook] Uploading to storage: ${storagePath}`);
+          
+          const { error: uploadError } = await supabase.storage
+            .from('training-videos')
+            .upload(storagePath, videoBuffer, {
+              contentType: 'video/mp4',
+              upsert: false,
+            });
+          
+          if (uploadError) {
+            console.error('[heygen-webhook] Storage upload failed:', uploadError);
+            // Continue without storage - use HeyGen URL as fallback
+            storagePath = null;
+          } else {
+            console.log(`[heygen-webhook] Video uploaded to storage: ${storagePath}`);
+          }
+        } catch (downloadError) {
+          console.error('[heygen-webhook] Video download/upload failed:', downloadError);
+          // Continue with HeyGen URL as fallback
+        }
+
+        // ============================================
+        // UPDATE TRAINING_VIDEOS RECORD
+        // ============================================
+        const updateData: Record<string, unknown> = {
+          status: 'ready',
+          video_url: videoUrl, // Keep HeyGen URL as backup
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        };
+
+        // Add video_path if upload succeeded
+        if (storagePath) {
+          updateData.video_path = storagePath;
+        }
+
+        await supabase
+          .from('training_videos')
+          .update(updateData)
+          .eq('id', trainingVideoId);
+        
+        console.log(`[heygen-webhook] Training video ${trainingVideoId} marked as ready`);
+        
+        // ============================================
+        // UPDATE TRAINING_LIBRARY.latest_video_path
+        // ============================================
+        if (trainingVideo.training_library_id) {
+          const latestPath = storagePath || videoUrl;
+          
+          const { error: libraryUpdateError } = await supabase
+            .from('training_library')
             .update({
-              status: 'ready',
-              video_url: videoUrl,
-              error_message: null,
+              latest_video_path: latestPath,
               updated_at: new Date().toISOString(),
             })
-            .eq('id', trainingVideoId);
+            .eq('id', trainingVideo.training_library_id);
           
-          console.log(`[heygen-webhook] Training video ${trainingVideoId} marked as ready`);
-          
-          // AUTO-LINK: If linked_vertical_id is set, update vertical_training.video_path
-          if (trainingVideo.linked_vertical_id) {
-            await supabase
-              .from('vertical_training')
-              .update({
-                video_path: videoUrl,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', trainingVideo.linked_vertical_id);
-            
-            console.log(`[heygen-webhook] Auto-linked video to vertical_training: ${trainingVideo.linked_vertical_id}`);
-          }
-          // FALLBACK: Try to match by vertical name if no linked_vertical_id
-          else if (trainingVideo.vertical) {
-            // Try to find matching vertical_training by industry_name (case-insensitive)
-            const { data: matchingVertical } = await supabase
-              .from('vertical_training')
-              .select('id, industry_name')
-              .ilike('industry_name', `%${trainingVideo.vertical}%`)
-              .limit(1)
-              .single();
-            
-            if (matchingVertical) {
-              // Update vertical_training with the video path
-              await supabase
-                .from('vertical_training')
-                .update({
-                  video_path: videoUrl,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', matchingVertical.id);
-              
-              // Also update training_videos with the linked_vertical_id
-              await supabase
-                .from('training_videos')
-                .update({
-                  linked_vertical_id: matchingVertical.id,
-                })
-                .eq('id', trainingVideoId);
-              
-              console.log(`[heygen-webhook] Auto-matched and linked to vertical: ${matchingVertical.industry_name}`);
-            } else {
-              console.log(`[heygen-webhook] No matching vertical found for: ${trainingVideo.vertical}`);
-            }
+          if (libraryUpdateError) {
+            console.error('[heygen-webhook] Failed to update training_library:', libraryUpdateError);
+            // Log but don't fail - can be retried manually
+          } else {
+            console.log(`[heygen-webhook] Updated training_library.latest_video_path: ${trainingVideo.training_library_id}`);
           }
         }
         
-        return new Response(JSON.stringify({ received: true, training_video_id: trainingVideoId }), {
+        return new Response(JSON.stringify({ 
+          received: true, 
+          training_video_id: trainingVideoId,
+          storage_path: storagePath,
+          training_library_id: trainingVideo.training_library_id,
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -160,6 +195,8 @@ serve(async (req) => {
         const errorMessage = errorMsg || 'Video generation failed';
         console.error(`[heygen-webhook] Training video ${trainingVideoId} failed: ${errorMessage}`);
         
+        // Mark as failed but don't touch training_library.latest_video_path
+        // (preserve previous video if any)
         await supabase
           .from('training_videos')
           .update({
