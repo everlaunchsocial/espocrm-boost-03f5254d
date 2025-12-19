@@ -118,6 +118,22 @@ export default function AffiliateTraining() {
         </Card>
       </Link>
 
+      {/* Vertical Training Library Banner */}
+      <Link to="/affiliate/training/verticals">
+        <Card className="bg-gradient-to-r from-blue-500/20 to-indigo-500/10 border-blue-500/30 hover:border-blue-500/50 transition-colors cursor-pointer">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BookOpen className="h-6 w-6 text-blue-500" />
+              <div>
+                <h3 className="font-semibold text-foreground">Vertical Training Library</h3>
+                <p className="text-sm text-muted-foreground">Master selling Phone AI to 20+ specific industries with video training</p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </Link>
+
       {/* Overall Progress Card */}
       <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
         <CardContent className="p-6">

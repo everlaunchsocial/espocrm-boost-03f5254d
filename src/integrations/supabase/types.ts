@@ -3666,6 +3666,42 @@ export type Database = {
         }
         Relationships: []
       }
+      vertical_training: {
+        Row: {
+          id: string
+          industry_name: string
+          pain_points: Json
+          rank: number
+          updated_at: string
+          video_path: string | null
+          where_to_find: Json
+          why_phone_ai_fits: Json
+          why_priority: Json
+        }
+        Insert: {
+          id?: string
+          industry_name: string
+          pain_points?: Json
+          rank: number
+          updated_at?: string
+          video_path?: string | null
+          where_to_find?: Json
+          why_phone_ai_fits?: Json
+          why_priority?: Json
+        }
+        Update: {
+          id?: string
+          industry_name?: string
+          pain_points?: Json
+          rank?: number
+          updated_at?: string
+          video_path?: string | null
+          where_to_find?: Json
+          why_phone_ai_fits?: Json
+          why_priority?: Json
+        }
+        Relationships: []
+      }
       video_analytics: {
         Row: {
           affiliate_id: string
