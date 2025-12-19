@@ -520,12 +520,15 @@ export default function AdminTrainingVideos() {
                       Link to Vertical Training
                       <span className="text-muted-foreground font-normal ml-1">(optional)</span>
                     </label>
-                    <Select value={selectedVerticalId} onValueChange={setSelectedVerticalId}>
+                    <Select 
+                      value={selectedVerticalId || '__none__'} 
+                      onValueChange={(val) => setSelectedVerticalId(val === '__none__' ? '' : val)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a vertical to link..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No link</SelectItem>
+                        <SelectItem value="__none__">No link</SelectItem>
                         {(verticalTrainings || []).map((v) => (
                           <SelectItem key={v.id} value={v.id}>
                             #{v.rank} — {v.industry_name}
@@ -608,10 +611,10 @@ export default function AdminTrainingVideos() {
                       {/* Vertical Link Control */}
                       <div className="flex items-center gap-2">
                         <Select
-                          value={video.linked_vertical_id || ''}
+                          value={video.linked_vertical_id || '__none__'}
                           onValueChange={(val) => linkVerticalMutation.mutate({ 
                             videoId: video.id, 
-                            verticalId: val || null 
+                            verticalId: val === '__none__' ? null : val 
                           })}
                           disabled={video.status !== 'ready'}
                         >
@@ -626,7 +629,7 @@ export default function AdminTrainingVideos() {
                             )}
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Unlink</SelectItem>
+                            <SelectItem value="__none__">Unlink</SelectItem>
                             {(verticalTrainings || []).map((v) => (
                               <SelectItem key={v.id} value={v.id}>
                                 #{v.rank} — {v.industry_name}
