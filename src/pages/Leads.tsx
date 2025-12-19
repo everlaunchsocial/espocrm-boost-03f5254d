@@ -25,8 +25,31 @@ const leadFields = [
   { name: 'phone', label: 'Phone', type: 'tel' as const, required: true },
   { name: 'company', label: 'Company', type: 'text' as const, required: true },
   { name: 'title', label: 'Title', type: 'text' as const },
-  { name: 'industry', label: 'Industry', type: 'text' as const },
-  { name: 'serviceCategory', label: 'Service Category', type: 'text' as const },
+  { 
+    name: 'industry', 
+    label: 'Industry', 
+    type: 'select' as const, 
+    required: true,
+    placeholder: 'e.g. Home Improvement, Medical Spa',
+    options: [
+      { value: 'home-improvement', label: 'Home Improvement' },
+      { value: 'med-spa', label: 'Medical Spa' },
+      { value: 'dentist', label: 'Dental Practice' },
+      { value: 'hvac', label: 'HVAC Services' },
+      { value: 'legal', label: 'Legal Services' },
+      { value: 'real-estate', label: 'Real Estate' },
+      { value: 'pest-control', label: 'Pest Control' },
+      { value: 'network-marketing', label: 'Network Marketing' },
+      { value: 'other', label: 'Other' },
+    ]
+  },
+  { 
+    name: 'serviceCategory', 
+    label: 'Sub-Category (if applicable)', 
+    type: 'text' as const,
+    placeholder: 'e.g. Plumbing, Electrical, Roofing',
+    helperText: 'Important: Specify sub-category for Home Improvement'
+  },
   { name: 'address', label: 'Address', type: 'text' as const },
   { name: 'city', label: 'City', type: 'text' as const },
   { name: 'state', label: 'State', type: 'text' as const },
