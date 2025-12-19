@@ -55,6 +55,7 @@ serve(async (req) => {
       avatar_name,
       voice_id, 
       voice_name,
+      use_native_background = false, // If true, don't apply background overlay
     } = await req.json();
 
     if (!training_library_id) {
@@ -64,6 +65,8 @@ serve(async (req) => {
     if (!avatar_id || !voice_id) {
       throw new Error('Missing required fields: avatar_id, voice_id');
     }
+
+    console.log(`[generate-training-video] use_native_background: ${use_native_background}`);
 
     // Load training entry from training_library (server-side, not from client)
     const { data: trainingEntry, error: trainingError } = await supabase
@@ -113,29 +116,37 @@ serve(async (req) => {
 
     console.log(`[generate-training-video] Training video record created: ${videoRecord.id}`);
 
-    // Standard branded background for all training videos
+    // Standard branded background for training videos (only used if avatar doesn't have native background)
     const TRAINING_VIDEO_BACKGROUND_URL = `${SUPABASE_URL}/storage/v1/object/public/assets/video-background.png`;
+
+    // Build the video input - only include background if avatar doesn't have native one
+    const videoInput: Record<string, unknown> = {
+      character: {
+        type: 'avatar',
+        avatar_id: avatar_id,
+        avatar_style: 'normal',
+      },
+      voice: {
+        type: 'text',
+        input_text: script_text,
+        voice_id: voice_id,
+      },
+    };
+
+    // Only add background for avatars that don't have their own
+    if (!use_native_background) {
+      videoInput.background = {
+        type: 'image',
+        url: TRAINING_VIDEO_BACKGROUND_URL,
+      };
+      console.log('[generate-training-video] Applying custom background');
+    } else {
+      console.log('[generate-training-video] Using avatar native background');
+    }
 
     // Call HeyGen to generate the video
     const heygenPayload = {
-      video_inputs: [
-        {
-          character: {
-            type: 'avatar',
-            avatar_id: avatar_id,
-            avatar_style: 'normal',
-          },
-          voice: {
-            type: 'text',
-            input_text: script_text,
-            voice_id: voice_id,
-          },
-          background: {
-            type: 'image',
-            url: TRAINING_VIDEO_BACKGROUND_URL,
-          },
-        },
-      ],
+      video_inputs: [videoInput],
       dimension: {
         width: 1280,
         height: 720,
