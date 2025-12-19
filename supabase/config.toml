@@ -167,3 +167,6 @@ verify_jwt = true
 
 [functions.generate-training-video]
 verify_jwt = true
+
+[functions.get-training-video-url]
+verify_jwt = false
