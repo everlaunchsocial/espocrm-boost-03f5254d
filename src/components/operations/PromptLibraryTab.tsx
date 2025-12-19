@@ -93,6 +93,9 @@ export function PromptLibraryTab() {
       is_active: true,
       parent_version_id: null,
       research_notes: newPromptForm.research_notes || null,
+      channel: 'universal',
+      sync_status: 'synced',
+      deployed_at: null,
     });
     setIsCreating(false);
     setNewPromptForm({

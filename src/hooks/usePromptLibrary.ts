@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+export type PromptChannel = 'phone' | 'web_voice' | 'chat' | 'support' | 'universal';
+export type SyncStatus = 'synced' | 'pending' | 'failed';
+
 export interface PromptTemplate {
   id: string;
   name: string;
@@ -13,9 +16,20 @@ export interface PromptTemplate {
   is_active: boolean;
   parent_version_id: string | null;
   research_notes: string | null;
+  channel: PromptChannel;
+  sync_status: SyncStatus;
+  deployed_at: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export const CHANNEL_LABELS: Record<PromptChannel, string> = {
+  phone: 'VAPI Phone',
+  web_voice: 'Web Voice',
+  chat: 'Demo Chat',
+  support: 'Support Chat',
+  universal: 'All Channels',
+};
 
 export type UseCase = 'system_prompt' | 'greeting' | 'lead_capture' | 'faq' | 'escalation' | 'wrap_up';
 
@@ -122,6 +136,9 @@ export function usePromptLibrary() {
       is_active: true,
       parent_version_id: originalPrompt.id,
       research_notes: researchNotes || originalPrompt.research_notes,
+      channel: originalPrompt.channel,
+      sync_status: 'pending',
+      deployed_at: null,
     });
   };
 
