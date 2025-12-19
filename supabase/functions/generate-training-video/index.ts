@@ -114,7 +114,7 @@ serve(async (req) => {
     console.log(`[generate-training-video] Training video record created: ${videoRecord.id}`);
 
     // Standard branded background for all training videos
-    const TRAINING_VIDEO_BACKGROUND_URL = `${SUPABASE_URL}/storage/v1/object/public/assets/training-video-background.png`;
+    const TRAINING_VIDEO_BACKGROUND_URL = `${SUPABASE_URL}/storage/v1/object/public/assets/video-background.png`;
 
     // Call HeyGen to generate the video
     const heygenPayload = {
