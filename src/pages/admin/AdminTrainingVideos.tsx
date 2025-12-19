@@ -90,7 +90,13 @@ export default function AdminTrainingVideos() {
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
 
   // Fetch avatars with cache support
-  const [avatarCacheInfo, setAvatarCacheInfo] = useState<{ cached: boolean; cached_at: string; cache_age_hours: string } | null>(null);
+  const [avatarCacheInfo, setAvatarCacheInfo] = useState<{ 
+    cached: boolean; 
+    cached_at?: string; 
+    cache_age_hours?: string;
+    warming?: boolean;
+    stale?: boolean;
+  } | null>(null);
   const [isRefreshingAvatars, setIsRefreshingAvatars] = useState(false);
 
   const { data: avatarsData, isLoading: avatarsLoading, refetch: refetchAvatars } = useQuery({
@@ -99,32 +105,54 @@ export default function AdminTrainingVideos() {
       const { data, error } = await supabase.functions.invoke('heygen-list-avatars');
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
+      
+      // Store cache info
       setAvatarCacheInfo({
         cached: data.cached,
         cached_at: data.cached_at,
-        cache_age_hours: data.cache_age_hours
+        cache_age_hours: data.cache_age_hours,
+        warming: data.warming,
+        stale: data.stale,
       });
+      
+      // If cache is empty (warming) or stale, trigger background refresh
+      if (data.warming || data.stale) {
+        console.log('Cache warming/stale, triggering background refresh...');
+        // Fire-and-forget refresh
+        supabase.functions.invoke('heygen-refresh-avatars').then(({ data: refreshData, error: refreshError }) => {
+          if (refreshError) {
+            console.error('Background refresh error:', refreshError);
+          } else if (refreshData?.success) {
+            console.log(`Background refresh complete: ${refreshData.total} avatars cached`);
+          }
+        });
+      }
+      
       return data.avatars as Avatar[];
     },
-    staleTime: 30 * 60 * 1000, // Cache locally for 30 minutes since DB is cached
+    staleTime: 30 * 60 * 1000, // Cache locally for 30 minutes
+    // Auto-refetch if warming (cache is being populated)
+    refetchInterval: (query) => {
+      const cacheInfo = avatarCacheInfo;
+      if (cacheInfo?.warming) {
+        return 3000; // Poll every 3s while warming
+      }
+      return false;
+    },
   });
 
   const handleRefreshAvatars = async () => {
     setIsRefreshingAvatars(true);
     try {
-      // Force refresh by passing refresh param in body
-      const { data: refreshData, error: refreshError } = await supabase.functions.invoke('heygen-list-avatars', {
-        body: { refresh: true },
-      });
+      // Call the dedicated refresh function
+      const { data: refreshData, error: refreshError } = await supabase.functions.invoke('heygen-refresh-avatars');
       if (refreshError) throw refreshError;
       if (!refreshData.success) throw new Error(refreshData.error);
-      setAvatarCacheInfo({
-        cached: refreshData.cached,
-        cached_at: refreshData.cached_at,
-        cache_age_hours: refreshData.cache_age_hours
-      });
+      
+      toast.success(`Avatars refreshed - ${refreshData.total} avatars cached in ${refreshData.total_time_ms}ms`);
+      
+      // Refetch from cache to get updated data
       await refetchAvatars();
-      toast.success(`Avatars refreshed - loaded ${refreshData.total} avatars`);
     } catch (err) {
       console.error('Error refreshing avatars:', err);
       toast.error("Could not refresh avatars");

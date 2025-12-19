@@ -2293,45 +2293,21 @@ export type Database = {
           },
         ]
       }
-      heygen_avatars_cache: {
+      heygen_cache: {
         Row: {
-          avatar_id: string
           cached_at: string
-          default_voice_id: string | null
-          default_voice_name: string | null
-          gender: string | null
-          id: string
-          is_premium: boolean | null
-          name: string
-          preview_image_url: string | null
-          preview_video_url: string | null
-          tags: string[] | null
+          key: string
+          payload: Json
         }
         Insert: {
-          avatar_id: string
           cached_at?: string
-          default_voice_id?: string | null
-          default_voice_name?: string | null
-          gender?: string | null
-          id?: string
-          is_premium?: boolean | null
-          name: string
-          preview_image_url?: string | null
-          preview_video_url?: string | null
-          tags?: string[] | null
+          key: string
+          payload: Json
         }
         Update: {
-          avatar_id?: string
           cached_at?: string
-          default_voice_id?: string | null
-          default_voice_name?: string | null
-          gender?: string | null
-          id?: string
-          is_premium?: boolean | null
-          name?: string
-          preview_image_url?: string | null
-          preview_video_url?: string | null
-          tags?: string[] | null
+          key?: string
+          payload?: Json
         }
         Relationships: []
       }
