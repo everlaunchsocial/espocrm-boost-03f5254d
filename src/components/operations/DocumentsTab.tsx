@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useWorkspaceDocuments, WorkspaceDocument } from '@/hooks/useWorkspaceDocuments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,8 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { DocumentViewer } from './DocumentViewer';
 
+const VIEWING_DOC_KEY = 'operations_viewing_doc_id';
+
 function getFileIcon(fileType: string | null) {
   if (!fileType) return File;
   if (fileType.startsWith('image/')) return FileImage;
@@ -44,6 +46,26 @@ export function DocumentsTab() {
   const [isDragging, setIsDragging] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<WorkspaceDocument | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Persist viewing document in sessionStorage so it survives navigation
+  useEffect(() => {
+    const savedDocId = sessionStorage.getItem(VIEWING_DOC_KEY);
+    if (savedDocId && documents.length > 0 && !viewingDoc) {
+      const doc = documents.find(d => d.id === savedDocId);
+      if (doc) {
+        setViewingDoc(doc);
+      }
+    }
+  }, [documents, viewingDoc]);
+
+  const handleSetViewingDoc = (doc: WorkspaceDocument | null) => {
+    setViewingDoc(doc);
+    if (doc) {
+      sessionStorage.setItem(VIEWING_DOC_KEY, doc.id);
+    } else {
+      sessionStorage.removeItem(VIEWING_DOC_KEY);
+    }
+  };
 
   const filteredDocs = documents.filter(doc => 
     doc.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -70,7 +92,7 @@ export function DocumentsTab() {
   };
 
   const handleView = (doc: WorkspaceDocument) => {
-    setViewingDoc(doc);
+    handleSetViewingDoc(doc);
   };
 
   const handleDownload = (doc: WorkspaceDocument) => {
@@ -281,7 +303,7 @@ export function DocumentsTab() {
     <DocumentViewer
       document={viewingDoc}
       isOpen={!!viewingDoc}
-      onClose={() => setViewingDoc(null)}
+      onClose={() => handleSetViewingDoc(null)}
     />
     </>
   );
