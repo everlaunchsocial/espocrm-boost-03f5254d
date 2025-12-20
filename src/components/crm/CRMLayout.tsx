@@ -73,6 +73,7 @@ const adminNavigation = [
   { name: 'Customer Usage', href: '/admin/customer-usage', icon: BarChart3 },
   { name: 'AI Usage & Costs', href: '/admin/usage', icon: DollarSign },
   { name: 'Quality Insights', href: '/admin/quality-insights', icon: Phone },
+  { name: 'Evertrak', href: '/admin/evertrak', icon: Lightbulb },
   { name: 'Signup Analytics', href: '/admin/signup-analytics', icon: UserPlus },
   { name: 'Training', href: '/admin/training', icon: GraduationCap },
   { name: 'Training Videos', href: '/admin/training-videos', icon: Video },
