@@ -45,3 +45,14 @@ export {
   getChannelDifferences,
   getAllChannelPrompts
 } from './promptGenerator';
+
+// Context Resolution Utilities
+export {
+  resolvePromptContext,
+  resolveVerticalId,
+  buildFeatureOverrides,
+  buildAdditionalInstructions,
+  fetchCustomerSettings,
+  createInlineSettings,
+  type CustomerSettings
+} from './promptContextResolver';
