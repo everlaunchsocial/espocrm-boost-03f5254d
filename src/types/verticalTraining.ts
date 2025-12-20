@@ -4,6 +4,7 @@ export interface VerticalTrainingRow {
   id: string;
   rank: number;
   industry_name: string;
+  parent_archetype: string | null;
   video_path: string | null;
   why_priority: string[];
   pain_points: string[];

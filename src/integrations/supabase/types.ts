@@ -3764,6 +3764,7 @@ export type Database = {
           id: string
           industry_name: string
           pain_points: Json
+          parent_archetype: string | null
           rank: number
           updated_at: string
           video_path: string | null
@@ -3775,6 +3776,7 @@ export type Database = {
           id?: string
           industry_name: string
           pain_points?: Json
+          parent_archetype?: string | null
           rank: number
           updated_at?: string
           video_path?: string | null
@@ -3786,6 +3788,7 @@ export type Database = {
           id?: string
           industry_name?: string
           pain_points?: Json
+          parent_archetype?: string | null
           rank?: number
           updated_at?: string
           video_path?: string | null
