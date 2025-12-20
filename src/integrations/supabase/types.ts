@@ -1647,6 +1647,7 @@ export type Database = {
           phone: string | null
           phone_tested_at: string | null
           plan_name: string | null
+          settings_updated_at: string
           sms_notifications_enabled: boolean | null
           testing_code: string | null
           user_id: string
@@ -1681,6 +1682,7 @@ export type Database = {
           phone?: string | null
           phone_tested_at?: string | null
           plan_name?: string | null
+          settings_updated_at?: string
           sms_notifications_enabled?: boolean | null
           testing_code?: string | null
           user_id: string
@@ -1715,6 +1717,7 @@ export type Database = {
           phone?: string | null
           phone_tested_at?: string | null
           plan_name?: string | null
+          settings_updated_at?: string
           sms_notifications_enabled?: boolean | null
           testing_code?: string | null
           user_id?: string

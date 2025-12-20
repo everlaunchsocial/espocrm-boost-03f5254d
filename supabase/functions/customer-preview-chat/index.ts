@@ -6,7 +6,9 @@ import {
   generateCompletePrompt,
   resolveVerticalId,
   buildActionPolicy,
-  generateEnforcementPromptSection
+  generateEnforcementPromptSection,
+  logConfigResolution,
+  computeConfigVersion
 } from "../_shared/verticalPromptGenerator.ts";
 
 const corsHeaders = {
@@ -66,11 +68,14 @@ serve(async (req) => {
           transferToHuman: settings.transferNumber ? 'ON' : 'OFF',
         });
         
+        // Log config resolution for debugging (critical for toggle verification)
+        logConfigResolution('customer-preview-chat', settings, actionPolicy);
+        
         // Append enforcement section to prompt
         const enforcementSection = generateEnforcementPromptSection(actionPolicy);
         finalSystemPrompt = `${finalSystemPrompt}\n\n${enforcementSection}`;
         
-        console.log(`Generated vertical prompt for ${settings.businessName} (vertical: ${settings.businessType || 'generic'}, enforcement: applied)`);
+        console.log(`[customer-preview-chat] Prompt generated successfully (config version: ${computeConfigVersion(settings)})`);
       }
     }
     

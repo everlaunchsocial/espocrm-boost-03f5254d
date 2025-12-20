@@ -6,7 +6,9 @@ import {
   generatePromptFromSettings,
   resolveVerticalId,
   buildActionPolicy,
-  generateEnforcementPromptSection
+  generateEnforcementPromptSection,
+  logConfigResolution,
+  computeConfigVersion
 } from "../_shared/verticalPromptGenerator.ts";
 
 const corsHeaders = {
@@ -139,7 +141,7 @@ serve(async (req) => {
 
     // Regenerate system prompt using vertical prompt generator with enforcement
     if (regenerate_prompt) {
-      console.log('Regenerating system prompt with vertical prompt generator + enforcement...');
+      console.log('[vapi-update-assistant] Regenerating system prompt with vertical prompt generator + enforcement...');
       
       // Fetch customer settings using the shared utility
       const settings = await fetchCustomerSettings(supabase, customer_id);
@@ -158,6 +160,9 @@ serve(async (req) => {
           transferToHuman: settings.transferNumber ? 'ON' : 'OFF',
         });
         
+        // Log config resolution for debugging (critical for toggle verification)
+        logConfigResolution('vapi-update-assistant', settings, actionPolicy);
+        
         const enforcementSection = generateEnforcementPromptSection(actionPolicy);
         systemPrompt = `${systemPrompt}\n\n${enforcementSection}`;
         
@@ -169,9 +174,9 @@ serve(async (req) => {
           ],
         };
         
-        console.log(`Generated phone prompt for ${settings.businessName} (vertical ID: ${verticalId}, enforcement: ${actionPolicy.requiresComplianceGuardrails ? 'compliance' : 'standard'})`);
+        console.log(`[vapi-update-assistant] Phone prompt generated (config version: ${computeConfigVersion(settings)}, enforcement: ${actionPolicy.requiresComplianceGuardrails ? 'compliance' : 'standard'})`);
       } else {
-        console.log('Could not fetch customer settings, skipping prompt regeneration');
+        console.log('[vapi-update-assistant] Could not fetch customer settings, skipping prompt regeneration');
       }
     }
 
