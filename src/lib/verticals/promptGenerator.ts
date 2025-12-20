@@ -10,7 +10,7 @@ import {
   WorkflowPermissions,
   ChannelBehavior 
 } from './types';
-import { getVerticalConfig } from './promptMappings';
+import { getVerticalConfig, getComplianceModifiers, GENERIC_LOCAL_BUSINESS_CONFIG } from './promptMappings';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BRAIN RULES → SYSTEM PROMPT MODIFIERS
@@ -235,9 +235,11 @@ export function generateChannelBehaviorPrompt(channel: Channel, behavior: Channe
 // COMPLETE PROMPT GENERATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function generateCompletePrompt(context: PromptContext): string | null {
-  const config = getVerticalConfig(context.verticalId);
-  if (!config) return null;
+export function generateCompletePrompt(context: PromptContext): string {
+  // Safe fallback - getVerticalConfig always returns a valid config
+  const config = context.verticalId != null 
+    ? getVerticalConfig(context.verticalId)
+    : GENERIC_LOCAL_BUSINESS_CONFIG;
 
   const channelBehavior = config.channelOverrides[context.channel];
 
@@ -252,6 +254,15 @@ export function generateCompletePrompt(context: PromptContext): string | null {
 
   // Brain rules
   sections.push('\n' + generateBrainRulesPrompt(config.brainRules));
+
+  // Compliance safety modifiers (always added for medical/legal verticals)
+  const complianceModifiers = context.verticalId != null 
+    ? getComplianceModifiers(context.verticalId) 
+    : [];
+  
+  if (complianceModifiers.length > 0) {
+    sections.push(`\n## Compliance & Safety Requirements\n${complianceModifiers.map(m => `- ${m}`).join('\n')}`);
+  }
 
   // Feature flags as prompt
   sections.push('\n' + generateFeatureFlagsPrompt(config.featureConfig));
@@ -306,20 +317,17 @@ export function getChannelDifferences(verticalId: number): Record<Channel, Chann
 export function getAllChannelPrompts(
   verticalId: number, 
   businessName: string
-): Record<Channel, string> | null {
+): Record<Channel, string> {
   const channels: Channel[] = ['phone', 'web_chat', 'web_voice', 'sms'];
   const prompts: Record<string, string> = {};
 
   for (const channel of channels) {
-    const prompt = generateCompletePrompt({ 
+    prompts[channel] = generateCompletePrompt({ 
       channel, 
       businessName, 
       verticalId 
     });
-    if (prompt) {
-      prompts[channel] = prompt;
-    }
   }
 
-  return Object.keys(prompts).length === 4 ? prompts as Record<Channel, string> : null;
+  return prompts as Record<Channel, string>;
 }

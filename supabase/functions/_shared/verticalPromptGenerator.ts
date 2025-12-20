@@ -89,20 +89,53 @@ const VERTICAL_ID_MAP: Record<string, number> = {
   'concrete': 20, 'masonry': 20,
 };
 
-const DEFAULT_VERTICAL_ID = 1;
+// Fallback to Generic Local Business (0) instead of Plumbing
+const DEFAULT_VERTICAL_ID = 0;
+
+// Compliance-aware verticals
+const MEDICAL_VERTICAL_IDS = [17, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92];
+const LEGAL_VERTICAL_IDS = [14, 15, 16, 66, 67, 68, 69, 70];
+
+const COMPLIANCE_MODIFIERS = {
+  medical: [
+    'NEVER provide medical diagnosis, treatment recommendations, or health advice',
+    'ALWAYS recommend consulting with a licensed healthcare professional',
+    'Do NOT interpret symptoms or suggest conditions',
+    'Capture intake information only and schedule appointments',
+    'For emergencies, advise calling 911 immediately'
+  ],
+  legal: [
+    'NEVER provide legal advice or interpret laws',
+    'ALWAYS recommend consulting with a licensed attorney',
+    'Do NOT guarantee case outcomes or settlement amounts',
+    'Capture case details for attorney review only',
+    'Maintain strict confidentiality in all communications'
+  ]
+};
+
+function getComplianceModifiers(verticalId: number): string[] {
+  const modifiers: string[] = [];
+  if (MEDICAL_VERTICAL_IDS.includes(verticalId)) modifiers.push(...COMPLIANCE_MODIFIERS.medical);
+  if (LEGAL_VERTICAL_IDS.includes(verticalId)) modifiers.push(...COMPLIANCE_MODIFIERS.legal);
+  return modifiers;
+}
 
 export function resolveVerticalId(businessType: string | null): number {
-  if (!businessType) return DEFAULT_VERTICAL_ID;
+  if (!businessType) {
+    console.warn('[VerticalResolver] No business type provided, using Generic Local Business fallback');
+    return DEFAULT_VERTICAL_ID;
+  }
   const normalized = businessType.toLowerCase().replace(/[\s-]+/g, '_');
   if (VERTICAL_ID_MAP[normalized]) return VERTICAL_ID_MAP[normalized];
   for (const [key, id] of Object.entries(VERTICAL_ID_MAP)) {
     if (normalized.includes(key) || key.includes(normalized)) return id;
   }
+  console.warn(`[VerticalResolver] Unknown business type "${businessType}", using Generic Local Business fallback`);
   return DEFAULT_VERTICAL_ID;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// VERTICAL CONFIGURATIONS (Top 20 inline for Edge Functions)
+// VERTICAL CONFIGURATIONS
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface VerticalConfig {
@@ -112,7 +145,42 @@ interface VerticalConfig {
   channelBehavior: Record<Channel, ChannelBehavior>;
 }
 
+// Generic Local Business fallback configuration
+const GENERIC_LOCAL_BUSINESS_CONFIG: VerticalConfig = {
+  name: 'Generic Local Business',
+  brainRules: {
+    urgencyClassification: 'medium',
+    alwaysCollect: ['callback_number', 'name', 'reason_for_contact'],
+    neverDo: [
+      'provide_medical_diagnosis_or_advice',
+      'provide_legal_advice',
+      'guarantee_outcomes_or_pricing',
+      'make_commitments_on_behalf_of_owner'
+    ],
+    escalationTriggers: ['request_for_human', 'complaint', 'emergency_mentioned'],
+    toneGuidance: 'Calm, concise, and professional. Be helpful without overcommitting.',
+    complianceNotes: [
+      'Never provide medical diagnosis or health advice',
+      'Never provide legal advice',
+      'Never guarantee pricing',
+      'Encourage professional consultation for specialized questions'
+    ]
+  },
+  featureConfig: {
+    appointmentBooking: 'OPTIONAL', emergencyEscalation: 'OFF', afterHoursHandling: 'ON',
+    leadCapture: 'ON', callbackScheduling: 'ON', insuranceInfoCollection: 'OFF',
+    priceQuoting: 'OFF', locationVerification: 'OPTIONAL', smsFollowUp: 'OPTIONAL', transferToHuman: 'ON'
+  },
+  channelBehavior: {
+    phone: { primaryAction: 'Capture caller intent and contact info, offer callback', greetingStyle: 'professional', responseLength: 'brief', canShowVisuals: false, canSendLinks: false, interruptionHandling: 'Allow natural conversation flow', fallbackBehavior: 'Capture callback number and promise follow-up' },
+    web_chat: { primaryAction: 'Qualify inquiry and capture lead information', greetingStyle: 'warm', responseLength: 'moderate', canShowVisuals: true, canSendLinks: true, interruptionHandling: 'Queue and respond in order', fallbackBehavior: 'Offer contact form or callback request' },
+    web_voice: { primaryAction: 'Conversational intake with visual support', greetingStyle: 'professional', responseLength: 'brief', canShowVisuals: true, canSendLinks: true, interruptionHandling: 'Natural conversation flow', fallbackBehavior: 'Switch to chat or capture callback' },
+    sms: { primaryAction: 'Brief responses, direct to call for complex inquiries', greetingStyle: 'professional', responseLength: 'brief', canShowVisuals: false, canSendLinks: true, interruptionHandling: 'Async processing', fallbackBehavior: 'Suggest calling for detailed assistance' }
+  }
+};
+
 const VERTICAL_CONFIGS: Record<number, VerticalConfig> = {
+  0: GENERIC_LOCAL_BUSINESS_CONFIG,
   1: {
     name: 'Plumbing',
     brainRules: {
@@ -135,11 +203,15 @@ const VERTICAL_CONFIGS: Record<number, VerticalConfig> = {
       sms: { primaryAction: 'Confirm appointments and send reminders', greetingStyle: 'professional', responseLength: 'brief', canShowVisuals: false, canSendLinks: true, interruptionHandling: 'Async', fallbackBehavior: 'Prompt to call for urgent issues' }
     }
   },
-  // Add more verticals as needed - for brevity, we'll use a default fallback
 };
 
 function getVerticalConfig(verticalId: number): VerticalConfig {
-  return VERTICAL_CONFIGS[verticalId] || VERTICAL_CONFIGS[1]; // Default to plumbing
+  const config = VERTICAL_CONFIGS[verticalId];
+  if (!config) {
+    console.warn(`[VerticalConfig] Unknown verticalId ${verticalId}, using Generic Local Business fallback`);
+    return GENERIC_LOCAL_BUSINESS_CONFIG;
+  }
+  return config;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -260,6 +332,12 @@ export function generateCompletePrompt(options: PromptGenerationOptions): string
   
   // Brain rules
   sections.push('\n' + generateBrainRulesSection(config.brainRules));
+  
+  // Compliance safety modifiers (always added for medical/legal verticals)
+  const complianceModifiers = getComplianceModifiers(options.verticalId);
+  if (complianceModifiers.length > 0) {
+    sections.push(`\n## Compliance & Safety Requirements\n${complianceModifiers.map(m => `- ${m}`).join('\n')}`);
+  }
   
   // Features
   sections.push('\n' + generateFeatureSection(config.featureConfig, options.featureOverrides));

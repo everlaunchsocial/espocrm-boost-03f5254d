@@ -84,14 +84,18 @@ const VERTICAL_ID_MAP: Record<string, number> = {
   'masonry': 20,
 };
 
-// Default vertical for unknown business types (generic local business)
-const DEFAULT_VERTICAL_ID = 1; // Plumbing is a good default (24/7, emergency-capable)
+// Default vertical for unknown business types (Generic Local Business)
+const DEFAULT_VERTICAL_ID = 0; // Generic Local Business - neutral, safe fallback
 
 /**
  * Resolves business_type string to verticalId number
+ * Falls back to Generic Local Business (0) for unknown types
  */
 export function resolveVerticalId(businessType: string | null): number {
-  if (!businessType) return DEFAULT_VERTICAL_ID;
+  if (!businessType) {
+    console.warn('[VerticalResolver] No business type provided, using Generic Local Business fallback');
+    return DEFAULT_VERTICAL_ID;
+  }
   
   const normalized = businessType.toLowerCase().replace(/[\s-]+/g, '_');
   
@@ -107,6 +111,7 @@ export function resolveVerticalId(businessType: string | null): number {
     }
   }
   
+  console.warn(`[VerticalResolver] Unknown business type "${businessType}", using Generic Local Business fallback`);
   return DEFAULT_VERTICAL_ID;
 }
 
