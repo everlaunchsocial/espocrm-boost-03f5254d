@@ -2908,12 +2908,16 @@ export type Database = {
       remediation_suggestions: {
         Row: {
           applied_at: string | null
+          applied_by: string | null
           channel: string | null
           created_at: string
           id: string
           issue_tags: string[]
           notes: string | null
           occurrence_count: number
+          patch_payload: Json | null
+          patch_target: string | null
+          patch_text: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           source_analyses: string[] | null
@@ -2924,12 +2928,16 @@ export type Database = {
         }
         Insert: {
           applied_at?: string | null
+          applied_by?: string | null
           channel?: string | null
           created_at?: string
           id?: string
           issue_tags?: string[]
           notes?: string | null
           occurrence_count?: number
+          patch_payload?: Json | null
+          patch_target?: string | null
+          patch_text?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source_analyses?: string[] | null
@@ -2940,12 +2948,16 @@ export type Database = {
         }
         Update: {
           applied_at?: string | null
+          applied_by?: string | null
           channel?: string | null
           created_at?: string
           id?: string
           issue_tags?: string[]
           notes?: string | null
           occurrence_count?: number
+          patch_payload?: Json | null
+          patch_target?: string | null
+          patch_text?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source_analyses?: string[] | null

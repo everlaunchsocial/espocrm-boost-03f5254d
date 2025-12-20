@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { Lightbulb, Check, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { 
+  Lightbulb, Check, X, Clock, ChevronDown, ChevronUp, 
+  Wand2, Copy, CheckCircle2, FileCode, Loader2 
+} from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -27,7 +31,11 @@ interface RemediationSuggestion {
   status: 'draft' | 'approved' | 'rejected' | 'applied';
   reviewed_at: string | null;
   applied_at: string | null;
+  applied_by: string | null;
   notes: string | null;
+  patch_payload: Record<string, unknown> | null;
+  patch_text: string | null;
+  patch_target: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -44,9 +52,18 @@ const LAYER_LABELS: Record<string, string> = {
   business_facts: 'Business Facts',
 };
 
+const PATCH_TARGET_LABELS: Record<string, string> = {
+  base_prompt: 'Base Prompt',
+  vertical_mapping: 'Vertical Mapping',
+  workflow_policy: 'Workflow Policy',
+  default_config: 'Default Config',
+  business_facts: 'Business Facts',
+};
+
 export function RemediationSuggestions() {
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [patchExpandedId, setPatchExpandedId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   const { data: suggestions, isLoading } = useQuery({
@@ -76,6 +93,10 @@ export function RemediationSuggestions() {
       
       if (status === 'applied') {
         updateData.applied_at = new Date().toISOString();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          updateData.applied_by = user.id;
+        }
       }
       
       const { error } = await supabase
@@ -95,6 +116,26 @@ export function RemediationSuggestions() {
     },
   });
 
+  const generatePatchMutation = useMutation({
+    mutationFn: async (suggestionId: string) => {
+      const { data, error } = await supabase.functions.invoke('generate-remediation-patch', {
+        body: { suggestion_id: suggestionId },
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['remediation-suggestions'] });
+      toast.success('Patch generated successfully');
+      console.log('[RemediationSuggestions] Patch generated:', data);
+    },
+    onError: (error) => {
+      toast.error('Failed to generate patch');
+      console.error(error);
+    },
+  });
+
   const handleAction = (id: string, status: 'approved' | 'rejected' | 'applied') => {
     updateStatusMutation.mutate({ 
       id, 
@@ -103,6 +144,20 @@ export function RemediationSuggestions() {
     });
     setNotes(prev => ({ ...prev, [id]: '' }));
     setExpandedId(null);
+  };
+
+  const handleGeneratePatch = (id: string) => {
+    generatePatchMutation.mutate(id);
+  };
+
+  const handleCopyPatch = async (patchText: string) => {
+    try {
+      await navigator.clipboard.writeText(patchText);
+      toast.success('Patch copied to clipboard');
+    } catch (error) {
+      toast.error('Failed to copy patch');
+      console.error(error);
+    }
   };
 
   if (isLoading) {
@@ -124,6 +179,7 @@ export function RemediationSuggestions() {
   }
 
   const draftCount = suggestions?.filter(s => s.status === 'draft').length || 0;
+  const approvedCount = suggestions?.filter(s => s.status === 'approved' && !s.applied_at).length || 0;
 
   return (
     <Card>
@@ -135,6 +191,11 @@ export function RemediationSuggestions() {
             {draftCount > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {draftCount} pending review
+              </Badge>
+            )}
+            {approvedCount > 0 && (
+              <Badge className="ml-2 bg-green-500/20 text-green-500">
+                {approvedCount} approved
               </Badge>
             )}
           </div>
@@ -172,6 +233,12 @@ export function RemediationSuggestions() {
                       {suggestion.channel && (
                         <Badge variant="outline" className="text-xs capitalize">
                           {suggestion.channel}
+                        </Badge>
+                      )}
+                      {suggestion.patch_target && (
+                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+                          <FileCode className="h-3 w-3 mr-1" />
+                          {PATCH_TARGET_LABELS[suggestion.patch_target] || suggestion.patch_target}
                         </Badge>
                       )}
                       <span className="text-xs text-muted-foreground">
@@ -213,6 +280,9 @@ export function RemediationSuggestions() {
                       Created {format(new Date(suggestion.created_at), 'MMM d, h:mm a')}
                       {suggestion.reviewed_at && (
                         <span> • Reviewed {format(new Date(suggestion.reviewed_at), 'MMM d')}</span>
+                      )}
+                      {suggestion.applied_at && (
+                        <span> • Applied {format(new Date(suggestion.applied_at), 'MMM d')}</span>
                       )}
                     </p>
                   </div>
@@ -268,17 +338,102 @@ export function RemediationSuggestions() {
                   </div>
                 )}
                 
-                {/* Mark as applied for approved suggestions */}
-                {suggestion.status === 'approved' && !suggestion.applied_at && (
-                  <div className="mt-3 pt-3 border-t border-current/10">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAction(suggestion.id, 'applied')}
-                      disabled={updateStatusMutation.isPending}
-                    >
-                      Mark as Applied
-                    </Button>
+                {/* Patch generation and display for approved suggestions */}
+                {suggestion.status === 'approved' && (
+                  <div className="mt-3 pt-3 border-t border-current/10 space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {!suggestion.patch_text ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleGeneratePatch(suggestion.id)}
+                          disabled={generatePatchMutation.isPending}
+                          className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border-amber-500/30"
+                        >
+                          {generatePatchMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <Wand2 className="h-4 w-4 mr-1" />
+                          )}
+                          Generate Patch
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCopyPatch(suggestion.patch_text!)}
+                            className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border-blue-500/30"
+                          >
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copy Patch
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleGeneratePatch(suggestion.id)}
+                            disabled={generatePatchMutation.isPending}
+                          >
+                            {generatePatchMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            ) : (
+                              <Wand2 className="h-4 w-4 mr-1" />
+                            )}
+                            Regenerate
+                          </Button>
+                        </>
+                      )}
+                      
+                      {!suggestion.applied_at && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleAction(suggestion.id, 'applied')}
+                          disabled={updateStatusMutation.isPending}
+                          className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border-purple-500/30"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                          Mark as Applied
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* Collapsible patch text display */}
+                    {suggestion.patch_text && (
+                      <Collapsible
+                        open={patchExpandedId === suggestion.id}
+                        onOpenChange={(open) => setPatchExpandedId(open ? suggestion.id : null)}
+                      >
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-full justify-between">
+                            <span className="flex items-center gap-2">
+                              <FileCode className="h-4 w-4" />
+                              View Patch Code
+                            </span>
+                            {patchExpandedId === suggestion.id ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="mt-2 relative">
+                            <pre className="bg-background text-foreground p-4 rounded-lg text-xs overflow-x-auto max-h-80 overflow-y-auto border">
+                              {suggestion.patch_text}
+                            </pre>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="absolute top-2 right-2"
+                              onClick={() => handleCopyPatch(suggestion.patch_text!)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
                   </div>
                 )}
               </div>
