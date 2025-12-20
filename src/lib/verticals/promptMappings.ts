@@ -3,7 +3,128 @@
 
 import { VerticalPromptConfig } from './types';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// GENERIC LOCAL BUSINESS FALLBACK (ID: 0)
+// Used when verticalId is missing, unknown, or not mapped
+// ═══════════════════════════════════════════════════════════════════════════
+export const GENERIC_LOCAL_BUSINESS_CONFIG: VerticalPromptConfig = {
+  verticalId: 0,
+  verticalName: 'Generic Local Business',
+  brainRules: {
+    urgencyClassification: 'medium',
+    alwaysCollect: ['callback_number', 'name', 'reason_for_contact'],
+    neverDo: [
+      'provide_medical_diagnosis_or_advice',
+      'provide_legal_advice',
+      'guarantee_outcomes_or_pricing',
+      'make_commitments_on_behalf_of_owner'
+    ],
+    escalationTriggers: ['request_for_human', 'complaint', 'emergency_mentioned'],
+    toneGuidance: 'Calm, concise, and professional. Be helpful without overcommitting. Ask minimal qualifying questions and capture lead information.',
+    complianceNotes: [
+      'Never provide medical diagnosis or health advice - recommend consulting a professional',
+      'Never provide legal advice - recommend consulting an attorney',
+      'Never guarantee pricing - offer to have someone follow up with details',
+      'Always encourage professional consultation for specialized questions'
+    ]
+  },
+  featureConfig: {
+    appointmentBooking: 'OPTIONAL',
+    emergencyEscalation: 'OFF',
+    afterHoursHandling: 'ON',
+    leadCapture: 'ON',
+    callbackScheduling: 'ON',
+    insuranceInfoCollection: 'OFF',
+    priceQuoting: 'OFF',
+    locationVerification: 'OPTIONAL',
+    smsFollowUp: 'OPTIONAL',
+    transferToHuman: 'ON'
+  },
+  workflowPermissions: {
+    allowed: [
+      'capture_contact_info',
+      'capture_intent',
+      'provide_hours_and_location',
+      'request_callback',
+      'transfer_to_human',
+      'answer_basic_faq'
+    ],
+    forbidden: [
+      'provide_medical_diagnosis',
+      'provide_legal_advice',
+      'quote_specific_prices',
+      'make_binding_commitments',
+      'diagnose_technical_issues'
+    ],
+    requiresConfirmation: ['schedule_appointment', 'escalate_to_owner']
+  },
+  channelOverrides: {
+    phone: {
+      primaryAction: 'Capture caller intent and contact info, offer callback',
+      greetingStyle: 'professional',
+      responseLength: 'brief',
+      canShowVisuals: false,
+      canSendLinks: false,
+      interruptionHandling: 'Allow natural conversation flow',
+      fallbackBehavior: 'Capture callback number and promise follow-up'
+    },
+    web_chat: {
+      primaryAction: 'Qualify inquiry and capture lead information',
+      greetingStyle: 'warm',
+      responseLength: 'moderate',
+      canShowVisuals: true,
+      canSendLinks: true,
+      interruptionHandling: 'Queue and respond in order',
+      fallbackBehavior: 'Offer contact form or callback request'
+    },
+    web_voice: {
+      primaryAction: 'Conversational intake with visual support',
+      greetingStyle: 'professional',
+      responseLength: 'brief',
+      canShowVisuals: true,
+      canSendLinks: true,
+      interruptionHandling: 'Natural conversation flow',
+      fallbackBehavior: 'Switch to chat or capture callback'
+    },
+    sms: {
+      primaryAction: 'Brief responses, direct to call for complex inquiries',
+      greetingStyle: 'professional',
+      responseLength: 'brief',
+      canShowVisuals: false,
+      canSendLinks: true,
+      interruptionHandling: 'Async processing',
+      fallbackBehavior: 'Suggest calling for detailed assistance'
+    }
+  }
+};
+
+// Compliance-aware verticals that require extra safety guardrails
+export const MEDICAL_VERTICAL_IDS = [17, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92];
+export const LEGAL_VERTICAL_IDS = [14, 15, 16, 66, 67, 68, 69, 70];
+
+export const COMPLIANCE_MODIFIERS = {
+  medical: [
+    'NEVER provide medical diagnosis, treatment recommendations, or health advice',
+    'ALWAYS recommend consulting with a licensed healthcare professional',
+    'Do NOT interpret symptoms or suggest conditions',
+    'Capture intake information only and schedule appointments',
+    'For emergencies, advise calling 911 immediately'
+  ],
+  legal: [
+    'NEVER provide legal advice or interpret laws',
+    'ALWAYS recommend consulting with a licensed attorney',
+    'Do NOT guarantee case outcomes or settlement amounts',
+    'Capture case details for attorney review only',
+    'Maintain strict confidentiality in all communications'
+  ]
+};
+
 export const verticalPromptMappings: Record<number, VerticalPromptConfig> = {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 0. GENERIC LOCAL BUSINESS (FALLBACK)
+  // ═══════════════════════════════════════════════════════════════════════════
+  0: GENERIC_LOCAL_BUSINESS_CONFIG,
+
   // ═══════════════════════════════════════════════════════════════════════════
   // 1. PLUMBING
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1425,9 +1546,31 @@ export const verticalPromptMappings: Record<number, VerticalPromptConfig> = {
   }
 };
 
-// Export helper to get config by vertical ID
-export function getVerticalConfig(verticalId: number): VerticalPromptConfig | undefined {
-  return verticalPromptMappings[verticalId];
+// Export helper to get config by vertical ID (with fallback to Generic Local Business)
+export function getVerticalConfig(verticalId: number): VerticalPromptConfig {
+  const config = verticalPromptMappings[verticalId];
+  if (!config) {
+    console.warn(`[VerticalConfig] Unknown verticalId ${verticalId}, using Generic Local Business fallback`);
+    return GENERIC_LOCAL_BUSINESS_CONFIG;
+  }
+  return config;
+}
+
+// Check if vertical requires compliance modifiers
+export function isComplianceAwareVertical(verticalId: number): { medical: boolean; legal: boolean } {
+  return {
+    medical: MEDICAL_VERTICAL_IDS.includes(verticalId),
+    legal: LEGAL_VERTICAL_IDS.includes(verticalId)
+  };
+}
+
+// Get compliance modifiers for a vertical
+export function getComplianceModifiers(verticalId: number): string[] {
+  const compliance = isComplianceAwareVertical(verticalId);
+  const modifiers: string[] = [];
+  if (compliance.medical) modifiers.push(...COMPLIANCE_MODIFIERS.medical);
+  if (compliance.legal) modifiers.push(...COMPLIANCE_MODIFIERS.legal);
+  return modifiers;
 }
 
 // Export list of all vertical IDs

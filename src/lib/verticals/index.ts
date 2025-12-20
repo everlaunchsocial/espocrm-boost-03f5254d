@@ -19,7 +19,13 @@ export type {
 export {
   verticalPromptMappings,
   getVerticalConfig,
-  TOP_20_VERTICAL_IDS
+  TOP_20_VERTICAL_IDS,
+  GENERIC_LOCAL_BUSINESS_CONFIG,
+  MEDICAL_VERTICAL_IDS,
+  LEGAL_VERTICAL_IDS,
+  COMPLIANCE_MODIFIERS,
+  isComplianceAwareVertical,
+  getComplianceModifiers
 } from './promptMappings';
 
 // Prompt Generation Utilities
