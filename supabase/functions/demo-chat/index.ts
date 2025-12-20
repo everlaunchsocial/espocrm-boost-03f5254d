@@ -2,7 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { 
   generateCompletePrompt,
-  resolveVerticalId
+  resolveVerticalId,
+  buildActionPolicy,
+  generateEnforcementPromptSection
 } from "../_shared/verticalPromptGenerator.ts";
 
 const corsHeaders = {
@@ -105,6 +107,11 @@ serve(async (req) => {
     // Build system prompt using vertical generator with web_chat channel
     let systemPrompt = demo.ai_prompt;
     
+    // For demos, use generic local business vertical (0) with neutral enforcement
+    const verticalId = resolveVerticalId(null); // Returns 0 (generic)
+    const actionPolicy = buildActionPolicy(verticalId, 'web_chat');
+    const enforcementSection = generateEnforcementPromptSection(actionPolicy);
+    
     if (!systemPrompt) {
       // Try fetching from prompt_templates first
       const libraryPrompt = await fetchPromptFromLibrary(supabase, 'universal', 'system_prompt');
@@ -120,8 +127,6 @@ serve(async (req) => {
     
     // Use vertical-aware prompt as fallback (for demos, use a generic local business approach)
     if (!systemPrompt) {
-      const verticalId = resolveVerticalId(null); // Demo uses generic vertical
-      
       // Generate a demo-specific prompt that incorporates vertical behavior
       const verticalPrompt = generateCompletePrompt({
         channel: 'web_chat',
@@ -131,8 +136,10 @@ serve(async (req) => {
         websiteUrl: demo.website_url || undefined,
       });
       
-      // Wrap with demo-specific instructions
+      // Wrap with demo-specific instructions and enforcement
       systemPrompt = `${verticalPrompt}
+
+${enforcementSection}
 
 ## DEMO MODE INSTRUCTIONS
 You are demonstrating EverLaunch AI to a business owner. Guide them through:
@@ -143,7 +150,12 @@ You are demonstrating EverLaunch AI to a business owner. Guide them through:
 4. **Wrap Up**: Thank them and explain EverLaunch benefits
 
 Keep responses conversational and brief (2-4 sentences max). Be warm and professional.`;
+    } else {
+      // Append enforcement to existing prompt
+      systemPrompt = `${systemPrompt}\n\n${enforcementSection}`;
     }
+    
+    console.log(`Demo chat using vertical ${verticalId} with enforcement applied`);
 
     // Get API key
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
