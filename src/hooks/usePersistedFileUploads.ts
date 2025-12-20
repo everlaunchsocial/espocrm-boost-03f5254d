@@ -165,12 +165,13 @@ export function usePersistedFileUploads(affiliateId: string | null) {
         return false;
       }
 
-      // Use public URL (buckets are now public)
+      // Use public URL with cache-busting timestamp
       const { data: publicUrlData } = supabase.storage
         .from('affiliate-photos')
         .getPublicUrl(path);
 
-      const newPhoto: PersistedPhoto = { path, previewUrl: publicUrlData.publicUrl };
+      const cacheBuster = `?t=${Date.now()}`;
+      const newPhoto: PersistedPhoto = { path, previewUrl: publicUrlData.publicUrl + cacheBuster };
       
       setPhotos(prev => {
         const updated = [...prev];
@@ -254,12 +255,13 @@ export function usePersistedFileUploads(affiliateId: string | null) {
         return false;
       }
 
-      // Use public URL (buckets are now public)
+      // Use public URL with cache-busting timestamp
       const { data: publicUrlData } = supabase.storage
         .from('affiliate-voices')
         .getPublicUrl(path);
 
-      const newVoice: PersistedVoice = { path, previewUrl: publicUrlData.publicUrl, duration };
+      const cacheBuster = `?t=${Date.now()}`;
+      const newVoice: PersistedVoice = { path, previewUrl: publicUrlData.publicUrl + cacheBuster, duration };
       setVoice(newVoice);
       saveDraft(photos, newVoice, userId, storageKey);
 
