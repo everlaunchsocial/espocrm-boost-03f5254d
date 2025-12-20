@@ -72,4 +72,11 @@ export interface PromptContext {
   verticalId: number;
   customOverrides?: Partial<FeatureConfig>;
   additionalInstructions?: string;
+  // Optional runtime context
+  isAfterHours?: boolean;
+  currentTime?: string;
+  callerInfo?: {
+    name?: string;
+    phone?: string;
+  };
 }

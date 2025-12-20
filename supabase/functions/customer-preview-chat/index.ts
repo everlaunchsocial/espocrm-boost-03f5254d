@@ -1,5 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  fetchCustomerSettings, 
+  generatePromptFromSettings,
+  generateCompletePrompt,
+  resolveVerticalId
+} from "../_shared/verticalPromptGenerator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,31 +43,30 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Build enhanced system prompt with knowledge base if customerId provided
-    let finalSystemPrompt = systemPrompt || `You are a helpful AI assistant for ${businessName || 'a business'}. Keep responses clear, concise, and professional.`;
+    // Build system prompt using vertical prompt generator
+    let finalSystemPrompt = systemPrompt;
     
-    if (customerId) {
-      // Fetch knowledge sources content
-      const { data: knowledgeSources } = await supabase
-        .from('customer_knowledge_sources')
-        .select('content_text, file_name')
-        .eq('customer_id', customerId)
-        .eq('status', 'processed')
-        .not('content_text', 'is', null);
+    if (!finalSystemPrompt && customerId) {
+      // Fetch customer settings and generate vertical-aware prompt
+      const settings = await fetchCustomerSettings(supabase, customerId);
       
-      if (knowledgeSources && knowledgeSources.length > 0) {
-        const knowledgeContent = knowledgeSources
-          .map(src => `[${src.file_name}]:\n${src.content_text}`)
-          .join('\n\n');
-        
-        // Truncate to 8000 chars max
-        const truncatedKnowledge = knowledgeContent.length > 8000 
-          ? knowledgeContent.substring(0, 8000) + '...' 
-          : knowledgeContent;
-        
-        finalSystemPrompt += `\n\n=== KNOWLEDGE BASE ===\nUse the following information to answer customer questions:\n${truncatedKnowledge}`;
-        console.log(`Including ${knowledgeSources.length} knowledge sources in chat prompt`);
+      if (settings) {
+        finalSystemPrompt = generatePromptFromSettings(settings, 'web_chat');
+        console.log(`Generated vertical prompt for ${settings.businessName} (vertical: ${settings.businessType || 'default'})`);
       }
+    }
+    
+    // Fallback if still no prompt
+    if (!finalSystemPrompt) {
+      // Use generic prompt with vertical awareness if we have business name
+      const verticalId = resolveVerticalId(null);
+      finalSystemPrompt = generateCompletePrompt({
+        channel: 'web_chat',
+        businessName: businessName || 'a business',
+        verticalId,
+        aiName: 'Ashley',
+      });
+      console.log('Using fallback generic prompt');
     }
 
     // Prepare messages for the API
@@ -118,13 +123,8 @@ serve(async (req) => {
 
     // Log usage to service_usage table if customerId is provided (fire and forget)
     if (customerId) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
       const inputTokens = data.usage?.prompt_tokens || 0;
       const outputTokens = data.usage?.completion_tokens || 0;
-      const totalTokens = inputTokens + outputTokens;
       
       // Estimate cost: Gemini Flash is ~$0.075 per 1M input tokens, ~$0.30 per 1M output tokens
       const estimatedCost = (inputTokens * 0.000000075) + (outputTokens * 0.0000003);
@@ -132,7 +132,7 @@ serve(async (req) => {
       supabase.from('service_usage').insert({
         customer_id: customerId,
         usage_type: 'customer_chat',
-        call_type: 'preview', // Mark as preview so it's separated from real customer chats
+        call_type: 'preview',
         provider: 'lovable_ai',
         model: 'google/gemini-2.5-flash',
         tokens_in: inputTokens,
@@ -142,7 +142,8 @@ serve(async (req) => {
         metadata: {
           business_name: businessName,
           message_count: messages.length,
-          is_preview: true
+          is_preview: true,
+          used_vertical_prompt: true
         }
       }).then(({ error }) => {
         if (error) {

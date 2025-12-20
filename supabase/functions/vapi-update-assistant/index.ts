@@ -1,76 +1,16 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  fetchCustomerSettings, 
+  generatePromptFromSettings,
+  resolveVerticalId 
+} from "../_shared/verticalPromptGenerator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-// Build industry-aware system prompt from vertical template
-function buildSystemPrompt(
-  businessName: string,
-  websiteUrl: string | null,
-  verticalTemplate: any | null,
-  voiceInstructions: string | null,
-  aiName: string,
-  knowledgeContent: string | null
-): string {
-  let prompt = '';
-  
-  if (verticalTemplate) {
-    prompt = verticalTemplate.prompt_template.replace('{business_name}', businessName);
-    
-    const vocab = verticalTemplate.vocabulary_preferences || {};
-    if (vocab.use?.length) {
-      prompt += `\n\nPreferred terminology: ${vocab.use.join(', ')}.`;
-    }
-    if (vocab.avoid?.length) {
-      prompt += ` Avoid using: ${vocab.avoid.join(', ')}.`;
-    }
-    
-    const doList = verticalTemplate.do_list || [];
-    if (doList.length) {
-      prompt += '\n\nGuidelines - Always do:\n' + doList.map((item: string) => `• ${item}`).join('\n');
-    }
-    
-    const dontList = verticalTemplate.dont_list || [];
-    if (dontList.length) {
-      prompt += '\n\nGuidelines - Never do:\n' + dontList.map((item: string) => `• ${item}`).join('\n');
-    }
-    
-    const goals = verticalTemplate.typical_goals || [];
-    if (goals.length) {
-      prompt += `\n\nYour primary goals are to: ${goals.join(', ')}.`;
-    }
-  } else {
-    prompt = `You are ${aiName}, a friendly and professional AI phone assistant for ${businessName}. 
-Your job is to answer calls, help customers with their questions, and provide excellent service.
-Always be helpful, courteous, and concise. If you don't know something, offer to take a message or transfer to a human.`;
-  }
-  
-  if (verticalTemplate) {
-    prompt = `You are ${aiName}, the AI receptionist. ` + prompt;
-  }
-  
-  if (websiteUrl) {
-    prompt += `\n\nThe business website is ${websiteUrl}.`;
-  }
-  
-  // Add knowledge base content from uploaded documents
-  if (knowledgeContent && knowledgeContent.length > 0) {
-    const truncatedKnowledge = knowledgeContent.length > 8000 
-      ? knowledgeContent.substring(0, 8000) + '...' 
-      : knowledgeContent;
-    prompt += `\n\n=== KNOWLEDGE BASE ===\nUse the following information to answer customer questions:\n${truncatedKnowledge}`;
-  }
-  
-  if (voiceInstructions) {
-    prompt += `\n\nAdditional instructions: ${voiceInstructions}`;
-  }
-  
-  return prompt;
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -172,7 +112,6 @@ serve(async (req) => {
 
     // Update greeting if provided (include AI name in greeting)
     if (greeting_text || ai_name) {
-      // Fetch current ai_name if not provided
       let effectiveAiName = ai_name;
       if (!effectiveAiName) {
         const { data: voiceSettings } = await supabase
@@ -183,11 +122,9 @@ serve(async (req) => {
         effectiveAiName = voiceSettings?.ai_name || 'Ashley';
       }
       
-      // If greeting is provided, use it; otherwise build a default with the name
       if (greeting_text) {
         updatePayload.firstMessage = greeting_text;
       } else {
-        // Fetch customer business name for default greeting
         const { data: profile } = await supabase
           .from('customer_profiles')
           .select('business_name')
@@ -198,63 +135,16 @@ serve(async (req) => {
       }
     }
 
-    // Regenerate system prompt with vertical template if requested
+    // Regenerate system prompt using vertical prompt generator
     if (regenerate_prompt) {
-      console.log('Regenerating system prompt with vertical template...');
+      console.log('Regenerating system prompt with vertical prompt generator...');
       
-      // Fetch customer profile
-      const { data: customerProfile } = await supabase
-        .from('customer_profiles')
-        .select('business_name, website_url, business_type')
-        .eq('id', customer_id)
-        .single();
+      // Fetch customer settings using the shared utility
+      const settings = await fetchCustomerSettings(supabase, customer_id);
       
-      if (customerProfile) {
-        // Fetch vertical template
-        let verticalTemplate = null;
-        if (customerProfile.business_type) {
-          const { data: template } = await supabase
-            .from('vertical_templates')
-            .select('*')
-            .eq('vertical_key', customerProfile.business_type)
-            .eq('is_active', true)
-            .maybeSingle();
-          verticalTemplate = template;
-        }
-        
-        // Fetch voice settings (including ai_name)
-        const { data: voiceSettings } = await supabase
-          .from('voice_settings')
-          .select('instructions, ai_name, voice_gender')
-          .eq('customer_id', customer_id)
-          .maybeSingle();
-        
-        const effectiveAiName = voiceSettings?.ai_name || (voiceSettings?.voice_gender === 'male' ? 'Alex' : 'Ashley');
-        
-        // Fetch knowledge sources content
-        let knowledgeContent: string | null = null;
-        const { data: knowledgeSources } = await supabase
-          .from('customer_knowledge_sources')
-          .select('content_text, file_name')
-          .eq('customer_id', customer_id)
-          .eq('status', 'processed')
-          .not('content_text', 'is', null);
-        
-        if (knowledgeSources && knowledgeSources.length > 0) {
-          knowledgeContent = knowledgeSources
-            .map(src => `[${src.file_name}]:\n${src.content_text}`)
-            .join('\n\n');
-          console.log(`Including ${knowledgeSources.length} knowledge sources in prompt`);
-        }
-        
-        const systemPrompt = buildSystemPrompt(
-          customerProfile.business_name || 'the business',
-          customerProfile.website_url,
-          verticalTemplate,
-          voiceSettings?.instructions || null,
-          effectiveAiName,
-          knowledgeContent
-        );
+      if (settings) {
+        // Generate vertical-aware phone prompt
+        const systemPrompt = generatePromptFromSettings(settings, 'phone');
         
         updatePayload.model = {
           provider: 'openai',
@@ -264,7 +154,10 @@ serve(async (req) => {
           ],
         };
         
-        console.log('Regenerated system prompt with vertical:', customerProfile.business_type || 'none');
+        const verticalId = resolveVerticalId(settings.businessType);
+        console.log(`Generated phone prompt for ${settings.businessName} (vertical ID: ${verticalId})`);
+      } else {
+        console.log('Could not fetch customer settings, skipping prompt regeneration');
       }
     }
 

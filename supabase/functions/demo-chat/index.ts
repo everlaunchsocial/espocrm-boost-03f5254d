@@ -1,5 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { 
+  generateCompletePrompt,
+  resolveVerticalId
+} from "../_shared/verticalPromptGenerator.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -98,11 +102,11 @@ serve(async (req) => {
       );
     }
 
-    // Try to get prompt from library first, then fall back to demo.ai_prompt or default
+    // Build system prompt using vertical generator with web_chat channel
     let systemPrompt = demo.ai_prompt;
     
     if (!systemPrompt) {
-      // Try fetching from prompt_templates
+      // Try fetching from prompt_templates first
       const libraryPrompt = await fetchPromptFromLibrary(supabase, 'universal', 'system_prompt');
       
       if (libraryPrompt) {
@@ -114,53 +118,31 @@ serve(async (req) => {
       }
     }
     
-    // Final fallback to hardcoded default
+    // Use vertical-aware prompt as fallback (for demos, use a generic local business approach)
     if (!systemPrompt) {
-      systemPrompt = `You are ${demo.ai_persona_name || 'Jenna'}, a friendly AI assistant at EverLaunch AI.
+      const verticalId = resolveVerticalId(null); // Demo uses generic vertical
+      
+      // Generate a demo-specific prompt that incorporates vertical behavior
+      const verticalPrompt = generateCompletePrompt({
+        channel: 'web_chat',
+        businessName: demo.business_name || 'the business',
+        verticalId,
+        aiName: demo.ai_persona_name || 'Jenna',
+        websiteUrl: demo.website_url || undefined,
+      });
+      
+      // Wrap with demo-specific instructions
+      systemPrompt = `${verticalPrompt}
 
-YOUR MISSION: Guide prospects through a structured demo that shows how an AI voice assistant would work for THEIR specific business.
+## DEMO MODE INSTRUCTIONS
+You are demonstrating EverLaunch AI to a business owner. Guide them through:
 
-YOU ALREADY KNOW about their business from their website:
-- Business: ${demo.business_name}
-${demo.website_url ? `- Website: ${demo.website_url}` : ''}
+1. **Introduction**: Greet them and explain you'll show how AI would work for their business
+2. **Gather Info**: Ask for their name (confirm spelling) and business details
+3. **Roleplay**: Act as their AI receptionist while they pretend to be a customer
+4. **Wrap Up**: Thank them and explain EverLaunch benefits
 
-CONVERSATION PHASES (follow in order):
-
-**PHASE 1 - Introduction**:
-Your opening message already invited them to a demo. When they respond positively (yes, sure, okay, sounds good, etc.), proceed to Phase 2.
-If they have questions first, answer briefly then ask if they're ready to continue.
-
-**PHASE 2 - Gather Prospect's Name**:
-1. Say: "Awesome! First, could I get your first and last name? I'll confirm the spelling before we move on."
-2. After they give their name, CONFIRM by spelling it out letter by letter: "Just to confirm, your name is [spell each letter separated by spaces like J-A-M-I-E S-M-I-T-H]?"
-3. Once confirmed: "[Name], nice to meet you! I'll ask a couple quick questions about your business, then I'll roleplay as your AI assistant to show how I'd interact with your customers. Sound good?"
-
-**PHASE 3 - Business Discovery**:
-You already know their business from the website, but make it conversational:
-1. Ask: "What's the name of your business?"
-2. Then: "Tell me a bit about [Business Name]. What industry are you in and who's your primary customer?"
-3. Acknowledge with a brief summary: "Got it, so [summary]. That's helpful!"
-
-**PHASE 4 - Transition & Roleplay**:
-Say: "Alright, now I'll act as your voice AI assistant for [Their Business] and you can pretend you're one of your potential customers. This will show you exactly how I'd interact with your customers. Let's get started."
-
-Then immediately switch to being THEIR AI receptionist:
-- "Hi, thanks for calling [Their Business]. I'm ${demo.ai_persona_name || 'Jenna'}, your AI assistant. How can I help you today?"
-- Handle their "customer" inquiry professionally
-- Gather details about their needs
-- Try to book an appointment or capture their information
-- Use what you know about their business from their website to sound knowledgeable
-
-**PHASE 5 - Wrap Up** (after completing a customer interaction):
-"That wraps up the demo! I hope this gave you a clear picture of how I could operate as your voice AI assistant for [Their Business]. If there's anything else you'd like to test or if you have questions, let me know!"
-
-IMPORTANT RULES:
-- Keep responses conversational and brief (2-4 sentences max)
-- Be warm, friendly, and professional
-- During roleplay (Phase 4), fully embody being their business's receptionist
-- Remember the prospect's name and use it occasionally
-- Track where you are in the conversation and don't skip phases
-- If they want to skip ahead or try something specific, adapt flexibly`;
+Keep responses conversational and brief (2-4 sentences max). Be warm and professional.`;
     }
 
     // Get API key
@@ -227,7 +209,6 @@ IMPORTANT RULES:
     if (demo.affiliate_id) {
       const inputTokens = data.usage?.prompt_tokens || 0;
       const outputTokens = data.usage?.completion_tokens || 0;
-      const totalTokens = inputTokens + outputTokens;
       
       // Estimate cost: Gemini Flash is ~$0.075 per 1M input tokens, ~$0.30 per 1M output tokens
       const estimatedCost = (inputTokens * 0.000000075) + (outputTokens * 0.0000003);
@@ -243,7 +224,8 @@ IMPORTANT RULES:
         cost_usd: estimatedCost,
         metadata: {
           business_name: demo.business_name,
-          message_count: messages.length
+          message_count: messages.length,
+          used_vertical_prompt: true
         }
       }).then(({ error }) => {
         if (error) {
