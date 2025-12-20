@@ -87,6 +87,7 @@ import QualityInsights from "./pages/admin/QualityInsights";
 import UsageDashboard from "./pages/admin/UsageDashboard";
 import Operations from "./pages/admin/Operations";
 import UploadBackground from "./pages/admin/UploadBackground";
+import RegressionTests from "./pages/admin/RegressionTests";
 
 
 // Customer Portal pages
@@ -248,6 +249,7 @@ const App = () => (
             <Route path="/admin/training-videos" element={<AdminTrainingVideos />} />
             <Route path="/admin/test-analyzer" element={<TestAnalyzer />} />
             <Route path="/admin/quality-insights" element={<QualityInsights />} />
+            <Route path="/admin/regression-tests" element={<RegressionTests />} />
             <Route path="/admin/usage" element={<UsageDashboard />} />
             <Route path="/admin/operations" element={<Operations />} />
             <Route path="/admin/upload-background" element={<UploadBackground />} />

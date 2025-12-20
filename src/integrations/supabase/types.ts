@@ -2317,6 +2317,45 @@ export type Database = {
           },
         ]
       }
+      golden_scenarios: {
+        Row: {
+          channel: string
+          config_overrides: Json | null
+          conversation_script: Json
+          created_at: string | null
+          expected_assertions: Json
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          vertical_id: number | null
+        }
+        Insert: {
+          channel: string
+          config_overrides?: Json | null
+          conversation_script?: Json
+          created_at?: string | null
+          expected_assertions?: Json
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          vertical_id?: number | null
+        }
+        Update: {
+          channel?: string
+          config_overrides?: Json | null
+          conversation_script?: Json
+          created_at?: string | null
+          expected_assertions?: Json
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          vertical_id?: number | null
+        }
+        Relationships: []
+      }
       heygen_cache: {
         Row: {
           cached_at: string
@@ -2904,6 +2943,102 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      regression_test_results: {
+        Row: {
+          ai_response: string | null
+          assertions_failed: Json | null
+          assertions_passed: Json | null
+          created_at: string | null
+          error_message: string | null
+          execution_time_ms: number | null
+          generated_prompt: string | null
+          id: string
+          passed: boolean
+          run_id: string
+          scenario_id: string
+        }
+        Insert: {
+          ai_response?: string | null
+          assertions_failed?: Json | null
+          assertions_passed?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          generated_prompt?: string | null
+          id?: string
+          passed: boolean
+          run_id: string
+          scenario_id: string
+        }
+        Update: {
+          ai_response?: string | null
+          assertions_failed?: Json | null
+          assertions_passed?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          generated_prompt?: string | null
+          id?: string
+          passed?: boolean
+          run_id?: string
+          scenario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regression_test_results_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "regression_test_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regression_test_results_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "golden_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      regression_test_runs: {
+        Row: {
+          completed_at: string | null
+          failed_count: number
+          id: string
+          passed_count: number
+          run_type: string
+          started_at: string | null
+          status: string
+          total_scenarios: number
+          triggered_by: string | null
+          vertical_filter: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          failed_count?: number
+          id?: string
+          passed_count?: number
+          run_type?: string
+          started_at?: string | null
+          status?: string
+          total_scenarios?: number
+          triggered_by?: string | null
+          vertical_filter?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          failed_count?: number
+          id?: string
+          passed_count?: number
+          run_type?: string
+          started_at?: string | null
+          status?: string
+          total_scenarios?: number
+          triggered_by?: string | null
+          vertical_filter?: number | null
+        }
+        Relationships: []
       }
       remediation_suggestions: {
         Row: {
