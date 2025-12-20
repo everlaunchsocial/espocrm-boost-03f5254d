@@ -4,7 +4,9 @@ import {
   fetchCustomerSettings, 
   generatePromptFromSettings,
   generateCompletePrompt,
-  resolveVerticalId
+  resolveVerticalId,
+  buildActionPolicy,
+  generateEnforcementPromptSection
 } from "../_shared/verticalPromptGenerator.ts";
 
 const corsHeaders = {
@@ -45,6 +47,7 @@ serve(async (req) => {
 
     // Build system prompt using vertical prompt generator
     let finalSystemPrompt = systemPrompt;
+    let actionPolicy = null;
     
     if (!finalSystemPrompt && customerId) {
       // Fetch customer settings and generate vertical-aware prompt
@@ -52,7 +55,22 @@ serve(async (req) => {
       
       if (settings) {
         finalSystemPrompt = generatePromptFromSettings(settings, 'web_chat');
-        console.log(`Generated vertical prompt for ${settings.businessName} (vertical: ${settings.businessType || 'default'})`);
+        
+        // Build action policy for enforcement
+        const verticalId = resolveVerticalId(settings.businessType);
+        actionPolicy = buildActionPolicy(verticalId, 'web_chat', {
+          appointmentBooking: settings.appointmentsEnabled ? 'ON' : 'OFF',
+          leadCapture: settings.leadCaptureEnabled ? 'ON' : 'OFF',
+          afterHoursHandling: settings.afterHoursBehavior === 'voicemail' ? 'OFF' : 'ON',
+          emergencyEscalation: settings.afterHoursBehavior === 'voicemail' ? 'OFF' : 'ON',
+          transferToHuman: settings.transferNumber ? 'ON' : 'OFF',
+        });
+        
+        // Append enforcement section to prompt
+        const enforcementSection = generateEnforcementPromptSection(actionPolicy);
+        finalSystemPrompt = `${finalSystemPrompt}\n\n${enforcementSection}`;
+        
+        console.log(`Generated vertical prompt for ${settings.businessName} (vertical: ${settings.businessType || 'generic'}, enforcement: applied)`);
       }
     }
     
@@ -60,13 +78,20 @@ serve(async (req) => {
     if (!finalSystemPrompt) {
       // Use generic prompt with vertical awareness if we have business name
       const verticalId = resolveVerticalId(null);
+      actionPolicy = buildActionPolicy(verticalId, 'web_chat');
+      
       finalSystemPrompt = generateCompletePrompt({
         channel: 'web_chat',
         businessName: businessName || 'a business',
         verticalId,
         aiName: 'Ashley',
       });
-      console.log('Using fallback generic prompt');
+      
+      // Append enforcement for generic fallback
+      const enforcementSection = generateEnforcementPromptSection(actionPolicy);
+      finalSystemPrompt = `${finalSystemPrompt}\n\n${enforcementSection}`;
+      
+      console.log('Using fallback generic prompt with enforcement');
     }
 
     // Prepare messages for the API

@@ -4,7 +4,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { 
   fetchCustomerSettings, 
   generatePromptFromSettings,
-  resolveVerticalId 
+  resolveVerticalId,
+  buildActionPolicy,
+  generateEnforcementPromptSection
 } from "../_shared/verticalPromptGenerator.ts";
 
 const corsHeaders = {
@@ -135,16 +137,29 @@ serve(async (req) => {
       }
     }
 
-    // Regenerate system prompt using vertical prompt generator
+    // Regenerate system prompt using vertical prompt generator with enforcement
     if (regenerate_prompt) {
-      console.log('Regenerating system prompt with vertical prompt generator...');
+      console.log('Regenerating system prompt with vertical prompt generator + enforcement...');
       
       // Fetch customer settings using the shared utility
       const settings = await fetchCustomerSettings(supabase, customer_id);
       
       if (settings) {
         // Generate vertical-aware phone prompt
-        const systemPrompt = generatePromptFromSettings(settings, 'phone');
+        let systemPrompt = generatePromptFromSettings(settings, 'phone');
+        
+        // Build action policy and add enforcement section
+        const verticalId = resolveVerticalId(settings.businessType);
+        const actionPolicy = buildActionPolicy(verticalId, 'phone', {
+          appointmentBooking: settings.appointmentsEnabled ? 'ON' : 'OFF',
+          leadCapture: settings.leadCaptureEnabled ? 'ON' : 'OFF',
+          afterHoursHandling: settings.afterHoursBehavior === 'voicemail' ? 'OFF' : 'ON',
+          emergencyEscalation: settings.afterHoursBehavior === 'voicemail' ? 'OFF' : 'ON',
+          transferToHuman: settings.transferNumber ? 'ON' : 'OFF',
+        });
+        
+        const enforcementSection = generateEnforcementPromptSection(actionPolicy);
+        systemPrompt = `${systemPrompt}\n\n${enforcementSection}`;
         
         updatePayload.model = {
           provider: 'openai',
@@ -154,8 +169,7 @@ serve(async (req) => {
           ],
         };
         
-        const verticalId = resolveVerticalId(settings.businessType);
-        console.log(`Generated phone prompt for ${settings.businessName} (vertical ID: ${verticalId})`);
+        console.log(`Generated phone prompt for ${settings.businessName} (vertical ID: ${verticalId}, enforcement: ${actionPolicy.requiresComplianceGuardrails ? 'compliance' : 'standard'})`);
       } else {
         console.log('Could not fetch customer settings, skipping prompt regeneration');
       }

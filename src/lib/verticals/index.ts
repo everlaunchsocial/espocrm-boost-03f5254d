@@ -62,3 +62,20 @@ export {
   createInlineSettings,
   type CustomerSettings
 } from './promptContextResolver';
+
+// Action Policy Enforcement
+export {
+  buildActionPolicy,
+  buildActionPolicyFromSettings,
+  filterToolSchemas,
+  isToolAllowed,
+  getToolRefusal,
+  isTopicRestricted,
+  getTopicRefusal,
+  generateEnforcementPromptSection,
+  REFUSAL_TEMPLATES,
+  RESTRICTED_TOPICS,
+  type ActionPolicy,
+  type ActionPolicyInput,
+  type RefusalType
+} from './actionPolicy';

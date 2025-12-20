@@ -477,3 +477,146 @@ export function generatePromptFromSettings(
     featureOverrides,
   });
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACTION POLICY ENFORCEMENT (Edge Function version)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const REFUSAL_TEMPLATES = {
+  LEGAL_NO_ADVICE: "I can't provide legal advice, but I can connect you with our attorney who can help. Would you like me to schedule a consultation or have someone call you back?",
+  MEDICAL_NO_DIAGNOSIS: "I'm not able to diagnose conditions, but I can help you schedule an appointment with our team who can evaluate your situation properly. What works best for you?",
+  PRICING_VARIES: "Pricing depends on the specific situation. I can capture your details and have someone follow up with an accurate quote. Can I get your contact information?",
+  DIY_SAFETY_REFUSAL: "For safety reasons, I can't provide instructions for that. Our licensed professionals can handle it safely. Would you like to schedule a service call?",
+  NO_GUARANTEES: "I can't guarantee specific outcomes, but I can have our team review your situation and discuss options. Can I schedule that for you?",
+  BOOKING_UNAVAILABLE: "I'm not able to schedule appointments directly right now, but I can take your information and have someone call you back to set that up.",
+  ESCALATION_UNAVAILABLE: "I can't transfer you to someone right now, but I can make sure your message gets to the right person. Can I get your callback number?",
+  GENERIC_INTAKE: "I'd be happy to help. Let me get some information so the right person can assist you. Can I start with your name and callback number?"
+} as const;
+
+export interface ActionPolicy {
+  verticalId: number;
+  verticalName: string;
+  channel: Channel;
+  allowedTools: string[];
+  disabledTools: string[];
+  restrictedTopics: string[];
+  isLegalVertical: boolean;
+  isMedicalVertical: boolean;
+  requiresComplianceGuardrails: boolean;
+  features: {
+    bookingEnabled: boolean;
+    escalationEnabled: boolean;
+    afterHoursEnabled: boolean;
+    leadCaptureEnabled: boolean;
+    pricingEnabled: boolean;
+    transferEnabled: boolean;
+  };
+}
+
+// Tool to feature mapping
+const TOOL_FEATURE_MAP: Record<string, keyof FeatureConfig> = {
+  'create_booking': 'appointmentBooking',
+  'schedule_appointment': 'appointmentBooking',
+  'book_appointment': 'appointmentBooking',
+  'live_transfer': 'emergencyEscalation',
+  'transfer_to_human': 'transferToHuman',
+  'emergency_dispatch': 'emergencyEscalation',
+  'capture_lead': 'leadCapture',
+  'quote_estimate': 'priceQuoting',
+  'provide_pricing': 'priceQuoting',
+};
+
+export function buildActionPolicy(
+  verticalId: number,
+  channel: Channel,
+  featureOverrides?: Partial<FeatureConfig>
+): ActionPolicy {
+  const config = getVerticalConfig(verticalId);
+  const mergedFeatures = { ...config.featureConfig, ...featureOverrides };
+  
+  const isLegalVertical = LEGAL_VERTICAL_IDS.includes(verticalId);
+  const isMedicalVertical = MEDICAL_VERTICAL_IDS.includes(verticalId);
+  
+  const features = {
+    bookingEnabled: mergedFeatures.appointmentBooking !== 'OFF',
+    escalationEnabled: mergedFeatures.emergencyEscalation !== 'OFF',
+    afterHoursEnabled: mergedFeatures.afterHoursHandling !== 'OFF',
+    leadCaptureEnabled: mergedFeatures.leadCapture !== 'OFF',
+    pricingEnabled: mergedFeatures.priceQuoting === 'ON',
+    transferEnabled: mergedFeatures.transferToHuman !== 'OFF',
+  };
+  
+  const allowedTools: string[] = [];
+  const disabledTools: string[] = [];
+  
+  for (const [tool, featureKey] of Object.entries(TOOL_FEATURE_MAP)) {
+    if (mergedFeatures[featureKey] === 'OFF') {
+      disabledTools.push(tool);
+    } else {
+      allowedTools.push(tool);
+    }
+  }
+  
+  const restrictedTopics: string[] = ['diy_electrical', 'diy_gas_work', 'unsafe_instructions'];
+  if (isMedicalVertical) restrictedTopics.push('medical_diagnosis', 'treatment_recommendation');
+  if (isLegalVertical) restrictedTopics.push('legal_advice', 'case_outcome_prediction');
+  if (!features.pricingEnabled) restrictedTopics.push('price_guarantee');
+  
+  return {
+    verticalId,
+    verticalName: config.name,
+    channel,
+    allowedTools,
+    disabledTools,
+    restrictedTopics,
+    isLegalVertical,
+    isMedicalVertical,
+    requiresComplianceGuardrails: isLegalVertical || isMedicalVertical,
+    features,
+  };
+}
+
+export function generateEnforcementPromptSection(policy: ActionPolicy): string {
+  const sections: string[] = ['## Action Restrictions'];
+  
+  if (!policy.features.bookingEnabled) {
+    sections.push('- **Booking DISABLED**: Do not schedule appointments. Offer to capture details for callback.');
+  }
+  if (!policy.features.escalationEnabled) {
+    sections.push('- **Escalation DISABLED**: Do not offer to transfer or dispatch. Capture details instead.');
+  }
+  if (!policy.features.pricingEnabled) {
+    sections.push('- **Pricing DISABLED**: Do not quote prices. Explain pricing varies and offer follow-up.');
+  }
+  if (!policy.features.transferEnabled) {
+    sections.push('- **Transfer DISABLED**: Cannot transfer to human. Focus on capturing information.');
+  }
+  
+  if (policy.requiresComplianceGuardrails) {
+    sections.push('\n## Compliance Guardrails');
+    if (policy.isMedicalVertical) {
+      sections.push('- **NEVER diagnose conditions** or recommend treatments');
+      sections.push(`- When asked for medical advice: "${REFUSAL_TEMPLATES.MEDICAL_NO_DIAGNOSIS}"`);
+    }
+    if (policy.isLegalVertical) {
+      sections.push('- **NEVER provide legal advice** or predict case outcomes');
+      sections.push(`- When asked for legal advice: "${REFUSAL_TEMPLATES.LEGAL_NO_ADVICE}"`);
+    }
+  }
+  
+  sections.push('\n## Universal Safety');
+  sections.push('- Never provide DIY instructions for electrical, gas, or structural work');
+  sections.push('- Never guarantee outcomes or make binding commitments');
+  
+  return sections.join('\n');
+}
+
+export function filterToolSchemas<T extends { name?: string; function?: { name: string } }>(
+  tools: T[],
+  policy: ActionPolicy
+): T[] {
+  return tools.filter(tool => {
+    const toolName = (tool.name || tool.function?.name || '').toLowerCase().replace(/\s+/g, '_');
+    return !policy.disabledTools.some(d => toolName.includes(d) || d.includes(toolName));
+  });
+}
