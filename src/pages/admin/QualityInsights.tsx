@@ -13,6 +13,10 @@ import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { PatternInsights } from "@/components/admin/quality/PatternInsights";
 import { CategoryBreakdown } from "@/components/admin/quality/CategoryBreakdown";
+import { StrugglingVerticals } from "@/components/admin/quality/StrugglingVerticals";
+import { TopIssueTags } from "@/components/admin/quality/TopIssueTags";
+import { QualityAlerts } from "@/components/admin/quality/QualityAlerts";
+import { RemediationSuggestions } from "@/components/admin/quality/RemediationSuggestions";
 
 interface CallAnalysis {
   id: string;
@@ -365,6 +369,21 @@ export default function QualityInsights() {
             </CardContent>
           </Card>
         </div>
+
+        {/* NEW: Quality Alerts */}
+        <QualityAlerts limit={5} onViewAnalysis={(id) => {
+          const analysis = analyses?.find(a => a.id === id);
+          if (analysis) setSelectedAnalysis(analysis);
+        }} />
+
+        {/* NEW: Struggling Verticals & Top Issues */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <StrugglingVerticals days={dateRange} />
+          <TopIssueTags days={dateRange} />
+        </div>
+
+        {/* NEW: Remediation Suggestions */}
+        <RemediationSuggestions />
 
         {/* Pattern Detection & Auto-Suggestions */}
         {analyses && analyses.length > 0 && (
