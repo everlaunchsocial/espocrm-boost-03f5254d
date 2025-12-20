@@ -88,6 +88,7 @@ import UsageDashboard from "./pages/admin/UsageDashboard";
 import Operations from "./pages/admin/Operations";
 import UploadBackground from "./pages/admin/UploadBackground";
 import RegressionTests from "./pages/admin/RegressionTests";
+import AdminEvertrak from "./pages/admin/AdminEvertrak";
 
 
 // Customer Portal pages
@@ -105,6 +106,7 @@ import AIPreview from "./pages/customer/AIPreview";
 import CustomerTraining from "./pages/customer/CustomerTraining";
 import CustomerAffiliate from "./pages/customer/CustomerAffiliate";
 import CustomerInsights from "./pages/customer/CustomerInsights";
+import CustomerEvertrak from "./pages/customer/CustomerEvertrak";
 
 // Customer Onboarding pages
 import OnboardingStep1 from "./pages/customer/OnboardingStep1";
@@ -202,6 +204,7 @@ const App = () => (
             <Route path="/customer/calendar" element={<Calendar />} />
             <Route path="/customer/training" element={<CustomerTraining />} />
             <Route path="/customer/insights" element={<CustomerInsights />} />
+            <Route path="/customer/evertrak" element={<CustomerEvertrak />} />
             <Route path="/customer/affiliate" element={<CustomerAffiliate />} />
           </Route>
           
@@ -250,6 +253,7 @@ const App = () => (
             <Route path="/admin/test-analyzer" element={<TestAnalyzer />} />
             <Route path="/admin/quality-insights" element={<QualityInsights />} />
             <Route path="/admin/regression-tests" element={<RegressionTests />} />
+            <Route path="/admin/evertrak" element={<AdminEvertrak />} />
             <Route path="/admin/usage" element={<UsageDashboard />} />
             <Route path="/admin/operations" element={<Operations />} />
             <Route path="/admin/upload-background" element={<UploadBackground />} />
