@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Pencil, Trash2, GripVertical, Video, FileText, File, HelpCircle, BookOpen, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Video, FileText, File, HelpCircle, BookOpen, ChevronRight, VideoOff, PlayCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useAdminTraining } from '@/hooks/useAdminTraining';
+import { useVerticalTraining } from '@/hooks/useVerticalTraining';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { CategoryModal } from '@/components/admin/training/CategoryModal';
 import { ModuleModal } from '@/components/admin/training/ModuleModal';
 import { toast } from 'sonner';
@@ -40,12 +43,39 @@ export default function AdminTraining() {
     updateModule,
     deleteModule,
   } = useAdminTraining();
+  
+  const { verticals, isLoading: verticalsLoading } = useVerticalTraining();
+  
+  // Fetch training videos to check which verticals have videos
+  const { data: trainingVideos } = useQuery({
+    queryKey: ['training-videos-status'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('training_videos')
+        .select('id, vertical, status, video_url, training_library_id')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [moduleModalOpen, setModuleModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [editingModule, setEditingModule] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'category' | 'module'; id: string; name: string } | null>(null);
+  
+  // Get video status for each vertical
+  const getVerticalVideoStatus = (industryName: string) => {
+    const video = trainingVideos?.find(v => 
+      v.vertical?.toLowerCase() === industryName.toLowerCase()
+    );
+    if (!video) return 'none';
+    if (video.status === 'ready' && video.video_url) return 'ready';
+    if (video.status === 'processing') return 'processing';
+    if (video.status === 'failed') return 'failed';
+    return 'pending';
+  };
 
   const handleEditCategory = (category: any) => {
     setEditingCategory(category);
@@ -119,6 +149,83 @@ export default function AdminTraining() {
           </CardContent>
         </Card>
       </Link>
+
+      {/* Training Video Placeholders Grid */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="h-5 w-5 text-primary" />
+                Training Videos Status
+              </CardTitle>
+              <CardDescription>
+                {verticals.filter(v => getVerticalVideoStatus(v.industry_name) === 'ready').length} / {verticals.length} videos ready
+              </CardDescription>
+            </div>
+            <Button asChild>
+              <Link to="/admin/training-videos">
+                <PlayCircle className="h-4 w-4 mr-2" />
+                Generate Videos
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {verticalsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {verticals.map((vertical) => {
+                const status = getVerticalVideoStatus(vertical.industry_name);
+                return (
+                  <div
+                    key={vertical.id}
+                    className={`relative aspect-video rounded-lg border-2 border-dashed flex flex-col items-center justify-center p-2 transition-all ${
+                      status === 'ready'
+                        ? 'border-green-500/50 bg-green-500/10'
+                        : status === 'processing'
+                        ? 'border-yellow-500/50 bg-yellow-500/10'
+                        : status === 'failed'
+                        ? 'border-red-500/50 bg-red-500/10'
+                        : 'border-muted-foreground/30 bg-muted/30 hover:border-primary/50 hover:bg-primary/5'
+                    }`}
+                  >
+                    {status === 'ready' ? (
+                      <Video className="h-6 w-6 text-green-500 mb-1" />
+                    ) : status === 'processing' ? (
+                      <Loader2 className="h-6 w-6 text-yellow-500 mb-1 animate-spin" />
+                    ) : status === 'failed' ? (
+                      <VideoOff className="h-6 w-6 text-red-500 mb-1" />
+                    ) : (
+                      <VideoOff className="h-6 w-6 text-muted-foreground/50 mb-1" />
+                    )}
+                    <span className="text-xs font-medium text-center leading-tight line-clamp-2">
+                      {vertical.industry_name}
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className={`absolute -top-2 -right-2 text-[10px] px-1.5 py-0 ${
+                        status === 'ready'
+                          ? 'bg-green-500 text-white'
+                          : status === 'processing'
+                          ? 'bg-yellow-500 text-white'
+                          : status === 'failed'
+                          ? 'bg-red-500 text-white'
+                          : ''
+                      }`}
+                    >
+                      #{vertical.rank}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="modules" className="space-y-4">
         <TabsList>
