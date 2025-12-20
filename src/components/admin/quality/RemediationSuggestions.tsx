@@ -8,11 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   Lightbulb, Check, X, Clock, ChevronDown, ChevronUp, 
-  Wand2, Copy, CheckCircle2, FileCode, Loader2 
+  Wand2, Copy, CheckCircle2, FileCode, Loader2, Beaker
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface RemediationSuggestion {
   id: string;

@@ -182,3 +182,6 @@ verify_jwt = true
 
 [functions.analyze-call-quality]
 verify_jwt = false
+
+[functions.run-regression-tests]
+verify_jwt = true
