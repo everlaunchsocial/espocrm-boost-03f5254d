@@ -1161,16 +1161,22 @@ export type Database = {
       }
       call_analysis: {
         Row: {
+          action_summary: Json | null
           analysis_cost: number | null
           analyzed_at: string
           analyzer_model: string | null
           call_category: string | null
           call_id: string | null
+          channel: string | null
+          config_version: string | null
           created_at: string
           customer_id: string | null
           id: string
           insights: Json | null
+          issue_tags: string[] | null
+          mapped_layer: string | null
           overall_score: number | null
+          recommended_fix: Json | null
           score_accuracy: number | null
           score_booking_success: number | null
           score_call_duration: number | null
@@ -1184,18 +1190,25 @@ export type Database = {
           sentiment: string | null
           suggestions: Json | null
           transcript_summary: string | null
+          vertical_id: string | null
         }
         Insert: {
+          action_summary?: Json | null
           analysis_cost?: number | null
           analyzed_at?: string
           analyzer_model?: string | null
           call_category?: string | null
           call_id?: string | null
+          channel?: string | null
+          config_version?: string | null
           created_at?: string
           customer_id?: string | null
           id?: string
           insights?: Json | null
+          issue_tags?: string[] | null
+          mapped_layer?: string | null
           overall_score?: number | null
+          recommended_fix?: Json | null
           score_accuracy?: number | null
           score_booking_success?: number | null
           score_call_duration?: number | null
@@ -1209,18 +1222,25 @@ export type Database = {
           sentiment?: string | null
           suggestions?: Json | null
           transcript_summary?: string | null
+          vertical_id?: string | null
         }
         Update: {
+          action_summary?: Json | null
           analysis_cost?: number | null
           analyzed_at?: string
           analyzer_model?: string | null
           call_category?: string | null
           call_id?: string | null
+          channel?: string | null
+          config_version?: string | null
           created_at?: string
           customer_id?: string | null
           id?: string
           insights?: Json | null
+          issue_tags?: string[] | null
+          mapped_layer?: string | null
           overall_score?: number | null
+          recommended_fix?: Json | null
           score_accuracy?: number | null
           score_booking_success?: number | null
           score_call_duration?: number | null
@@ -1234,6 +1254,7 @@ export type Database = {
           sentiment?: string | null
           suggestions?: Json | null
           transcript_summary?: string | null
+          vertical_id?: string | null
         }
         Relationships: [
           {
@@ -2814,6 +2835,127 @@ export type Database = {
           },
         ]
       }
+      quality_alerts: {
+        Row: {
+          actual_value: number | null
+          alert_type: string
+          call_analysis_id: string | null
+          channel: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          resolved_at: string | null
+          severity: string
+          threshold_value: number | null
+          vertical_id: string | null
+        }
+        Insert: {
+          actual_value?: number | null
+          alert_type?: string
+          call_analysis_id?: string | null
+          channel?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          severity?: string
+          threshold_value?: number | null
+          vertical_id?: string | null
+        }
+        Update: {
+          actual_value?: number | null
+          alert_type?: string
+          call_analysis_id?: string | null
+          channel?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          severity?: string
+          threshold_value?: number | null
+          vertical_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_alerts_call_analysis_id_fkey"
+            columns: ["call_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "call_analysis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quality_alerts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "quality_alerts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remediation_suggestions: {
+        Row: {
+          applied_at: string | null
+          channel: string | null
+          created_at: string
+          id: string
+          issue_tags: string[]
+          notes: string | null
+          occurrence_count: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_analyses: string[] | null
+          status: string
+          suggested_changes: Json
+          updated_at: string
+          vertical_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          channel?: string | null
+          created_at?: string
+          id?: string
+          issue_tags?: string[]
+          notes?: string | null
+          occurrence_count?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_analyses?: string[] | null
+          status?: string
+          suggested_changes: Json
+          updated_at?: string
+          vertical_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          channel?: string | null
+          created_at?: string
+          id?: string
+          issue_tags?: string[]
+          notes?: string | null
+          occurrence_count?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_analyses?: string[] | null
+          status?: string
+          suggested_changes?: Json
+          updated_at?: string
+          vertical_id?: string
+        }
+        Relationships: []
+      }
       sender_addresses: {
         Row: {
           created_at: string
@@ -4081,6 +4223,27 @@ export type Database = {
           },
         ]
       }
+      quality_patterns_weekly: {
+        Row: {
+          avg_accuracy: number | null
+          avg_booking_success: number | null
+          avg_clarity: number | null
+          avg_completeness: number | null
+          avg_lead_quality: number | null
+          avg_objection_handling: number | null
+          avg_score: number | null
+          avg_tone: number | null
+          call_count: number | null
+          channel: string | null
+          low_score_count: number | null
+          negative_sentiment_count: number | null
+          prev_week_score: number | null
+          score_trend: number | null
+          vertical_id: string | null
+          week_start: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_customer_cycle_charges: {
@@ -4125,6 +4288,31 @@ export type Database = {
       get_my_global_role: { Args: never; Returns: string }
       get_my_parent_affiliate_id: { Args: never; Returns: string }
       get_own_affiliate_id: { Args: { _user_id: string }; Returns: string }
+      get_struggling_verticals: {
+        Args: { p_days?: number; p_limit?: number; p_min_calls?: number }
+        Returns: {
+          avg_score: number
+          call_count: number
+          channel: string
+          low_score_count: number
+          top_issues: string[]
+          vertical_id: string
+        }[]
+      }
+      get_top_issue_tags: {
+        Args: {
+          p_channel?: string
+          p_days?: number
+          p_limit?: number
+          p_vertical_id?: string
+        }
+        Returns: {
+          affected_verticals: string[]
+          avg_score_impact: number
+          issue_tag: string
+          occurrence_count: number
+        }[]
+      }
       increment_demo_voice_count: {
         Args: { demo_id: string }
         Returns: undefined
