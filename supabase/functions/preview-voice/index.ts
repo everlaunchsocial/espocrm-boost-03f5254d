@@ -22,8 +22,10 @@ serve(async (req) => {
 
   try {
     const { voice_id, text, speed } = await req.json();
+    console.log('Preview voice request:', { voice_id, text: text?.substring(0, 50), speed });
 
     if (!voice_id) {
+      console.error('Missing voice_id in request');
       return new Response(
         JSON.stringify({ error: 'voice_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -31,14 +33,14 @@ serve(async (req) => {
     }
 
     const cartesiaApiKey = Deno.env.get('CARTESIA_API_KEY');
-    
-    // If no Cartesia API key, try using Vapi TTS endpoint
     const vapiApiKey = Deno.env.get('VAPI_API_KEY');
     
-    if (!cartesiaApiKey && !vapiApiKey) {
-      console.error('No API key configured for voice preview');
+    console.log('API keys check - Cartesia:', !!cartesiaApiKey, 'Vapi:', !!vapiApiKey);
+    
+    if (!cartesiaApiKey) {
+      console.error('CARTESIA_API_KEY is not set');
       return new Response(
-        JSON.stringify({ error: 'Voice preview not configured' }),
+        JSON.stringify({ error: 'Voice preview not configured - missing Cartesia API key' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -101,13 +103,13 @@ serve(async (req) => {
       );
     }
 
-    // Fallback: return a message that preview requires API key
+    // This should never be reached since we check for Cartesia key above
+    console.error('Unexpected: reached fallback without API key');
     return new Response(
       JSON.stringify({ 
-        error: 'Voice preview requires Cartesia API key configuration',
-        message: 'Contact support to enable voice preview'
+        error: 'Voice preview configuration error',
       }),
-      { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: unknown) {
