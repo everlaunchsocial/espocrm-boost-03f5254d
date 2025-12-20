@@ -81,6 +81,7 @@ import AdminGenealogy from "./pages/admin/AdminGenealogy";
 import AdminTraining from "./pages/admin/AdminTraining";
 import AdminTrainingVideos from "./pages/admin/AdminTrainingVideos";
 import TrainingLibrary from "./pages/admin/TrainingLibrary";
+import VerticalTrainingList from "./pages/admin/VerticalTrainingList";
 import TestAnalyzer from "./pages/admin/TestAnalyzer";
 import QualityInsights from "./pages/admin/QualityInsights";
 import UsageDashboard from "./pages/admin/UsageDashboard";
@@ -242,6 +243,7 @@ const App = () => (
             <Route path="/admin/signup-analytics" element={<SignupAnalytics />} />
 <Route path="/admin/training" element={<AdminTraining />} />
             <Route path="/admin/training-library" element={<TrainingLibrary />} />
+            <Route path="/admin/verticals" element={<VerticalTrainingList />} />
             <Route path="/admin/affiliate-training/verticals" element={<VerticalTrainingLibrary />} />
             <Route path="/admin/training-videos" element={<AdminTrainingVideos />} />
             <Route path="/admin/test-analyzer" element={<TestAnalyzer />} />
