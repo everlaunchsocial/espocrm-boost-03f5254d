@@ -1,7 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+
+// Fields that affect phone AI prompt generation - trigger vapi-update-assistant when changed
+const PHONE_AI_AFFECTING_FIELDS = [
+  'lead_capture_enabled',
+  'after_hours_behavior', 
+  'business_hours',
+  'business_type',
+  'business_name',
+  'phone', // transfer number
+];
+
+const CALENDAR_AFFECTING_FIELDS = ['appointments_enabled'];
+const VOICE_AFFECTING_FIELDS = ['ai_name', 'greeting_text'];
+const CHAT_AFFECTING_FIELDS = ['instructions'];
 
 export type OnboardingStage = 
   | 'pending_portal_entry'
@@ -90,6 +104,41 @@ export function useCustomerOnboarding() {
   const [calendarIntegration, setCalendarIntegration] = useState<CalendarIntegration | null>(null);
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
   const [twilioNumber, setTwilioNumber] = useState<string | null>(null);
+
+  // Track if phone AI sync is needed (debounced to avoid multiple calls)
+  const phoneAiSyncPending = useRef(false);
+  const phoneAiSyncTimeout = useRef<NodeJS.Timeout | null>(null);
+  
+  // Trigger vapi-update-assistant to refresh phone AI prompt
+  const syncPhoneAiAssistant = useCallback(async (customerId: string) => {
+    try {
+      console.log('[useCustomerOnboarding] Syncing phone AI assistant for customer:', customerId);
+      const { error } = await supabase.functions.invoke('vapi-update-assistant', {
+        body: { customer_id: customerId, regenerate_prompt: true }
+      });
+      if (error) {
+        console.error('[useCustomerOnboarding] Failed to sync phone AI:', error);
+      } else {
+        console.log('[useCustomerOnboarding] Phone AI assistant synced successfully');
+      }
+    } catch (err) {
+      console.error('[useCustomerOnboarding] Error syncing phone AI:', err);
+    }
+  }, []);
+  
+  // Debounced phone AI sync - waits 1s after last change before syncing
+  const queuePhoneAiSync = useCallback((customerId: string) => {
+    if (phoneAiSyncTimeout.current) {
+      clearTimeout(phoneAiSyncTimeout.current);
+    }
+    phoneAiSyncPending.current = true;
+    phoneAiSyncTimeout.current = setTimeout(() => {
+      if (phoneAiSyncPending.current) {
+        syncPhoneAiAssistant(customerId);
+        phoneAiSyncPending.current = false;
+      }
+    }, 1000);
+  }, [syncPhoneAiAssistant]);
 
   const fetchCustomerData = useCallback(async () => {
     try {
@@ -200,13 +249,25 @@ export function useCustomerOnboarding() {
       if (error) throw error;
       
       setCustomerProfile(prev => prev ? { ...prev, ...updates } : null);
+      
+      // Check if any phone AI affecting fields changed - trigger assistant sync
+      const affectedFields = Object.keys(updates);
+      const needsPhoneAiSync = affectedFields.some(field => 
+        PHONE_AI_AFFECTING_FIELDS.includes(field)
+      );
+      
+      if (needsPhoneAiSync) {
+        console.log('[updateProfile] Phone AI affecting fields changed:', affectedFields.filter(f => PHONE_AI_AFFECTING_FIELDS.includes(f)));
+        queuePhoneAiSync(customerProfile.id);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Failed to save changes');
       return false;
     }
-  }, [customerProfile]);
+  }, [customerProfile, queuePhoneAiSync]);
 
   const updateVoiceSettings = useCallback(async (updates: Partial<VoiceSettings>) => {
     if (!customerProfile) return false;
@@ -230,13 +291,25 @@ export function useCustomerOnboarding() {
         if (error) throw error;
         setVoiceSettings(data as unknown as VoiceSettings);
       }
+      
+      // Check if voice fields affecting phone AI changed
+      const affectedFields = Object.keys(updates);
+      const needsPhoneAiSync = affectedFields.some(field => 
+        VOICE_AFFECTING_FIELDS.includes(field)
+      );
+      
+      if (needsPhoneAiSync) {
+        console.log('[updateVoiceSettings] Phone AI affecting fields changed:', affectedFields.filter(f => VOICE_AFFECTING_FIELDS.includes(f)));
+        queuePhoneAiSync(customerProfile.id);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating voice settings:', error);
       toast.error('Failed to save voice settings');
       return false;
     }
-  }, [customerProfile, voiceSettings]);
+  }, [customerProfile, voiceSettings, queuePhoneAiSync]);
 
   const updateChatSettings = useCallback(async (updates: Partial<ChatSettings>) => {
     if (!customerProfile) return false;
@@ -260,14 +333,25 @@ export function useCustomerOnboarding() {
         if (error) throw error;
         setChatSettings(data as unknown as ChatSettings);
       }
+      
+      // Check if chat fields affecting phone AI changed
+      const affectedFields = Object.keys(updates);
+      const needsPhoneAiSync = affectedFields.some(field => 
+        CHAT_AFFECTING_FIELDS.includes(field)
+      );
+      
+      if (needsPhoneAiSync) {
+        console.log('[updateChatSettings] Phone AI affecting fields changed:', affectedFields.filter(f => CHAT_AFFECTING_FIELDS.includes(f)));
+        queuePhoneAiSync(customerProfile.id);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating chat settings:', error);
       toast.error('Failed to save chat settings');
       return false;
     }
-  }, [customerProfile, chatSettings]);
-
+  }, [customerProfile, chatSettings, queuePhoneAiSync]);
   const updateCalendarIntegration = useCallback(async (updates: Partial<CalendarIntegration>) => {
     if (!customerProfile) return false;
     
@@ -290,13 +374,25 @@ export function useCustomerOnboarding() {
         if (error) throw error;
         setCalendarIntegration(data as unknown as CalendarIntegration);
       }
+      
+      // Check if calendar fields affecting phone AI changed
+      const affectedFields = Object.keys(updates);
+      const needsPhoneAiSync = affectedFields.some(field => 
+        CALENDAR_AFFECTING_FIELDS.includes(field)
+      );
+      
+      if (needsPhoneAiSync) {
+        console.log('[updateCalendarIntegration] Phone AI affecting fields changed:', affectedFields.filter(f => CALENDAR_AFFECTING_FIELDS.includes(f)));
+        queuePhoneAiSync(customerProfile.id);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating calendar integration:', error);
       toast.error('Failed to save calendar settings');
       return false;
     }
-  }, [customerProfile, calendarIntegration]);
+  }, [customerProfile, calendarIntegration, queuePhoneAiSync]);
 
   const addKnowledgeSource = useCallback(async (source: { source_type: string; file_name: string; storage_path: string }) => {
     if (!customerProfile) return null;

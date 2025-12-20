@@ -60,6 +60,10 @@ export interface CustomerSettings {
   leadEmail: string | null;
   leadSmsNumber: string | null;
   knowledgeContent: string | null;
+  // Config version for cache invalidation
+  settingsUpdatedAt: string | null;
+  calendarUpdatedAt: string | null;
+  voiceUpdatedAt: string | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -384,7 +388,7 @@ export async function fetchCustomerSettings(
       .from('customer_profiles')
       .select(`id, business_name, business_type, website_url, lead_capture_enabled,
                lead_email, lead_sms_number, business_hours, customer_timezone,
-               after_hours_behavior, phone`)
+               after_hours_behavior, phone, settings_updated_at`)
       .eq('id', customerId)
       .single();
     
@@ -392,7 +396,7 @@ export async function fetchCustomerSettings(
     
     const { data: voiceSettings } = await supabase
       .from('voice_settings')
-      .select('ai_name, greeting_text')
+      .select('ai_name, greeting_text, updated_at')
       .eq('customer_id', customerId)
       .maybeSingle();
     
@@ -404,7 +408,7 @@ export async function fetchCustomerSettings(
     
     const { data: calendarSettings } = await supabase
       .from('calendar_integrations')
-      .select('appointments_enabled')
+      .select('appointments_enabled, updated_at')
       .eq('customer_id', customerId)
       .maybeSingle();
     
@@ -439,6 +443,10 @@ export async function fetchCustomerSettings(
       leadEmail: profile.lead_email,
       leadSmsNumber: profile.lead_sms_number,
       knowledgeContent,
+      // Config version timestamps for cache invalidation
+      settingsUpdatedAt: profile.settings_updated_at || null,
+      calendarUpdatedAt: calendarSettings?.updated_at || null,
+      voiceUpdatedAt: voiceSettings?.updated_at || null,
     };
   } catch (error) {
     console.error('Error fetching customer settings:', error);
@@ -476,6 +484,54 @@ export function generatePromptFromSettings(
     businessHours: settings.businessHours || undefined,
     featureOverrides,
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIG VERSION HELPER
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Compute a config version hash from settings timestamps
+ * Used for cache keying and stale detection
+ */
+export function computeConfigVersion(settings: CustomerSettings): string {
+  const timestamps = [
+    settings.settingsUpdatedAt,
+    settings.calendarUpdatedAt,
+    settings.voiceUpdatedAt,
+  ].filter(Boolean).sort();
+  
+  if (timestamps.length === 0) return 'no-version';
+  
+  // Return the most recent timestamp as the version
+  return timestamps[timestamps.length - 1] || 'no-version';
+}
+
+/**
+ * Log detailed config resolution info for debugging
+ */
+export function logConfigResolution(
+  context: string,
+  settings: CustomerSettings,
+  policy: ActionPolicy
+): void {
+  const configVersion = computeConfigVersion(settings);
+  
+  console.log(`[${context}] Config Resolution:`);
+  console.log(`  - Customer: ${settings.customerId}`);
+  console.log(`  - Business: ${settings.businessName} (${settings.businessType || 'generic'})`);
+  console.log(`  - Vertical ID: ${policy.verticalId} (${policy.verticalName})`);
+  console.log(`  - Config Version: ${configVersion}`);
+  console.log(`  - Channel: ${policy.channel}`);
+  console.log(`  - Features:`);
+  console.log(`    • Booking: ${policy.features.bookingEnabled ? 'ON' : 'OFF'}`);
+  console.log(`    • Escalation: ${policy.features.escalationEnabled ? 'ON' : 'OFF'}`);
+  console.log(`    • Lead Capture: ${policy.features.leadCaptureEnabled ? 'ON' : 'OFF'}`);
+  console.log(`    • Transfer: ${policy.features.transferEnabled ? 'ON' : 'OFF'}`);
+  console.log(`    • Pricing: ${policy.features.pricingEnabled ? 'ON' : 'OFF'}`);
+  console.log(`  - Compliance: ${policy.requiresComplianceGuardrails ? 'REQUIRED' : 'standard'}`);
+  console.log(`  - Allowed Tools: ${policy.allowedTools.length}`);
+  console.log(`  - Disabled Tools: ${policy.disabledTools.join(', ') || 'none'}`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
