@@ -2,6 +2,7 @@ import { useContacts, useAccounts, useLeads, useDeals, useTasks, useActivities }
 import { StatCard } from '@/components/crm/StatCard';
 import { ActivityTimeline } from '@/components/crm/ActivityTimeline';
 import { StatusBadge } from '@/components/crm/StatusBadge';
+import { VoiceExecutiveSummary } from '@/components/dashboard/VoiceExecutiveSummary';
 import { Users, Building2, UserPlus, Handshake, TrendingUp, DollarSign } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -44,6 +45,9 @@ export default function Dashboard() {
         <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground mt-1">Welcome back! Here's your sales overview.</p>
       </div>
+
+      {/* Voice Executive Summary - Top of Dashboard */}
+      <VoiceExecutiveSummary />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
