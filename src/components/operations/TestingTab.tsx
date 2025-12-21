@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   CheckCircle2, 
   XCircle, 
@@ -28,10 +29,13 @@ import {
   DollarSign,
   Globe,
   History,
-  RefreshCw
+  RefreshCw,
+  Beaker,
+  ClipboardList
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { RegressionTestsPanel } from "./RegressionTestsPanel";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   demo: <Globe className="h-4 w-4" />,
@@ -49,7 +53,7 @@ const categoryColors: Record<string, string> = {
   general: "bg-muted text-muted-foreground"
 };
 
-export function TestingTab() {
+function ManualTestingPanel() {
   const { data: suites, isLoading: suitesLoading } = useTestSuites();
   const { data: activeRun } = useActiveTestRun();
   const { data: completions } = useTestStepCompletions(activeRun?.id || null);
@@ -223,8 +227,11 @@ export function TestingTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">Testing Command Center</h2>
-          <p className="text-muted-foreground text-sm">Systematic testing with step-by-step checklists</p>
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <ClipboardList className="h-5 w-5" />
+            Manual Test Suites
+          </h2>
+          <p className="text-muted-foreground text-sm">Step-by-step testing checklists</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -300,5 +307,30 @@ export function TestingTab() {
         </div>
       )}
     </div>
+  );
+}
+
+export function TestingTab() {
+  return (
+    <Tabs defaultValue="regression" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="regression" className="gap-2">
+          <Beaker className="h-4 w-4" />
+          AI Regression
+        </TabsTrigger>
+        <TabsTrigger value="manual" className="gap-2">
+          <ClipboardList className="h-4 w-4" />
+          Manual Suites
+        </TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="regression">
+        <RegressionTestsPanel />
+      </TabsContent>
+      
+      <TabsContent value="manual">
+        <ManualTestingPanel />
+      </TabsContent>
+    </Tabs>
   );
 }
