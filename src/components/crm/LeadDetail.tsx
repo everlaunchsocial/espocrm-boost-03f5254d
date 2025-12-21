@@ -19,6 +19,7 @@ import { CallAssistant } from './CallAssistant';
 import { DemoCreationModal } from '@/components/demos/DemoCreationModal';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { LeadTimelinePanel } from './LeadTimelinePanel';
+import { SuggestedContactWindows } from './SuggestedContactWindows';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -378,6 +379,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             <div className="py-4 border-b border-border space-y-3">
               <p className="text-sm font-medium text-muted-foreground">Lead Notes</p>
               <p className="text-sm whitespace-pre-wrap">{lead.notes}</p>
+            </div>
+          )}
+
+          {/* Suggested Contact Windows - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <SuggestedContactWindows leadId={lead.id} />
             </div>
           )}
 
