@@ -269,6 +269,22 @@ export default function AdminSettings() {
                 onCheckedChange={(checked) => setFlag('aiCrmPhase1', checked)}
               />
             </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="ai-crm-phase2" className="flex items-center gap-2">
+                  <span>🧪</span>
+                  AI CRM Phase 2
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Enable Lead Timeline Panel + Unified Activity View
+                </p>
+              </div>
+              <Switch 
+                id="ai-crm-phase2"
+                checked={flags.aiCrmPhase2}
+                onCheckedChange={(checked) => setFlag('aiCrmPhase2', checked)}
+              />
+            </div>
           </CardContent>
         </Card>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Lead, EmailRecipient } from '@/types/crm';
 import { useActivities, useTasks, useNotes, useUpdateLead, useConvertLeadToContact } from '@/hooks/useCRMData';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import {
   Sheet,
   SheetContent,
@@ -17,6 +18,7 @@ import { EmailComposerModal } from './EmailComposerModal';
 import { CallAssistant } from './CallAssistant';
 import { DemoCreationModal } from '@/components/demos/DemoCreationModal';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
+import { LeadTimelinePanel } from './LeadTimelinePanel';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -80,6 +82,8 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
   const { data: notes = [] } = useNotes();
   const updateLead = useUpdateLead();
   const convertLeadToContact = useConvertLeadToContact();
+  const { isEnabled } = useFeatureFlags();
+  const phase2Enabled = isEnabled('aiCrmPhase2');
 
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [activityType, setActivityType] = useState<'call' | 'email' | 'meeting' | 'note'>('call');
@@ -381,7 +385,9 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
           <Tabs defaultValue="notes" className="mt-4">
             <TabsList className="w-full">
               <TabsTrigger value="notes" className="flex-1">Notes ({leadNotes.length})</TabsTrigger>
-              <TabsTrigger value="activity" className="flex-1">Activity ({leadActivities.length})</TabsTrigger>
+              <TabsTrigger value="activity" className="flex-1">
+                {phase2Enabled ? 'Timeline' : `Activity (${leadActivities.length})`}
+              </TabsTrigger>
               <TabsTrigger value="tasks" className="flex-1">Tasks ({leadTasks.length})</TabsTrigger>
             </TabsList>
 
@@ -390,10 +396,14 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             </TabsContent>
 
             <TabsContent value="activity" className="mt-4">
-              {leadActivities.length > 0 ? (
-                <ActivityTimeline activities={leadActivities} />
+              {phase2Enabled ? (
+                <LeadTimelinePanel leadId={lead.id} />
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">No activities yet.</p>
+                leadActivities.length > 0 ? (
+                  <ActivityTimeline activities={leadActivities} />
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">No activities yet.</p>
+                )
               )}
             </TabsContent>
 
