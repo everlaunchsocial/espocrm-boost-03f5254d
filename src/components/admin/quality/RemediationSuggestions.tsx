@@ -8,12 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   Lightbulb, Check, X, Clock, ChevronDown, ChevronUp, 
-  Wand2, Copy, CheckCircle2, FileCode, Loader2, Beaker
+  Wand2, Copy, CheckCircle2, FileCode, Loader2, Beaker, Play, ExternalLink
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 interface RemediationSuggestion {
   id: string;
@@ -63,9 +63,11 @@ const PATCH_TARGET_LABELS: Record<string, string> = {
 
 export function RemediationSuggestions() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [patchExpandedId, setPatchExpandedId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [regressionRunId, setRegressionRunId] = useState<string | null>(null);
 
   const { data: suggestions, isLoading } = useQuery({
     queryKey: ['remediation-suggestions'],
@@ -137,6 +139,34 @@ export function RemediationSuggestions() {
     },
   });
 
+  const runRegressionMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('run-regression-tests', {
+        body: { run_all: true },
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      const passed = data?.passed || 0;
+      const failed = data?.failed || 0;
+      const runId = data?.run_id;
+      
+      setRegressionRunId(runId);
+      
+      if (failed === 0) {
+        toast.success(`Regression tests completed: ${passed} passed, ${failed} failed`);
+      } else {
+        toast.warning(`Regression tests completed: ${passed} passed, ${failed} failed`);
+      }
+    },
+    onError: (error) => {
+      toast.error('Failed to run regression tests');
+      console.error('[RemediationSuggestions] Regression test error:', error);
+    },
+  });
+
   const handleAction = (id: string, status: 'approved' | 'rejected' | 'applied') => {
     updateStatusMutation.mutate({ 
       id, 
@@ -199,6 +229,36 @@ export function RemediationSuggestions() {
                 {approvedCount} approved
               </Badge>
             )}
+          </div>
+          <div className="flex items-center gap-2">
+            {regressionRunId && (
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+              >
+                <Link to="/admin/operations">
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  View Results
+                </Link>
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => {
+                toast.info('Regression tests started...');
+                runRegressionMutation.mutate();
+              }}
+              disabled={runRegressionMutation.isPending}
+              className="bg-indigo-500 hover:bg-indigo-600"
+            >
+              {runRegressionMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4 mr-1" />
+              )}
+              Run Regression Tests
+            </Button>
           </div>
         </CardTitle>
       </CardHeader>
