@@ -3269,6 +3269,42 @@ export type Database = {
           },
         ]
       }
+      summary_deliveries: {
+        Row: {
+          created_at: string
+          delivered_at: string
+          delivery_method: string
+          error_message: string | null
+          id: string
+          status: string
+          summary_content: string | null
+          summary_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string
+          delivery_method: string
+          error_message?: string | null
+          id?: string
+          status?: string
+          summary_content?: string | null
+          summary_type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string
+          delivery_method?: string
+          error_message?: string | null
+          id?: string
+          status?: string
+          summary_content?: string | null
+          summary_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           created_at: string
