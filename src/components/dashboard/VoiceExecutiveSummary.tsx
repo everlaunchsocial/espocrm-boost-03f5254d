@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Volume2, VolumeX, Loader2, UserPlus, ListTodo, Eye, Calendar, Sparkles } from 'lucide-react';
 import { useVoiceSummary } from '@/hooks/useVoiceSummary';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -11,10 +12,14 @@ import { toast } from 'sonner';
 const DEFAULT_VOICE_ID = 'a0e99841-438c-4a64-b679-ae501e7d6091';
 
 export function VoiceExecutiveSummary() {
+  const { isEnabled } = useFeatureFlags();
   const { data: summary, isLoading, error } = useVoiceSummary();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Feature flag check
+  if (!isEnabled('aiCrmPhase1')) return null;
 
   const stopAudio = useCallback(() => {
     if (audioRef.current) {

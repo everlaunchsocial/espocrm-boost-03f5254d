@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Mail, Phone, RefreshCw, ChevronDown, ChevronUp, History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 
@@ -39,7 +40,11 @@ function getActionConfig(subject: string) {
 }
 
 export function RecentFollowUpActions() {
+  const { isEnabled } = useFeatureFlags();
   const [isOpen, setIsOpen] = useState(true);
+
+  // Feature flag check
+  if (!isEnabled('aiCrmPhase1')) return null;
 
   const { data: recentActions, isLoading } = useQuery({
     queryKey: ['recent-followup-actions'],

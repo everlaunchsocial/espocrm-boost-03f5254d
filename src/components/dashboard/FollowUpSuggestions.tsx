@@ -14,6 +14,7 @@ import {
 import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2 } from 'lucide-react';
 import { useFollowUpSuggestions, SuggestionReason, FollowUpSuggestion } from '@/hooks/useFollowUpSuggestions';
 import { useFollowupLearning } from '@/hooks/useFollowupLearning';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -55,6 +56,7 @@ const actionConfig: Record<SuggestionReason, { label: string; icon: typeof Refre
 };
 
 export function FollowUpSuggestions() {
+  const { isEnabled } = useFeatureFlags();
   const { data: suggestions, isLoading, error, refetch } = useFollowUpSuggestions();
   const { logAccepted, confirmAction } = useFollowupLearning();
   const navigate = useNavigate();
@@ -62,6 +64,8 @@ export function FollowUpSuggestions() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
+  // Feature flag check
+  if (!isEnabled('aiCrmPhase1')) return null;
   const handleActionClick = (e: React.MouseEvent, suggestion: FollowUpSuggestion) => {
     e.preventDefault();
     e.stopPropagation();

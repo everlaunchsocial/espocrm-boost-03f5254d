@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 interface LogAcceptedParams {
   suggestionText: string;
@@ -14,9 +15,13 @@ interface ConfirmActionParams {
 }
 
 export function useFollowupLearning() {
+  const { isEnabled } = useFeatureFlags();
+
   // Log when a suggestion is accepted (clicked)
   const logAccepted = useMutation({
     mutationFn: async ({ suggestionText, suggestionType, leadId, demoId }: LogAcceptedParams) => {
+      // Skip if feature flag is disabled
+      if (!isEnabled('aiCrmPhase1')) return null;
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
@@ -43,6 +48,9 @@ export function useFollowupLearning() {
   // Mark the action as confirmed (completed)
   const confirmAction = useMutation({
     mutationFn: async ({ suggestionText, suggestionType }: ConfirmActionParams) => {
+      // Skip if feature flag is disabled
+      if (!isEnabled('aiCrmPhase1')) return null;
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
