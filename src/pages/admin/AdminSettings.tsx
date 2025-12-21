@@ -4,16 +4,18 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Bell, Shield, Database, AlertCircle, Mic, Loader2 } from 'lucide-react';
+import { Bell, Shield, Database, AlertCircle, Mic, Loader2, FlaskConical } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useNavigate } from 'react-router-dom';
 import { useVoiceSummaryPreferences } from '@/hooks/useVoiceSummaryPreferences';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useState, useEffect } from 'react';
 import { DeliveryHistoryCard } from '@/components/admin/DeliveryHistoryCard';
 
 export default function AdminSettings() {
   const { isAdmin, isLoading } = useUserRole();
   const navigate = useNavigate();
+  const { flags, setFlag, isEnabled } = useFeatureFlags();
   const { 
     preferences, 
     isLoading: prefsLoading, 
@@ -161,8 +163,8 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
-        {/* Delivery History */}
-        <DeliveryHistoryCard />
+        {/* Delivery History - only show if Phase 1 enabled */}
+        {isEnabled('aiCrmPhase1') && <DeliveryHistoryCard />}
 
         {/* Notifications */}
         <Card>
@@ -235,6 +237,37 @@ export default function AdminSettings() {
                 </p>
               </div>
               <Switch defaultChecked />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Labs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FlaskConical className="h-5 w-5" />
+              Labs
+            </CardTitle>
+            <CardDescription>
+              Experimental features and rollout controls
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="ai-crm-phase1" className="flex items-center gap-2">
+                  <span>🧪</span>
+                  AI CRM Phase 1
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Enable Voice Summary + Follow-Up Layer
+                </p>
+              </div>
+              <Switch 
+                id="ai-crm-phase1"
+                checked={flags.aiCrmPhase1}
+                onCheckedChange={(checked) => setFlag('aiCrmPhase1', checked)}
+              />
             </div>
           </CardContent>
         </Card>
