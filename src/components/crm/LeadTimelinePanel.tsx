@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useLeadTimeline, LeadTimelineEvent } from '@/hooks/useLeadTimeline';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { formatDistanceToNow, isToday, isYesterday, format, parseISO, startOfDay } from 'date-fns';
@@ -13,14 +13,18 @@ import {
   FileText,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Eye,
+  Send
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 interface LeadTimelinePanelProps {
   leadId: string;
+  onSendFollowUp?: (demoId: string) => void;
 }
 
 const EVENT_ICONS: Record<string, React.ElementType> = {
@@ -30,6 +34,7 @@ const EVENT_ICONS: Record<string, React.ElementType> = {
   meeting: Calendar,
   voice_call: Mic,
   demo_view: Presentation,
+  demo_watched: Eye,
   followup: ArrowRight,
   task: FileText,
   'status-change': FileText,
@@ -42,6 +47,7 @@ const EVENT_COLORS: Record<string, string> = {
   meeting: 'bg-orange-500/10 text-orange-500',
   voice_call: 'bg-emerald-500/10 text-emerald-500',
   demo_view: 'bg-pink-500/10 text-pink-500',
+  demo_watched: 'bg-indigo-500/10 text-indigo-500',
   followup: 'bg-yellow-500/10 text-yellow-500',
   task: 'bg-slate-500/10 text-slate-500',
   'status-change': 'bg-cyan-500/10 text-cyan-500',
@@ -54,6 +60,7 @@ const EVENT_LABELS: Record<string, string> = {
   meeting: 'Meeting',
   voice_call: 'Voice Call',
   demo_view: 'Demo',
+  demo_watched: 'Watched Demo',
   followup: 'Follow-up',
   task: 'Task',
   'status-change': 'Status Change',
@@ -65,7 +72,12 @@ function formatGroupLabel(date: Date): string {
   return format(date, 'EEEE, MMMM d, yyyy');
 }
 
-function TimelineItem({ event }: { event: LeadTimelineEvent }) {
+interface TimelineItemProps {
+  event: LeadTimelineEvent;
+  onSendFollowUp?: (demoId: string) => void;
+}
+
+function TimelineItem({ event, onSendFollowUp }: TimelineItemProps) {
   const Icon = EVENT_ICONS[event.event_type] || FileText;
   const colorClass = EVENT_COLORS[event.event_type] || 'bg-muted text-muted-foreground';
   const label = EVENT_LABELS[event.event_type] || event.event_type;
@@ -79,12 +91,22 @@ function TimelineItem({ event }: { event: LeadTimelineEvent }) {
   const viewCount = metadata.view_count as number | undefined;
   const accepted = metadata.accepted as boolean | undefined;
   const confirmed = metadata.confirmed as boolean | undefined;
+  const progressPercent = metadata.progress_percent as number | undefined;
+  const demoId = metadata.demo_id as string | undefined;
+  const watchDurationSeconds = metadata.watch_duration_seconds as number | undefined;
+
+  // Special rendering for demo_watched events
+  const isDemoWatched = event.event_type === 'demo_watched';
 
   return (
     <div className="flex gap-3 py-3 border-b border-border last:border-0">
       {/* Icon */}
       <div className={cn('h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0', colorClass)}>
-        <Icon className="h-4 w-4" />
+        {isDemoWatched ? (
+          <span className="text-base">👁️</span>
+        ) : (
+          <Icon className="h-4 w-4" />
+        )}
       </div>
 
       {/* Content */}
@@ -92,11 +114,16 @@ function TimelineItem({ event }: { event: LeadTimelineEvent }) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{event.summary}</p>
-            {event.preview_content && (
+            {isDemoWatched && progressPercent !== undefined ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                Viewed {progressPercent}% of the demo
+                {event.preview_content && ` • ${event.preview_content}`}
+              </p>
+            ) : event.preview_content ? (
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                 {event.preview_content}
               </p>
-            )}
+            ) : null}
           </div>
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             {relativeTime}
@@ -104,7 +131,7 @@ function TimelineItem({ event }: { event: LeadTimelineEvent }) {
         </div>
 
         {/* Tags/Metadata */}
-        <div className="flex flex-wrap gap-1.5 mt-2">
+        <div className="flex flex-wrap items-center gap-1.5 mt-2">
           <Badge variant="outline" className="text-xs">
             {label}
           </Badge>
@@ -112,6 +139,12 @@ function TimelineItem({ event }: { event: LeadTimelineEvent }) {
           {durationSeconds && (
             <Badge variant="secondary" className="text-xs">
               {Math.floor(durationSeconds / 60)}m {durationSeconds % 60}s
+            </Badge>
+          )}
+
+          {isDemoWatched && watchDurationSeconds && watchDurationSeconds > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {Math.floor(watchDurationSeconds / 60)}m {watchDurationSeconds % 60}s watched
             </Badge>
           )}
           
@@ -140,13 +173,26 @@ function TimelineItem({ event }: { event: LeadTimelineEvent }) {
               )}
             </>
           )}
+
+          {/* CTA for demo_watched */}
+          {isDemoWatched && demoId && onSendFollowUp && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-6 text-xs ml-auto"
+              onClick={() => onSendFollowUp(demoId)}
+            >
+              <Send className="h-3 w-3 mr-1" />
+              Send Follow-Up
+            </Button>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export function LeadTimelinePanel({ leadId }: LeadTimelinePanelProps) {
+export function LeadTimelinePanel({ leadId, onSendFollowUp }: LeadTimelinePanelProps) {
   const { isEnabled } = useFeatureFlags();
   const phase2Enabled = isEnabled('aiCrmPhase2');
   
@@ -211,7 +257,7 @@ export function LeadTimelinePanel({ leadId }: LeadTimelinePanelProps) {
             </h4>
             <div className="space-y-0">
               {group.events.map((event) => (
-                <TimelineItem key={event.id} event={event} />
+                <TimelineItem key={event.id} event={event} onSendFollowUp={onSendFollowUp} />
               ))}
             </div>
           </div>
