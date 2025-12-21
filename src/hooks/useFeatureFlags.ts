@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 interface FeatureFlags {
   aiCrmPhase1: boolean;
+  aiCrmPhase2: boolean;
 }
 
 interface FeatureFlagsStore {
@@ -19,6 +20,7 @@ const isProduction = typeof window !== 'undefined' &&
 
 const defaultFlags: FeatureFlags = {
   aiCrmPhase1: !isProduction, // ON for dev/staging, OFF for production
+  aiCrmPhase2: !isProduction, // ON for dev/staging, OFF for production
 };
 
 export const useFeatureFlags = create<FeatureFlagsStore>()(

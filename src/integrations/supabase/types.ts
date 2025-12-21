@@ -4493,6 +4493,18 @@ export type Database = {
           },
         ]
       }
+      lead_timeline: {
+        Row: {
+          event_at: string | null
+          event_type: string | null
+          id: string | null
+          lead_id: string | null
+          metadata: Json | null
+          preview_content: string | null
+          summary: string | null
+        }
+        Relationships: []
+      }
       quality_patterns_weekly: {
         Row: {
           avg_accuracy: number | null
