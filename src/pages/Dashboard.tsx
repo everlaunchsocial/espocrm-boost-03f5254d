@@ -3,6 +3,7 @@ import { StatCard } from '@/components/crm/StatCard';
 import { ActivityTimeline } from '@/components/crm/ActivityTimeline';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { VoiceExecutiveSummary } from '@/components/dashboard/VoiceExecutiveSummary';
+import { FollowUpSuggestions } from '@/components/dashboard/FollowUpSuggestions';
 import { Users, Building2, UserPlus, Handshake, TrendingUp, DollarSign } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -48,6 +49,9 @@ export default function Dashboard() {
 
       {/* Voice Executive Summary - Top of Dashboard */}
       <VoiceExecutiveSummary />
+
+      {/* Follow-Up Suggestions - Below Voice Summary */}
+      <FollowUpSuggestions />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
