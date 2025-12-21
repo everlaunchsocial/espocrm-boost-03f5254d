@@ -188,3 +188,6 @@ verify_jwt = true
 
 [functions.daily-voice-summary]
 verify_jwt = false
+
+[functions.retry-voice-summary]
+verify_jwt = true

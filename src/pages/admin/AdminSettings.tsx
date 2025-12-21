@@ -4,11 +4,12 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Settings, Bell, Shield, Database, AlertCircle, Mic, Loader2 } from 'lucide-react';
+import { Bell, Shield, Database, AlertCircle, Mic, Loader2 } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useNavigate } from 'react-router-dom';
 import { useVoiceSummaryPreferences } from '@/hooks/useVoiceSummaryPreferences';
 import { useState, useEffect } from 'react';
+import { DeliveryHistoryCard } from '@/components/admin/DeliveryHistoryCard';
 
 export default function AdminSettings() {
   const { isAdmin, isLoading } = useUserRole();
@@ -159,6 +160,9 @@ export default function AdminSettings() {
             )}
           </CardContent>
         </Card>
+
+        {/* Delivery History */}
+        <DeliveryHistoryCard />
 
         {/* Notifications */}
         <Card>
