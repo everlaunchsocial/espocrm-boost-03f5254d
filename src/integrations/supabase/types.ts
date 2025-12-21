@@ -1818,6 +1818,51 @@ export type Database = {
           },
         ]
       }
+      demo_views: {
+        Row: {
+          created_at: string
+          demo_id: string
+          id: string
+          lead_id: string | null
+          progress_percent: number | null
+          updated_at: string
+          watch_duration_seconds: number | null
+        }
+        Insert: {
+          created_at?: string
+          demo_id: string
+          id?: string
+          lead_id?: string | null
+          progress_percent?: number | null
+          updated_at?: string
+          watch_duration_seconds?: number | null
+        }
+        Update: {
+          created_at?: string
+          demo_id?: string
+          id?: string
+          lead_id?: string | null
+          progress_percent?: number | null
+          updated_at?: string
+          watch_duration_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_views_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "demos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_views_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       demos: {
         Row: {
           affiliate_id: string | null

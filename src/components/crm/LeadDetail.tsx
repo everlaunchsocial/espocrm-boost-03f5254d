@@ -397,7 +397,10 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
 
             <TabsContent value="activity" className="mt-4">
               {phase2Enabled ? (
-                <LeadTimelinePanel leadId={lead.id} />
+                <LeadTimelinePanel 
+                  leadId={lead.id} 
+                  onSendFollowUp={() => setEmailComposerOpen(true)}
+                />
               ) : (
                 leadActivities.length > 0 ? (
                   <ActivityTimeline activities={leadActivities} />
