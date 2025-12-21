@@ -3368,6 +3368,30 @@ export type Database = {
           },
         ]
       }
+      suggestion_log: {
+        Row: {
+          category: string | null
+          context: string | null
+          created_at: string
+          id: string
+          suggestion_text: string
+        }
+        Insert: {
+          category?: string | null
+          context?: string | null
+          created_at?: string
+          id?: string
+          suggestion_text: string
+        }
+        Update: {
+          category?: string | null
+          context?: string | null
+          created_at?: string
+          id?: string
+          suggestion_text?: string
+        }
+        Relationships: []
+      }
       summary_deliveries: {
         Row: {
           created_at: string
