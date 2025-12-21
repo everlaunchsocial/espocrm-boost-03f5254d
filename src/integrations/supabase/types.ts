@@ -3872,6 +3872,36 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          created_at: string
+          enable_voice_summary: boolean
+          id: string
+          include_followup_reminders: boolean
+          summary_delivery_time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enable_voice_summary?: boolean
+          id?: string
+          include_followup_reminders?: boolean
+          summary_delivery_time?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enable_voice_summary?: boolean
+          id?: string
+          include_followup_reminders?: boolean
+          summary_delivery_time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vapi_accounts: {
         Row: {
           api_key: string
