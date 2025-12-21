@@ -12,6 +12,9 @@ export interface FollowUpSuggestion {
   leadId: string;
   name: string;
   company?: string;
+  email?: string;
+  phone?: string;
+  demoId?: string;
   reason: SuggestionReason;
   reasonLabel: string;
   suggestionText: string;
@@ -45,7 +48,9 @@ export function useFollowUpSuggestions() {
             id,
             first_name,
             last_name,
-            company
+            company,
+            email,
+            phone
           )
         `)
         .not('lead_id', 'is', null);
@@ -53,7 +58,7 @@ export function useFollowUpSuggestions() {
       // 2. Fetch all leads for inactive check
       const { data: allLeads } = await supabase
         .from('leads')
-        .select('id, first_name, last_name, company, created_at, updated_at')
+        .select('id, first_name, last_name, company, email, phone, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       // 3. Fetch recent activities to check for replies/engagement
@@ -84,12 +89,15 @@ export function useFollowUpSuggestions() {
         
         // Demo was sent but not viewed, and it's been more than 48 hours
         if (emailSentAt && !firstViewedAt && isAfter(hours48Ago, emailSentAt)) {
-          const lead = demo.leads as { id: string; first_name: string; last_name: string; company?: string };
+          const lead = demo.leads as { id: string; first_name: string; last_name: string; company?: string; email?: string; phone?: string };
           suggestions.push({
             id: `demo-not-viewed-${demo.id}`,
             leadId: demo.lead_id,
             name: `${lead.first_name} ${lead.last_name}`,
             company: lead.company || demo.business_name,
+            email: lead.email,
+            phone: lead.phone,
+            demoId: demo.id,
             reason: 'demo_not_viewed',
             reasonLabel: 'Demo not viewed (48h)',
             suggestionText: 'Follow up to confirm they saw the demo',
@@ -111,7 +119,7 @@ export function useFollowUpSuggestions() {
           const hasRecentActivity = lastActivity && isAfter(lastActivity, firstViewedAt);
           
           if (!hasRecentActivity) {
-            const lead = demo.leads as { id: string; first_name: string; last_name: string; company?: string };
+            const lead = demo.leads as { id: string; first_name: string; last_name: string; company?: string; email?: string; phone?: string };
             // Don't add if already suggested for not-viewed
             const alreadySuggested = suggestions.some(s => s.leadId === demo.lead_id);
             if (!alreadySuggested) {
@@ -120,6 +128,9 @@ export function useFollowUpSuggestions() {
                 leadId: demo.lead_id,
                 name: `${lead.first_name} ${lead.last_name}`,
                 company: lead.company || demo.business_name,
+                email: lead.email,
+                phone: lead.phone,
+                demoId: demo.id,
                 reason: 'demo_viewed_no_reply',
                 reasonLabel: 'Demo viewed, no reply (24h)',
                 suggestionText: 'Reach out to answer questions after demo view',
@@ -155,6 +166,8 @@ export function useFollowUpSuggestions() {
             leadId: lead.id,
             name: `${lead.first_name} ${lead.last_name}`,
             company: lead.company,
+            email: lead.email,
+            phone: lead.phone,
             reason: 'lead_inactive',
             reasonLabel: 'No activity (7 days)',
             suggestionText: 'Re-engage inactive lead',
