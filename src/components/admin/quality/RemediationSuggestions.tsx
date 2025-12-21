@@ -237,7 +237,7 @@ export function RemediationSuggestions() {
                 size="sm"
                 asChild
               >
-                <Link to="/admin/operations">
+                <Link to="/admin/regression-tests">
                   <ExternalLink className="h-4 w-4 mr-1" />
                   View Results
                 </Link>
