@@ -1113,6 +1113,7 @@ export type Database = {
           slot_length_minutes: number | null
           token_expires_at: string | null
           updated_at: string
+          webhook_url: string | null
         }
         Insert: {
           access_token?: string | null
@@ -1127,6 +1128,7 @@ export type Database = {
           slot_length_minutes?: number | null
           token_expires_at?: string | null
           updated_at?: string
+          webhook_url?: string | null
         }
         Update: {
           access_token?: string | null
@@ -1141,6 +1143,7 @@ export type Database = {
           slot_length_minutes?: number | null
           token_expires_at?: string | null
           updated_at?: string
+          webhook_url?: string | null
         }
         Relationships: [
           {
