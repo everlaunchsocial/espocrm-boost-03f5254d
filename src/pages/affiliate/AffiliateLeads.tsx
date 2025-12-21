@@ -30,20 +30,9 @@ const leadFields = [
   { 
     name: 'industry', 
     label: 'Industry', 
-    type: 'select' as const, 
+    type: 'industry-combobox' as const, 
     required: true,
-    placeholder: 'e.g. Home Improvement, Medical Spa',
-    options: [
-      { value: 'home-improvement', label: 'Home Improvement' },
-      { value: 'med-spa', label: 'Medical Spa' },
-      { value: 'dentist', label: 'Dental Practice' },
-      { value: 'hvac', label: 'HVAC Services' },
-      { value: 'legal', label: 'Legal Services' },
-      { value: 'real-estate', label: 'Real Estate' },
-      { value: 'pest-control', label: 'Pest Control' },
-      { value: 'network-marketing', label: 'Network Marketing' },
-      { value: 'other', label: 'Other' },
-    ]
+    placeholder: 'Search industries...',
   },
   { 
     name: 'serviceCategory', 

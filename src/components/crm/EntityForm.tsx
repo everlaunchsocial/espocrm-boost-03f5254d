@@ -15,11 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { IndustryCombobox } from '@/components/ui/industry-combobox';
 
 interface Field {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'select' | 'textarea';
+  type: 'text' | 'email' | 'tel' | 'number' | 'date' | 'select' | 'textarea' | 'industry-combobox';
   placeholder?: string;
   helperText?: string;
   required?: boolean;
@@ -65,7 +66,13 @@ export function EntityForm({
                 {field.label}
                 {field.required && <span className="text-destructive ml-1">*</span>}
               </Label>
-              {field.type === 'select' ? (
+              {field.type === 'industry-combobox' ? (
+                <IndustryCombobox
+                  value={values[field.name] || ''}
+                  onChange={(value) => onChange(field.name, value)}
+                  placeholder={field.placeholder}
+                />
+              ) : field.type === 'select' ? (
                 <Select
                   value={values[field.name] || ''}
                   onValueChange={(value) => onChange(field.name, value)}

@@ -69,16 +69,39 @@ EverLaunch AI provides businesses with an AI-powered virtual employee that:
 
 ## Supported Industry Verticals
 
-EverLaunch AI has specialized AI prompts, training, and marketing for these verticals:
+EverLaunch AI supports **100+ industry verticals** with specialized AI prompts, training materials, pain points, and lead generation strategies for each. Verticals are organized by category:
 
-1. **Dental Practices** — Patient scheduling, insurance questions, emergency handling
-2. **Home Services/Improvement** — Quote requests, job scheduling, emergency repairs
-3. **HVAC & Plumbing** — 24/7 emergency dispatch, maintenance scheduling
-4. **Legal/Law Firms** — Client intake, case screening, consultation booking
-5. **Real Estate** — Property inquiries, showing scheduling, buyer/seller qualification
-6. **Pest Control** — Emergency triage, seasonal service booking, pest identification
-7. **Network Marketing/MLM** — Prospect qualification, team support, 3-way call scheduling
-8. **Medical Spa/Med Spa** — Consultation booking, treatment info, pricing inquiries
+### Trade & Home Services
+Plumbing, HVAC, Electrical, Roofing, Water Damage/Restoration, Locksmiths, Garage Door Repair, Pest Control, Landscaping, Pool Services, Cleaning Services, Moving Companies, General Contractors, Handyman Services, Flooring, Painting, Fencing, Appliance Repair, Chimney Sweep, Gutter Services, Window Installation, Solar Installation, Septic Services, Tree Services, Pressure Washing, and more.
+
+### Automotive
+Auto Repair, Towing, Mobile Mechanics, Transmission Repair, Auto Body, Auto Detailing, Tire Shops, Windshield Repair, Motorcycle Repair, RV Repair, and more.
+
+### Legal Services
+Criminal Defense, Personal Injury, Family Law, Estate Planning, Immigration Law, Bankruptcy, Real Estate Attorneys, DUI Defense, Workers' Compensation, Tax Law, Civil Litigation, Employment Law, Intellectual Property, and more.
+
+### Financial Services
+Accounting, Bookkeeping, Tax Preparation, Financial Advisors, Insurance Agencies, Mortgage Brokers, Credit Repair, Debt Settlement, Payroll Services, and more.
+
+### Healthcare & Wellness
+Dental Practices, Chiropractors, Physical Therapy, Urgent Care, Mental Health, Dermatology, Medical Spas, Optometry, Veterinary Clinics, Acupuncture, Massage Therapy, Podiatry, Home Healthcare, Senior Care, and more.
+
+### Personal Services
+Hair Salons, Barber Shops, Nail Salons, Tattoo Studios, Fitness Studios, Personal Training, Yoga Studios, Day Spas, Wedding Services, Photography, and more.
+
+### Property Services
+Property Management, Real Estate Agents, Home Inspection, Appraisers, Title Companies, Commercial Real Estate, and more.
+
+### Other Specialized Industries
+Network Marketing/MLM, Funeral Homes, Pet Services, Educational Services, IT Support, Event Planning, Security Services, Courier Services, Staffing Agencies, and more.
+
+### Vertical Training System
+Each vertical includes:
+- **Industry-specific pain points** — Why phone AI matters for that business
+- **AI prompt customization** — Trained responses for industry terminology
+- **Lead generation strategies** — Where to find prospects in that vertical
+- **Sales talking points** — How to pitch to business owners
+- **Archetype inheritance** — Child verticals inherit from parent categories for consistent training
 
 ---
 
