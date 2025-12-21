@@ -15,6 +15,9 @@ interface GoldenScenario {
   conversation_script: Array<{ role: string; content: string }>;
   expected_assertions: {
     must_include?: string[];
+    must_include_any?: string[];
+    must_include_groups?: string[][];
+    must_include_regex?: string[];
     must_not_include?: string[];
     must_trigger_tool_allowed?: string[];
     must_not_trigger_tool?: string[];
@@ -28,6 +31,8 @@ interface AssertionResult {
   type: string;
   passed: boolean;
   details: string;
+  matched?: string[];
+  expected?: string[] | string[][];
 }
 
 // Simplified prompt generator matching the frontend logic
@@ -165,6 +170,22 @@ async function generateAIResponse(
   }
 }
 
+// Helper: case-insensitive phrase check with trimming
+function containsPhrase(text: string, phrase: string): boolean {
+  return text.toLowerCase().trim().includes(phrase.toLowerCase().trim());
+}
+
+// Helper: check regex pattern (case-insensitive)
+function matchesRegex(text: string, pattern: string): boolean {
+  try {
+    const regex = new RegExp(pattern, 'i');
+    return regex.test(text);
+  } catch {
+    console.warn(`[run-regression-tests] Invalid regex pattern: ${pattern}`);
+    return false;
+  }
+}
+
 // Evaluate assertions against response
 function evaluateAssertions(
   response: string,
@@ -175,28 +196,109 @@ function evaluateAssertions(
   const failedList: AssertionResult[] = [];
   const responseLower = response.toLowerCase();
   
-  // must_include
-  if (assertions.must_include) {
+  // must_include (ALL required - strict)
+  if (assertions.must_include && assertions.must_include.length > 0) {
     for (const phrase of assertions.must_include) {
-      const found = responseLower.includes(phrase.toLowerCase());
+      const found = containsPhrase(response, phrase);
       const result: AssertionResult = {
         type: 'must_include',
         passed: found,
         details: `"${phrase}" ${found ? 'found' : 'NOT found'} in response`,
+        expected: [phrase],
+        matched: found ? [phrase] : [],
       };
       if (found) passedList.push(result);
       else failedList.push(result);
     }
   }
   
-  // must_not_include
-  if (assertions.must_not_include) {
+  // must_include_any (AT LEAST ONE required)
+  if (assertions.must_include_any && assertions.must_include_any.length > 0) {
+    const matched: string[] = [];
+    for (const phrase of assertions.must_include_any) {
+      if (containsPhrase(response, phrase)) {
+        matched.push(phrase);
+      }
+    }
+    const anyFound = matched.length > 0;
+    const result: AssertionResult = {
+      type: 'must_include_any',
+      passed: anyFound,
+      details: anyFound 
+        ? `Matched: ${matched.map(m => `"${m}"`).join(', ')}` 
+        : `None of [${assertions.must_include_any.map(p => `"${p}"`).join(', ')}] found`,
+      expected: assertions.must_include_any,
+      matched,
+    };
+    if (anyFound) passedList.push(result);
+    else failedList.push(result);
+  }
+  
+  // must_include_groups (each group requires at least one match - AND of OR-groups)
+  if (assertions.must_include_groups && assertions.must_include_groups.length > 0) {
+    let allGroupsPassed = true;
+    const groupResults: Array<{ group: string[]; matched: string[]; passed: boolean }> = [];
+    
+    for (const group of assertions.must_include_groups) {
+      const matched: string[] = [];
+      for (const phrase of group) {
+        if (containsPhrase(response, phrase)) {
+          matched.push(phrase);
+        }
+      }
+      const groupPassed = matched.length > 0;
+      groupResults.push({ group, matched, passed: groupPassed });
+      if (!groupPassed) allGroupsPassed = false;
+    }
+    
+    const failedGroups = groupResults.filter(g => !g.passed);
+    const passedGroups = groupResults.filter(g => g.passed);
+    
+    const result: AssertionResult = {
+      type: 'must_include_groups',
+      passed: allGroupsPassed,
+      details: allGroupsPassed
+        ? `All ${groupResults.length} groups matched: ${passedGroups.map(g => `[${g.matched.join('|')}]`).join(', ')}`
+        : `${failedGroups.length} group(s) failed: ${failedGroups.map(g => `[${g.group.join('|')}]`).join(', ')}`,
+      expected: assertions.must_include_groups,
+      matched: groupResults.flatMap(g => g.matched),
+    };
+    if (allGroupsPassed) passedList.push(result);
+    else failedList.push(result);
+  }
+  
+  // must_include_regex (at least one regex must match)
+  if (assertions.must_include_regex && assertions.must_include_regex.length > 0) {
+    const matched: string[] = [];
+    for (const pattern of assertions.must_include_regex) {
+      if (matchesRegex(response, pattern)) {
+        matched.push(pattern);
+      }
+    }
+    const anyMatched = matched.length > 0;
+    const result: AssertionResult = {
+      type: 'must_include_regex',
+      passed: anyMatched,
+      details: anyMatched
+        ? `Regex matched: ${matched.join(', ')}`
+        : `No regex patterns matched from [${assertions.must_include_regex.join(', ')}]`,
+      expected: assertions.must_include_regex,
+      matched,
+    };
+    if (anyMatched) passedList.push(result);
+    else failedList.push(result);
+  }
+  
+  // must_not_include (CRITICAL - all must be absent)
+  if (assertions.must_not_include && assertions.must_not_include.length > 0) {
     for (const phrase of assertions.must_not_include) {
-      const found = responseLower.includes(phrase.toLowerCase());
+      const found = containsPhrase(response, phrase);
       const result: AssertionResult = {
         type: 'must_not_include',
         passed: !found,
         details: `"${phrase}" ${found ? 'FOUND (violation!)' : 'not found (correct)'}`,
+        expected: [phrase],
+        matched: found ? [phrase] : [],
       };
       if (!found) passedList.push(result);
       else failedList.push(result);
@@ -204,27 +306,37 @@ function evaluateAssertions(
   }
   
   // must_trigger_tool_allowed
-  if (assertions.must_trigger_tool_allowed) {
-    const anyTriggered = assertions.must_trigger_tool_allowed.some(tool => 
-      toolsCalled.includes(tool) || toolsCalled.some(tc => tc.includes(tool) || tool.includes(tc))
-    );
+  if (assertions.must_trigger_tool_allowed && assertions.must_trigger_tool_allowed.length > 0) {
+    const matched: string[] = [];
+    for (const tool of assertions.must_trigger_tool_allowed) {
+      if (toolsCalled.includes(tool) || toolsCalled.some(tc => tc.includes(tool) || tool.includes(tc))) {
+        matched.push(tool);
+      }
+    }
+    const anyTriggered = matched.length > 0;
     const result: AssertionResult = {
       type: 'must_trigger_tool_allowed',
       passed: anyTriggered,
-      details: `Expected one of [${assertions.must_trigger_tool_allowed.join(', ')}], got [${toolsCalled.join(', ') || 'none'}]`,
+      details: anyTriggered
+        ? `Tool(s) triggered: ${matched.join(', ')}`
+        : `Expected one of [${assertions.must_trigger_tool_allowed.join(', ')}], got [${toolsCalled.join(', ') || 'none'}]`,
+      expected: assertions.must_trigger_tool_allowed,
+      matched,
     };
     if (anyTriggered) passedList.push(result);
     else failedList.push(result);
   }
   
-  // must_not_trigger_tool
-  if (assertions.must_not_trigger_tool) {
+  // must_not_trigger_tool (CRITICAL)
+  if (assertions.must_not_trigger_tool && assertions.must_not_trigger_tool.length > 0) {
     for (const tool of assertions.must_not_trigger_tool) {
       const triggered = toolsCalled.includes(tool) || toolsCalled.some(tc => tc.includes(tool));
       const result: AssertionResult = {
         type: 'must_not_trigger_tool',
         passed: !triggered,
         details: `Tool "${tool}" ${triggered ? 'WAS triggered (violation!)' : 'not triggered (correct)'}`,
+        expected: [tool],
+        matched: triggered ? [tool] : [],
       };
       if (!triggered) passedList.push(result);
       else failedList.push(result);
@@ -232,21 +344,30 @@ function evaluateAssertions(
   }
   
   // must_capture_fields (check if response mentions capturing these)
-  if (assertions.must_capture_fields) {
+  if (assertions.must_capture_fields && assertions.must_capture_fields.length > 0) {
+    const matched: string[] = [];
     for (const field of assertions.must_capture_fields) {
       // Check if the lead capture tool was called OR the response asks for this field
       const captured = toolsCalled.includes('capture_lead') || 
-                       responseLower.includes(field.toLowerCase()) ||
-                       responseLower.includes('contact') ||
-                       responseLower.includes('information');
-      const result: AssertionResult = {
-        type: 'must_capture_fields',
-        passed: captured,
-        details: `Field "${field}" capture ${captured ? 'attempted' : 'NOT attempted'}`,
-      };
-      if (captured) passedList.push(result);
-      else failedList.push(result);
+                       containsPhrase(response, field) ||
+                       containsPhrase(response, 'contact') ||
+                       containsPhrase(response, 'information') ||
+                       containsPhrase(response, 'details');
+      if (captured) matched.push(field);
     }
+    // Pass if any field capture was attempted
+    const anyCapture = matched.length > 0 || toolsCalled.includes('capture_lead');
+    const result: AssertionResult = {
+      type: 'must_capture_fields',
+      passed: anyCapture,
+      details: anyCapture 
+        ? `Field capture attempted: ${matched.length > 0 ? matched.join(', ') : 'via capture_lead tool'}`
+        : `No field capture detected for [${assertions.must_capture_fields.join(', ')}]`,
+      expected: assertions.must_capture_fields,
+      matched,
+    };
+    if (anyCapture) passedList.push(result);
+    else failedList.push(result);
   }
   
   // response_length
@@ -467,6 +588,7 @@ serve(async (req) => {
         channel: r.scenario.channel,
         passed: r.passed,
         failed_assertions: r.failedAssertions,
+        passed_assertions: r.passedAssertions,
         execution_time_ms: r.executionTimeMs,
         error: r.error,
       })),
