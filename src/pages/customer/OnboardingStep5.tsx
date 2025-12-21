@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ArrowRight, Calendar, Clock, Bell, AlertCircle, Link } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, Clock, Bell, AlertCircle, Link, Webhook, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,7 @@ export default function OnboardingStep5() {
     sunday: [],
   });
   const [isConnected, setIsConnected] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export default function OnboardingStep5() {
         setAvailability(calendarIntegration.availability_json as Record<string, string[]>);
       }
       setIsConnected(!!calendarIntegration.access_token);
+      setWebhookUrl(calendarIntegration.webhook_url || '');
     }
   }, [calendarIntegration]);
 
@@ -60,7 +63,8 @@ export default function OnboardingStep5() {
       appointments_enabled: appointmentsEnabled,
       slot_length_minutes: slotLength,
       send_reminders: sendReminders,
-      availability_json: availability
+      availability_json: availability,
+      webhook_url: webhookUrl || null,
     });
 
     if (success && showToast) {
@@ -104,6 +108,17 @@ export default function OnboardingStep5() {
     toast.info('Google Calendar integration coming soon!');
   };
 
+  const handleWebhookChange = (value: string) => {
+    setWebhookUrl(value);
+  };
+
+  const handleWebhookBlur = async () => {
+    await updateCalendarIntegration({ webhook_url: webhookUrl || null });
+    if (webhookUrl) {
+      toast.success('Webhook URL saved');
+    }
+  };
+
   const handleNext = async () => {
     setIsSaving(true);
     const success = await handleSave(false);
@@ -131,6 +146,8 @@ export default function OnboardingStep5() {
       </div>
     );
   }
+
+  const hasAnySyncOption = isConnected || !!webhookUrl;
 
   return (
     <Card className="animate-fade-in">
@@ -163,12 +180,23 @@ export default function OnboardingStep5() {
 
           {appointmentsEnabled && (
             <div className="space-y-6 pl-4 border-l-2 border-primary/20">
-              {/* Google Calendar Connection */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
+              {/* Sync Options Info */}
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  All appointments are saved in your EverLaunch portal. Optionally sync them to your calendar or CRM below.
+                </AlertDescription>
+              </Alert>
+
+              {/* Option 1: Google Calendar Connection */}
+              <div className="space-y-2 p-4 rounded-lg border border-border">
+                <Label className="flex items-center gap-2 text-base font-medium">
                   <Link className="h-4 w-4 text-muted-foreground" />
-                  Connect Your Calendar
+                  Option 1: Google Calendar
                 </Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Best for small businesses without a CRM. Appointments sync directly to your calendar.
+                </p>
                 <Button
                   variant={isConnected ? "secondary" : "outline"}
                   onClick={handleConnectGoogle}
@@ -186,15 +214,51 @@ export default function OnboardingStep5() {
                     </>
                   )}
                 </Button>
-                {!isConnected && appointmentsEnabled && (
-                  <Alert variant="default" className="border-warning/50 bg-warning/10">
-                    <AlertCircle className="h-4 w-4 text-warning" />
-                    <AlertDescription className="text-sm">
-                      Without a connected calendar, appointments will be logged but not synced to your calendar.
-                    </AlertDescription>
-                  </Alert>
+              </div>
+
+              {/* Option 2: Webhook/Zapier */}
+              <div className="space-y-2 p-4 rounded-lg border border-border">
+                <Label className="flex items-center gap-2 text-base font-medium">
+                  <Webhook className="h-4 w-4 text-muted-foreground" />
+                  Option 2: CRM / Scheduling Software (Zapier)
+                </Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Best if you use ServiceTitan, Jobber, HouseCall Pro, or any other software. We'll push appointments there via Zapier.
+                </p>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="https://hooks.zapier.com/hooks/catch/..."
+                    value={webhookUrl}
+                    onChange={(e) => handleWebhookChange(e.target.value)}
+                    onBlur={handleWebhookBlur}
+                    className="font-mono text-sm"
+                  />
+                  <a 
+                    href="https://zapier.com/app/zaps/create" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    How to set up Zapier webhook
+                  </a>
+                </div>
+                {webhookUrl && (
+                  <div className="flex items-center gap-2 mt-2 text-sm text-success">
+                    <div className="h-2 w-2 rounded-full bg-success" />
+                    Webhook configured
+                  </div>
                 )}
               </div>
+
+              {!hasAnySyncOption && (
+                <Alert variant="default" className="border-warning/50 bg-warning/10">
+                  <AlertCircle className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-sm">
+                    Without a sync option, appointments will be saved in your EverLaunch portal but not synced externally.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {/* Slot Length */}
               <div className="space-y-2">

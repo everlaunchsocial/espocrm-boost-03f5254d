@@ -16,6 +16,7 @@ interface CreateBookingRequest {
   bookingTime: string;
   notes?: string;
   businessName: string;
+  customerId?: string; // Optional: for customer portal bookings
 }
 
 const formatTime = (time: string): string => {
@@ -57,9 +58,9 @@ serve(async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: CreateBookingRequest = await req.json();
-    const { demoId, prospectName, prospectEmail, prospectPhone, bookingDate, bookingTime, notes, businessName } = body;
+    const { demoId, prospectName, prospectEmail, prospectPhone, bookingDate, bookingTime, notes, businessName, customerId } = body;
 
-    console.log("Creating booking:", { demoId, prospectName, prospectEmail, bookingDate, bookingTime });
+    console.log("Creating booking:", { demoId, prospectName, prospectEmail, bookingDate, bookingTime, customerId });
 
     // Validate required fields
     if (!demoId || !prospectName || !prospectEmail || !bookingDate || !bookingTime) {
@@ -69,7 +70,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Insert booking into database
+    // Insert booking into database (SOURCE OF TRUTH)
     const { data: booking, error: bookingError } = await supabase
       .from("calendar_bookings")
       .insert({
@@ -95,10 +96,10 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Booking created:", booking.id);
 
-    // Get demo details for activity logging
+    // Get demo details for activity logging and customer lookup
     const { data: demo } = await supabase
       .from("demos")
-      .select("lead_id, contact_id, business_name")
+      .select("lead_id, contact_id, business_name, affiliate_id")
       .eq("id", demoId)
       .single();
 
@@ -118,6 +119,59 @@ serve(async (req: Request): Promise<Response> => {
           is_system_generated: true,
         });
       }
+    }
+
+    // === EXTERNAL SYNC: Webhook/Zapier ===
+    // If customer has a webhook_url configured, POST booking data there
+    let webhookSyncSuccess = false;
+    if (customerId) {
+      const { data: calendarIntegration } = await supabase
+        .from("calendar_integrations")
+        .select("webhook_url, access_token")
+        .eq("customer_id", customerId)
+        .single();
+
+      if (calendarIntegration?.webhook_url) {
+        console.log("Sending booking to webhook:", calendarIntegration.webhook_url);
+        try {
+          const webhookPayload = {
+            event_type: 'appointment_booked',
+            booking_id: booking.id,
+            customer_name: prospectName,
+            customer_email: prospectEmail,
+            customer_phone: prospectPhone || null,
+            date: bookingDate,
+            time: bookingTime,
+            formatted_date: formatDate(bookingDate),
+            formatted_time: formatTime(bookingTime),
+            notes: notes || null,
+            business_name: businessName,
+            booked_at: new Date().toISOString(),
+          };
+
+          const webhookResponse = await fetch(calendarIntegration.webhook_url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(webhookPayload),
+          });
+
+          if (webhookResponse.ok) {
+            webhookSyncSuccess = true;
+            console.log("Webhook sync successful");
+          } else {
+            console.error("Webhook sync failed with status:", webhookResponse.status);
+          }
+        } catch (webhookError) {
+          // Non-blocking: log error but don't fail the booking
+          console.error("Webhook sync failed (non-blocking):", webhookError);
+        }
+      }
+
+      // === EXTERNAL SYNC: Google Calendar (Future) ===
+      // if (calendarIntegration?.access_token) {
+      //   // TODO: Implement Google Calendar event creation
+      //   console.log("Google Calendar sync would happen here");
+      // }
     }
 
     // Send confirmation emails if Resend is configured
@@ -205,7 +259,7 @@ serve(async (req: Request): Promise<Response> => {
     <p style="margin: 0 0 8px 0;"><strong>Business:</strong> ${businessName}</p>
     ${notes ? `<p style="margin: 0;"><strong>Notes:</strong> ${notes}</p>` : ''}
   </div>
-  <p style="color: #71717a; font-size: 14px;">This booking was made via the AI Demo for ${businessName}.</p>
+  <p style="color: #71717a; font-size: 14px;">This booking was made via the AI Demo for ${businessName}.${webhookSyncSuccess ? ' (Also synced to CRM via webhook)' : ''}</p>
 </body>
 </html>
           `,
@@ -228,6 +282,7 @@ serve(async (req: Request): Promise<Response> => {
           name: prospectName,
           email: prospectEmail,
         },
+        webhookSynced: webhookSyncSuccess,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );

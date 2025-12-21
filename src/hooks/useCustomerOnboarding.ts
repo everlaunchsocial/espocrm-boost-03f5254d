@@ -82,6 +82,7 @@ export interface CalendarIntegration {
   availability_json: Record<string, string[]>;
   slot_length_minutes: number;
   send_reminders: boolean;
+  webhook_url: string | null;
 }
 
 export interface KnowledgeSource {

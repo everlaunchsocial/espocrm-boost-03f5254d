@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Bell, AlertCircle, Link, ArrowLeft, Loader2 } from 'lucide-react';
+import { Calendar, Clock, Bell, AlertCircle, Link, ArrowLeft, Loader2, Webhook, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,7 @@ export default function CalendarSettings() {
     sunday: [],
   });
   const [isConnected, setIsConnected] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   // Redirect if onboarding not complete
@@ -54,6 +56,7 @@ export default function CalendarSettings() {
         setAvailability(calendarIntegration.availability_json as Record<string, string[]>);
       }
       setIsConnected(!!calendarIntegration.access_token);
+      setWebhookUrl(calendarIntegration.webhook_url || '');
     }
   }, [calendarIntegration]);
 
@@ -64,7 +67,8 @@ export default function CalendarSettings() {
       appointments_enabled: appointmentsEnabled,
       slot_length_minutes: slotLength,
       send_reminders: sendReminders,
-      availability_json: availability
+      availability_json: availability,
+      webhook_url: webhookUrl || null,
     });
 
     setIsSaving(false);
@@ -135,7 +139,7 @@ export default function CalendarSettings() {
     );
   }
 
-  const canEditAvailability = appointmentsEnabled && isConnected;
+  const hasAnySyncOption = isConnected || !!webhookUrl;
 
   return (
     <div className="p-6 md:p-8">
@@ -189,38 +193,41 @@ export default function CalendarSettings() {
           </CardContent>
         </Card>
 
-        {/* Calendar Connection Section */}
+        {/* Sync Options Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Link className="h-5 w-5 text-primary" />
-              Calendar Connection
+              Appointment Sync Options
             </CardTitle>
             <CardDescription>
-              Connect your calendar so your AI can check availability and book appointments
+              All appointments are saved in your EverLaunch portal. Optionally sync them externally.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {isConnected ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg border border-success/30 bg-success/5">
+          <CardContent className="space-y-6">
+            {/* Option 1: Google Calendar */}
+            <div className="space-y-3 p-4 rounded-lg border border-border">
+              <Label className="flex items-center gap-2 text-base font-medium">
+                <img src="https://www.google.com/favicon.ico" alt="Google" className="h-4 w-4" />
+                Google Calendar
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Best for small businesses without a CRM. Appointments sync directly to your calendar.
+              </p>
+              {isConnected ? (
+                <div className="flex items-center justify-between p-3 rounded-lg border border-success/30 bg-success/5">
                   <div className="flex items-center gap-3">
                     <div className="h-3 w-3 rounded-full bg-success animate-pulse" />
                     <div>
-                      <p className="font-medium">Connected to Google Calendar</p>
-                      <p className="text-sm text-muted-foreground">Your calendar is synced</p>
+                      <p className="font-medium text-sm">Connected to Google Calendar</p>
+                      <p className="text-xs text-muted-foreground">Your calendar is synced</p>
                     </div>
                   </div>
                   <Button variant="outline" size="sm" onClick={handleDisconnectGoogle}>
                     Disconnect
                   </Button>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Connect your Google Calendar so your AI can book appointments for you.
-                </p>
+              ) : (
                 <Button
                   variant="outline"
                   onClick={handleConnectGoogle}
@@ -229,21 +236,56 @@ export default function CalendarSettings() {
                   <img src="https://www.google.com/favicon.ico" alt="Google" className="h-4 w-4" />
                   Connect Google Calendar
                 </Button>
-                {appointmentsEnabled && (
-                  <Alert className="border-warning/50 bg-warning/10">
-                    <AlertCircle className="h-4 w-4 text-warning" />
-                    <AlertDescription className="text-sm">
-                      Without a connected calendar, appointments will be logged but not synced to your calendar.
-                    </AlertDescription>
-                  </Alert>
-                )}
+              )}
+            </div>
+
+            {/* Option 2: Webhook/Zapier */}
+            <div className="space-y-3 p-4 rounded-lg border border-border">
+              <Label className="flex items-center gap-2 text-base font-medium">
+                <Webhook className="h-4 w-4 text-muted-foreground" />
+                CRM / Scheduling Software (Zapier)
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Best if you use ServiceTitan, Jobber, HouseCall Pro, or any other software. We'll push appointments there via Zapier.
+              </p>
+              <div className="space-y-2">
+                <Input
+                  placeholder="https://hooks.zapier.com/hooks/catch/..."
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  className="font-mono text-sm"
+                />
+                <a 
+                  href="https://zapier.com/app/zaps/create" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  How to set up Zapier webhook
+                </a>
               </div>
+              {webhookUrl && (
+                <div className="flex items-center gap-2 text-sm text-success">
+                  <div className="h-2 w-2 rounded-full bg-success" />
+                  Webhook configured
+                </div>
+              )}
+            </div>
+
+            {appointmentsEnabled && !hasAnySyncOption && (
+              <Alert className="border-warning/50 bg-warning/10">
+                <AlertCircle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-sm">
+                  Without a sync option, appointments will be saved in your EverLaunch portal but not synced externally.
+                </AlertDescription>
+              </Alert>
             )}
           </CardContent>
         </Card>
 
         {/* Availability & Settings Section */}
-        <Card className={cn(!canEditAvailability && "opacity-60")}>
+        <Card className={cn(!appointmentsEnabled && "opacity-60")}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
@@ -254,11 +296,11 @@ export default function CalendarSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {!canEditAvailability && (
+            {!appointmentsEnabled && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  To edit availability, enable appointments and connect your calendar.
+                  Enable appointment booking above to edit these settings.
                 </AlertDescription>
               </Alert>
             )}
@@ -270,14 +312,14 @@ export default function CalendarSettings() {
                 {DAYS.map((day) => (
                   <button
                     key={day}
-                    onClick={() => canEditAvailability && toggleDayAvailability(day)}
-                    disabled={!canEditAvailability}
+                    onClick={() => appointmentsEnabled && toggleDayAvailability(day)}
+                    disabled={!appointmentsEnabled}
                     className={cn(
                       "px-3 py-2 rounded-lg text-sm font-medium capitalize transition-colors",
                       availability[day]?.length > 0
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground hover:bg-muted/80",
-                      !canEditAvailability && "cursor-not-allowed"
+                      !appointmentsEnabled && "cursor-not-allowed"
                     )}
                   >
                     {day.slice(0, 3)}
@@ -298,7 +340,7 @@ export default function CalendarSettings() {
               <Select 
                 value={slotLength.toString()} 
                 onValueChange={handleSlotLengthChange}
-                disabled={!canEditAvailability}
+                disabled={!appointmentsEnabled}
               >
                 <SelectTrigger className="w-full max-w-xs">
                   <SelectValue />
@@ -327,7 +369,7 @@ export default function CalendarSettings() {
                 <Switch
                   checked={sendReminders}
                   onCheckedChange={handleToggleReminders}
-                  disabled={!canEditAvailability}
+                  disabled={!appointmentsEnabled}
                 />
               </div>
 
@@ -337,7 +379,7 @@ export default function CalendarSettings() {
                   <Select 
                     value={reminderOffset.toString()} 
                     onValueChange={handleReminderOffsetChange}
-                    disabled={!canEditAvailability}
+                    disabled={!appointmentsEnabled}
                   >
                     <SelectTrigger className="w-full max-w-xs">
                       <SelectValue />
