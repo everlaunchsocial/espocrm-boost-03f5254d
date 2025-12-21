@@ -35,13 +35,21 @@ interface TestRun {
   completed_at: string | null;
 }
 
+interface AssertionDetail {
+  type: string;
+  passed: boolean;
+  details: string;
+  matched?: string[];
+  expected?: string[] | string[][];
+}
+
 interface TestResult {
   id: string;
   run_id: string;
   scenario_id: string;
   passed: boolean;
-  assertions_passed: Array<{ type: string; passed: boolean; details: string }>;
-  assertions_failed: Array<{ type: string; passed: boolean; details: string }>;
+  assertions_passed: AssertionDetail[];
+  assertions_failed: AssertionDetail[];
   generated_prompt: string | null;
   ai_response: string | null;
   execution_time_ms: number | null;
@@ -399,11 +407,27 @@ export default function RegressionTests() {
                                     <AlertTriangle className="h-4 w-4" />
                                     Failed Assertions
                                   </div>
-                                  <ul className="text-xs space-y-1">
+                                  <ul className="text-xs space-y-2">
                                     {result.assertions_failed.map((a, i) => (
-                                      <li key={i} className="flex items-start gap-2">
-                                        <XCircle className="h-3 w-3 text-red-500 mt-0.5 flex-shrink-0" />
-                                        <span><strong>{a.type}:</strong> {a.details}</span>
+                                      <li key={i} className="flex flex-col gap-1">
+                                        <div className="flex items-start gap-2">
+                                          <XCircle className="h-3 w-3 text-red-500 mt-0.5 flex-shrink-0" />
+                                          <span><strong>{a.type}:</strong> {a.details}</span>
+                                        </div>
+                                        {a.expected && (
+                                          <div className="ml-5 text-muted-foreground">
+                                            <span className="font-medium">Expected:</span>{' '}
+                                            {Array.isArray(a.expected[0]) 
+                                              ? (a.expected as string[][]).map((g) => `[${g.join(' | ')}]`).join(' AND ')
+                                              : (a.expected as string[]).join(', ')
+                                            }
+                                          </div>
+                                        )}
+                                        {a.matched && a.matched.length > 0 && (
+                                          <div className="ml-5 text-green-600">
+                                            <span className="font-medium">Matched:</span> {a.matched.join(', ')}
+                                          </div>
+                                        )}
                                       </li>
                                     ))}
                                   </ul>
@@ -415,13 +439,20 @@ export default function RegressionTests() {
                                 <div>
                                   <div className="text-sm font-medium text-green-500 mb-2 flex items-center gap-1">
                                     <CheckCircle2 className="h-4 w-4" />
-                                    Passed Assertions
+                                    Passed Assertions ({result.assertions_passed.length})
                                   </div>
-                                  <ul className="text-xs space-y-1 opacity-70">
+                                  <ul className="text-xs space-y-2 opacity-80">
                                     {result.assertions_passed.map((a, i) => (
-                                      <li key={i} className="flex items-start gap-2">
-                                        <CheckCircle2 className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
-                                        <span><strong>{a.type}:</strong> {a.details}</span>
+                                      <li key={i} className="flex flex-col gap-1">
+                                        <div className="flex items-start gap-2">
+                                          <CheckCircle2 className="h-3 w-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                          <span><strong>{a.type}:</strong> {a.details}</span>
+                                        </div>
+                                        {a.matched && a.matched.length > 0 && (
+                                          <div className="ml-5 text-green-600">
+                                            <span className="font-medium">Matched:</span> {a.matched.join(', ')}
+                                          </div>
+                                        )}
                                       </li>
                                     ))}
                                   </ul>
