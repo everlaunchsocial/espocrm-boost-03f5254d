@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2 } from 'lucide-react';
 import { useFollowUpSuggestions, SuggestionReason, FollowUpSuggestion } from '@/hooks/useFollowUpSuggestions';
+import { useFollowupLearning } from '@/hooks/useFollowupLearning';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -55,6 +56,7 @@ const actionConfig: Record<SuggestionReason, { label: string; icon: typeof Refre
 
 export function FollowUpSuggestions() {
   const { data: suggestions, isLoading, error, refetch } = useFollowUpSuggestions();
+  const { logAccepted, confirmAction } = useFollowupLearning();
   const navigate = useNavigate();
   const [selectedSuggestion, setSelectedSuggestion] = useState<FollowUpSuggestion | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -66,6 +68,14 @@ export function FollowUpSuggestions() {
     setSelectedSuggestion(suggestion);
     setIsConfirmed(false);
     setIsExecuting(false);
+    
+    // Log that the suggestion was accepted (clicked)
+    logAccepted({
+      suggestionText: suggestion.suggestionText,
+      suggestionType: suggestion.reason,
+      leadId: suggestion.leadId,
+      demoId: suggestion.demoId,
+    });
   };
 
   const executeResendDemo = async (suggestion: FollowUpSuggestion) => {
@@ -177,12 +187,23 @@ export function FollowUpSuggestions() {
           result = await executeScheduleCall(selectedSuggestion);
           toast.success('Call scheduled', { description: `Task created for ${selectedSuggestion.name}` });
           if (result?.navigateToLead) {
+            // Mark as confirmed before navigating
+            confirmAction({
+              suggestionText: selectedSuggestion.suggestionText,
+              suggestionType: selectedSuggestion.reason,
+            });
             setSelectedSuggestion(null);
             navigate(`/leads?selected=${selectedSuggestion.leadId}`);
             return;
           }
           break;
       }
+
+      // Mark the action as confirmed in the learning log
+      confirmAction({
+        suggestionText: selectedSuggestion.suggestionText,
+        suggestionType: selectedSuggestion.reason,
+      });
 
       setIsConfirmed(true);
       

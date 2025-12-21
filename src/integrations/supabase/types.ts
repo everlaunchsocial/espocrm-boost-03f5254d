@@ -2264,6 +2264,60 @@ export type Database = {
         }
         Relationships: []
       }
+      followup_learning_log: {
+        Row: {
+          accepted: boolean
+          confidence_score: number | null
+          confirmed: boolean
+          demo_id: string | null
+          id: string
+          lead_id: string | null
+          recorded_at: string
+          suggestion_text: string
+          suggestion_type: string
+          user_id: string
+        }
+        Insert: {
+          accepted?: boolean
+          confidence_score?: number | null
+          confirmed?: boolean
+          demo_id?: string | null
+          id?: string
+          lead_id?: string | null
+          recorded_at?: string
+          suggestion_text: string
+          suggestion_type: string
+          user_id: string
+        }
+        Update: {
+          accepted?: boolean
+          confidence_score?: number | null
+          confirmed?: boolean
+          demo_id?: string | null
+          id?: string
+          lead_id?: string | null
+          recorded_at?: string
+          suggestion_text?: string
+          suggestion_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followup_learning_log_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "demos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "followup_learning_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       genealogy: {
         Row: {
           affiliate_id: string
