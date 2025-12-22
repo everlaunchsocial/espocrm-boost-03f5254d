@@ -33,6 +33,7 @@ import { SuggestedContactWindows } from './SuggestedContactWindows';
 import { LeadPresenceIndicator } from './LeadPresenceIndicator';
 import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { LeadTagsEditor } from './LeadTagsEditor';
+import { LeadTeamNotes } from './LeadTeamNotes';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -438,6 +439,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
           {phase2Enabled && (
             <div className="py-4 border-b border-border">
               <SuggestedContactWindows leadId={lead.id} />
+            </div>
+          )}
+
+          {/* Team Notes - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <LeadTeamNotes leadId={lead.id} />
             </div>
           )}
 
