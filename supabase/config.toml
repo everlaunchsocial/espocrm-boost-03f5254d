@@ -215,3 +215,6 @@ verify_jwt = false
 
 [functions.generate-first-message]
 verify_jwt = true
+
+[functions.send-precall-summary]
+verify_jwt = true
