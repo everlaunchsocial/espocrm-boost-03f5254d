@@ -37,6 +37,7 @@ import { PreCallSummaryPanel } from './PreCallSummaryPanel';
 import { LeadPresenceIndicator } from './LeadPresenceIndicator';
 import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { LeadTagsEditor } from './LeadTagsEditor';
+import { LeadStatusPredictionBadge } from './LeadStatusPredictionBadge';
 import { LeadTeamNotes } from './LeadTeamNotes';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
@@ -222,9 +223,12 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <SheetTitle className="text-xl">
-                    {lead.firstName} {lead.lastName}
-                  </SheetTitle>
+                  <div className="flex items-center gap-2">
+                    <SheetTitle className="text-xl">
+                      {lead.firstName} {lead.lastName}
+                    </SheetTitle>
+                    {phase2Enabled && <LeadStatusPredictionBadge leadId={lead.id} />}
+                  </div>
                   <div className="flex items-center gap-3 flex-wrap">
                     <LeadPresenceIndicator leadId={lead.id} />
                     <LeadViewsIndicator leadId={lead.id} />
