@@ -286,6 +286,40 @@ export function useAIAssistant() {
     }
   }, [role, affiliate, customerId, location.pathname, pageContext, handleMessage, handleSpeakingChange, handleTranscript, addActionToHistory]);
 
+  const sendTextCommand = useCallback(async (command: string, actionLabel?: string) => {
+    if (!chatRef.current || state === 'idle') {
+      toast.info('Start the assistant first');
+      return false;
+    }
+    
+    try {
+      setState('processing');
+      setAiResponse('');
+      
+      // Send message to the chat
+      chatRef.current.sendTextMessage(command);
+      
+      // Add to history as quick action
+      if (actionLabel) {
+        const newAction: ActionHistoryItem = {
+          id: crypto.randomUUID(),
+          toolName: 'quick_action',
+          summary: `Quick Action: ${actionLabel}`,
+          timestamp: new Date(),
+          success: true,
+          parameters: { command },
+        };
+        setActionHistory(prev => [newAction, ...prev].slice(0, 10));
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error sending text command:', error);
+      toast.error('Failed to send command');
+      return false;
+    }
+  }, [state]);
+
   const endSession = useCallback(() => {
     if (chatRef.current) {
       chatRef.current.disconnect();
@@ -328,6 +362,7 @@ export function useAIAssistant() {
     startSession,
     endSession,
     toggleOpen,
-    clearActionHistory
+    clearActionHistory,
+    sendTextCommand
   };
 }
