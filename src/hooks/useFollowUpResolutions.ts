@@ -57,6 +57,38 @@ export function useFollowUpResolutions() {
     },
   });
 
+  // Mutation to mark multiple suggestions as resolved
+  const markAllAsResolved = useMutation({
+    mutationFn: async (items: { suggestionKey: string; leadId: string }[]) => {
+      // Filter out already resolved items
+      const newItems = items.filter(item => !resolvedKeys.has(item.suggestionKey));
+      
+      if (newItems.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from('follow_up_resolutions')
+        .insert(
+          newItems.map(item => ({
+            suggestion_key: item.suggestionKey,
+            lead_id: item.leadId,
+          }))
+        )
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['follow-up-resolutions'] });
+      const count = data?.length || 0;
+      toast.success(`${count} follow-up${count !== 1 ? 's' : ''} marked as done`);
+    },
+    onError: (error) => {
+      console.error('Error marking all follow-ups as resolved:', error);
+      toast.error('Failed to mark all as done');
+    },
+  });
+
   // Mutation to unmark a suggestion (undo)
   const unmarkResolved = useMutation({
     mutationFn: async (suggestionKey: string) => {
@@ -85,6 +117,7 @@ export function useFollowUpResolutions() {
     resolvedKeys,
     isResolved,
     markAsResolved,
+    markAllAsResolved,
     unmarkResolved,
   };
 }
