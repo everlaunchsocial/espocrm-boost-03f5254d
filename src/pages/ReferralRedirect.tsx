@@ -1,8 +1,9 @@
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { storeAffiliateAttribution } from '@/utils/affiliateAttribution';
 import CustomerLandingPage from '@/pages/customer/CustomerLandingPage';
+import NotFound from '@/pages/NotFound';
 
 /**
  * Handles /:username routes - checks if username is a valid affiliate
@@ -62,6 +63,6 @@ export default function ReferralRedirect() {
     return <CustomerLandingPage />;
   }
 
-  // Invalid username - show 404
-  return <Navigate to="/not-found" replace />;
+  // Invalid username - show 404 (render directly to avoid any redirect loops)
+  return <NotFound />;
 }
