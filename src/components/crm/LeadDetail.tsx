@@ -41,6 +41,7 @@ import { LeadStatusPredictionBadge } from './LeadStatusPredictionBadge';
 import { LeadHealthScoreMeter } from './LeadHealthScoreMeter';
 import { LeadAtAGlance } from './LeadAtAGlance';
 import { LeadTeamNotes } from './LeadTeamNotes';
+import { LeadInsightsSidebar } from './LeadInsightsSidebar';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
 import { LeadSentimentTags } from './LeadSentimentTags';
@@ -502,6 +503,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
           {phase2Enabled && (
             <div className="py-4 border-b border-border">
               <SuggestedContactWindows leadId={lead.id} />
+            </div>
+          )}
+
+          {/* Lead Insights Sidebar - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <LeadInsightsSidebar leadId={lead.id} />
             </div>
           )}
 
