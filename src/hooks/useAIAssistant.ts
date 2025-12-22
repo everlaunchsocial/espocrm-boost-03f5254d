@@ -44,7 +44,25 @@ export interface ConversationMessage {
   toolResult?: any;
 }
 
+export interface SuggestedQuestion {
+  id: string;
+  text: string;
+  icon: string;
+  category: 'calendar' | 'email' | 'stats' | 'leads' | 'general';
+}
+
 const MAX_MESSAGES = 100;
+const SUGGESTION_CACHE_MS = 60000; // 60 seconds
+
+const getCategoryIcon = (category: string): string => {
+  switch (category) {
+    case 'calendar': return '📅';
+    case 'email': return '📧';
+    case 'stats': return '📊';
+    case 'leads': return '📋';
+    default: return '💡';
+  }
+};
 
 export function useAIAssistant() {
   const [state, setState] = useState<AIAssistantState>('idle');
@@ -55,10 +73,13 @@ export function useAIAssistant() {
   const [pageContext, setPageContext] = useState<PageContext | null>(null);
   const [actionHistory, setActionHistory] = useState<ActionHistoryItem[]>([]);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
+  const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   const chatRef = useRef<RealtimeChat | null>(null);
   const userContextRef = useRef<UserContext | null>(null);
   const currentAiMessageRef = useRef<string>('');
+  const suggestionsCacheRef = useRef<{ questions: SuggestedQuestion[]; timestamp: number } | null>(null);
   
   const { role } = useUserRole();
   const { affiliate } = useCurrentAffiliate();
@@ -182,6 +203,117 @@ export function useAIAssistant() {
 
     setActionHistory(prev => [newAction, ...prev].slice(0, 10));
   }, []);
+
+  // Get default suggestions based on role and time of day
+  const getDefaultSuggestions = useCallback((): SuggestedQuestion[] => {
+    const hour = new Date().getHours();
+    const userRole = role === 'admin' ? 'admin' : role === 'customer' ? 'customer' : 'affiliate';
+    
+    const baseSuggestions: SuggestedQuestion[] = [];
+    
+    // Time-based suggestions
+    if (hour < 12) {
+      baseSuggestions.push({
+        id: 'morning-calendar',
+        text: "What's on my calendar today?",
+        icon: '📅',
+        category: 'calendar'
+      });
+    } else {
+      baseSuggestions.push({
+        id: 'afternoon-urgent',
+        text: 'Any urgent follow-ups?',
+        icon: '⚡',
+        category: 'leads'
+      });
+    }
+    
+    // Role-based suggestions
+    if (userRole === 'affiliate' || userRole === 'admin') {
+      baseSuggestions.push(
+        { id: 'demos', text: 'Show my recent demos', icon: '📊', category: 'stats' },
+        { id: 'followups', text: 'Who needs follow-up?', icon: '📋', category: 'leads' }
+      );
+    }
+    
+    if (userRole === 'customer') {
+      baseSuggestions.push(
+        { id: 'usage', text: "What's my usage this month?", icon: '📊', category: 'stats' },
+        { id: 'support', text: 'How do I get support?', icon: '❓', category: 'general' }
+      );
+    }
+    
+    if (userRole === 'admin') {
+      baseSuggestions.push(
+        { id: 'team', text: "How's the team doing?", icon: '👥', category: 'stats' }
+      );
+    }
+    
+    return baseSuggestions.slice(0, 4);
+  }, [role]);
+
+  // Generate contextual suggestions based on conversation
+  const generateSuggestions = useCallback(async () => {
+    // Check cache first
+    if (suggestionsCacheRef.current && 
+        Date.now() - suggestionsCacheRef.current.timestamp < SUGGESTION_CACHE_MS) {
+      return;
+    }
+    
+    // If no conversation yet, use defaults
+    if (conversationMessages.length === 0) {
+      const defaults = getDefaultSuggestions();
+      setSuggestedQuestions(defaults);
+      return;
+    }
+    
+    setSuggestionsLoading(true);
+    
+    try {
+      // Get last 3 messages for context
+      const recentContext = conversationMessages
+        .slice(-3)
+        .map(m => `${m.role}: ${m.content}`)
+        .join('\n');
+      
+      const contextInfo = pageContext?.entityType 
+        ? `User is viewing: ${pageContext.entityType} "${pageContext.entityName}"`
+        : '';
+      
+      const hour = new Date().getHours();
+      const timeContext = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+      
+      const { data, error } = await supabase.functions.invoke('ai-assistant-suggestions', {
+        body: {
+          recentContext,
+          pageContext: contextInfo,
+          timeContext,
+          userRole: role || 'user'
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.suggestions && Array.isArray(data.suggestions)) {
+        const suggestions: SuggestedQuestion[] = data.suggestions.slice(0, 4).map((s: any, i: number) => ({
+          id: `suggestion-${i}`,
+          text: s.text || s,
+          icon: s.icon || getCategoryIcon(s.category || 'general'),
+          category: s.category || 'general'
+        }));
+        
+        setSuggestedQuestions(suggestions);
+        suggestionsCacheRef.current = { questions: suggestions, timestamp: Date.now() };
+      }
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
+      // Fall back to defaults on error
+      const defaults = getDefaultSuggestions();
+      setSuggestedQuestions(defaults);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }, [conversationMessages, pageContext, role, getDefaultSuggestions]);
 
   const addConversationMessage = useCallback((
     role: 'user' | 'assistant',
@@ -381,6 +513,8 @@ export function useAIAssistant() {
       endSession();
       setActionHistory([]);
       setConversationMessages([]);
+      setSuggestedQuestions([]);
+      suggestionsCacheRef.current = null;
     }
     setIsOpen(!isOpen);
   }, [isOpen, endSession]);
@@ -392,6 +526,21 @@ export function useAIAssistant() {
   const clearConversation = useCallback(() => {
     setConversationMessages([]);
   }, []);
+
+  // Generate suggestions when conversation changes
+  useEffect(() => {
+    if (isOpen && state !== 'idle') {
+      generateSuggestions();
+    }
+  }, [isOpen, state, conversationMessages.length, generateSuggestions]);
+
+  // Set defaults when widget opens
+  useEffect(() => {
+    if (isOpen && suggestedQuestions.length === 0) {
+      const defaults = getDefaultSuggestions();
+      setSuggestedQuestions(defaults);
+    }
+  }, [isOpen, getDefaultSuggestions, suggestedQuestions.length]);
 
   useEffect(() => {
     return () => {
@@ -410,11 +559,14 @@ export function useAIAssistant() {
     pageContext,
     actionHistory,
     conversationMessages,
+    suggestedQuestions,
+    suggestionsLoading,
     startSession,
     endSession,
     toggleOpen,
     clearActionHistory,
     clearConversation,
-    sendTextCommand
+    sendTextCommand,
+    generateSuggestions
   };
 }
