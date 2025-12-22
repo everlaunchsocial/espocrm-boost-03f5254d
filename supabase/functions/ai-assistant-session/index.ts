@@ -30,13 +30,32 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get request body
-    const { userRole, affiliateId, customerId, currentPage } = await req.json();
+    const { userRole, affiliateId, customerId, currentPage, pageContext } = await req.json();
 
-    console.log('AI Assistant session request:', { userRole, affiliateId, customerId, currentPage });
+    console.log('AI Assistant session request:', { userRole, affiliateId, customerId, currentPage, pageContext });
 
     // Fetch user context based on role
     let userContext = '';
     let userName = 'User';
+
+    // Build page context string for system prompt
+    let pageContextPrompt = '';
+    if (pageContext?.entityType && pageContext?.entityName) {
+      const entityTypeLabels: Record<string, string> = {
+        lead: 'Lead',
+        demo: 'Demo',
+        contact: 'Contact'
+      };
+      pageContextPrompt = `\n📍 CURRENT PAGE CONTEXT:
+The user is currently viewing: ${entityTypeLabels[pageContext.entityType] || pageContext.entityType}: "${pageContext.entityName}"
+Entity ID: ${pageContext.entityId}
+Status: ${pageContext.entityStatus || 'Unknown'}
+${pageContext.entityEmail ? `Email: ${pageContext.entityEmail}` : ''}
+
+IMPORTANT: When the user says "this lead", "this demo", "this contact", or similar, they are referring to the entity above.
+You can use the entity ID directly in tool calls when the user references "this" entity.
+`;
+    }
 
     if (userRole === 'affiliate' && affiliateId) {
       // Fetch affiliate data
@@ -161,7 +180,7 @@ serve(async (req) => {
 
     // Build system prompt for internal productivity assistant
     const systemPrompt = `You are an AI productivity assistant for EverLaunch, an AI receptionist platform. You help internal users manage their work efficiently through voice commands.
-
+${pageContextPrompt}
 CURRENT USER CONTEXT:
 ${userContext}
 
