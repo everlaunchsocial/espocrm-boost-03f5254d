@@ -35,6 +35,17 @@ export interface ActionHistoryItem {
   aiResponse?: string;
 }
 
+export interface ConversationMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  toolName?: string;
+  toolResult?: any;
+}
+
+const MAX_MESSAGES = 100;
+
 export function useAIAssistant() {
   const [state, setState] = useState<AIAssistantState>('idle');
   const [transcript, setTranscript] = useState('');
@@ -43,9 +54,11 @@ export function useAIAssistant() {
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [pageContext, setPageContext] = useState<PageContext | null>(null);
   const [actionHistory, setActionHistory] = useState<ActionHistoryItem[]>([]);
+  const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
 
   const chatRef = useRef<RealtimeChat | null>(null);
   const userContextRef = useRef<UserContext | null>(null);
+  const currentAiMessageRef = useRef<string>('');
   
   const { role } = useUserRole();
   const { affiliate } = useCurrentAffiliate();
@@ -170,6 +183,23 @@ export function useAIAssistant() {
     setActionHistory(prev => [newAction, ...prev].slice(0, 10));
   }, []);
 
+  const addConversationMessage = useCallback((
+    role: 'user' | 'assistant',
+    content: string,
+    toolName?: string,
+    toolResult?: any
+  ) => {
+    const newMessage: ConversationMessage = {
+      id: crypto.randomUUID(),
+      role,
+      content,
+      timestamp: new Date(),
+      toolName,
+      toolResult,
+    };
+    setConversationMessages(prev => [...prev, newMessage].slice(-MAX_MESSAGES));
+  }, []);
+
   const handleMessage = useCallback((message: any) => {
     console.log('AI Assistant message:', message.type);
     
@@ -179,14 +209,25 @@ export function useAIAssistant() {
     
     if (message.type === 'response.done') {
       setActionInProgress(null);
+      // Save the complete AI response as a conversation message
+      if (currentAiMessageRef.current.trim()) {
+        addConversationMessage('assistant', currentAiMessageRef.current.trim());
+        currentAiMessageRef.current = '';
+      }
     }
-  }, []);
+
+    // Capture user transcript
+    if (message.type === 'conversation.item.input_audio_transcription.completed' && message.transcript) {
+      addConversationMessage('user', message.transcript);
+    }
+  }, [addConversationMessage]);
 
   const handleSpeakingChange = useCallback((speaking: boolean) => {
     setState(speaking ? 'speaking' : 'listening');
   }, []);
 
   const handleTranscript = useCallback((text: string, isFinal: boolean) => {
+    currentAiMessageRef.current += text;
     setAiResponse(prev => prev + text);
   }, []);
 
@@ -296,6 +337,9 @@ export function useAIAssistant() {
       setState('processing');
       setAiResponse('');
       
+      // Add user message to conversation
+      addConversationMessage('user', command);
+      
       // Send message to the chat
       chatRef.current.sendTextMessage(command);
       
@@ -318,7 +362,7 @@ export function useAIAssistant() {
       toast.error('Failed to send command');
       return false;
     }
-  }, [state]);
+  }, [state, addConversationMessage]);
 
   const endSession = useCallback(() => {
     if (chatRef.current) {
@@ -329,18 +373,24 @@ export function useAIAssistant() {
     setTranscript('');
     setAiResponse('');
     setActionInProgress(null);
+    currentAiMessageRef.current = '';
   }, []);
 
   const toggleOpen = useCallback(() => {
     if (isOpen) {
       endSession();
       setActionHistory([]);
+      setConversationMessages([]);
     }
     setIsOpen(!isOpen);
   }, [isOpen, endSession]);
 
   const clearActionHistory = useCallback(() => {
     setActionHistory([]);
+  }, []);
+
+  const clearConversation = useCallback(() => {
+    setConversationMessages([]);
   }, []);
 
   useEffect(() => {
@@ -359,10 +409,12 @@ export function useAIAssistant() {
     actionInProgress,
     pageContext,
     actionHistory,
+    conversationMessages,
     startSession,
     endSession,
     toggleOpen,
     clearActionHistory,
+    clearConversation,
     sendTextCommand
   };
 }
