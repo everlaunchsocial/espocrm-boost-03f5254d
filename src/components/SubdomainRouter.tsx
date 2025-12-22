@@ -17,7 +17,8 @@ const RESERVED_PATHS = [
   'buy', 'demo-request', 'checkout', 'product', 'biz', 'sales',
   'demo', 'demos', 'api', 'reset-password', 'unauthorized', 'partner', 'rep',
   'dashboard', 'calendar', 'email', 'contacts', 'accounts', 'leads', 'deals',
-  'estimates', 'invoices', 'tasks', 'media-library', 'voice-demo', 'training', 'v'
+  'estimates', 'invoices', 'tasks', 'media-library', 'voice-demo', 'training', 'v',
+  'not-found', 'logout'
 ];
 
 // Supported vertical landing page slugs

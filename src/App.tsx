@@ -70,7 +70,8 @@ import AdminAffiliateVideos from "./pages/admin/AdminAffiliateVideos";
 import AdminCreateAvatarProfile from "./pages/admin/AdminCreateAvatarProfile";
 import AdminCreateVideo from "./pages/admin/AdminCreateVideo";
 import VideoLandingPage from "./pages/VideoLandingPage";
-
+import Logout from "./pages/Logout";
+ 
 // Admin pages
 import AdminProfile from "./pages/admin/AdminProfile";
 import AdminSettings from "./pages/admin/AdminSettings";
@@ -138,6 +139,8 @@ const App = () => (
           <Route path="/biz" element={<BusinessOpportunity />} />
           <Route path="/partner" element={<AffiliateSignup />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/not-found" element={<NotFound />} />
+          <Route path="/logout" element={<Logout />} />
           
           {/* Product & Customer purchase pages - public */}
           <Route path="/product" element={<Product />} />
