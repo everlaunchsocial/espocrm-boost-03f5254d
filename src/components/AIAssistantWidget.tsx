@@ -202,7 +202,9 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     isRecording,
   });
 
-  if (!isEnabled('aiCrmPhase3')) {
+  const isPrivilegedUser = role === 'admin' || role === 'super_admin';
+
+  if (!isPrivilegedUser && !isEnabled('aiCrmPhase3')) {
     return null;
   }
 
@@ -275,7 +277,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
           "fixed flex flex-col items-end gap-2",
           isMobile ? "bottom-20 right-4" : "bottom-6 right-6"
         )}
-        style={{ zIndex: 9999 }}
+        style={{ zIndex: 99999 }}
       >
         {contextLabel && !isMobile && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border rounded-full shadow-lg text-xs font-medium text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
@@ -312,12 +314,13 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     );
   }
 
-  // Mobile: tap outside to close
+  // Mobile: tap outside to close (UI only)
   const handleBackdropClick = useCallback(() => {
     if (isMobile) {
-      closeWidget();
+      setIsMinimized(false);
+      toggleOpen();
     }
-  }, [isMobile, closeWidget]);
+  }, [isMobile, toggleOpen]);
 
   // Expanded widget when open
   return (
@@ -326,7 +329,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
       {isMobile && (
         <div 
           className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
-          style={{ zIndex: 9998 }}
+          style={{ zIndex: 99998 }}
           onClick={handleBackdropClick}
         />
       )}
@@ -351,7 +354,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
           shortcutPulse ? "border-primary ring-2 ring-primary/30" : "border-border",
           className
         )}
-        style={{ zIndex: 9999 }}
+        style={{ zIndex: 99999 }}
       >
         {/* Mobile drag handle */}
         {isMobile && !isMinimized && (
@@ -401,13 +404,24 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
               variant="ghost"
               size="icon"
               className={cn(isMobile ? "h-10 w-10" : "h-7 w-7")}
-              onClick={() => setIsMinimized(!isMinimized)}
-              title={isMinimized ? "Expand" : "Minimize"}
+              onClick={() => {
+                // Mobile: collapse to the floating button
+                if (isMobile) {
+                  setIsMinimized(false);
+                  toggleOpen();
+                  return;
+                }
+                // Desktop: keep the compact header mode
+                setIsMinimized(!isMinimized);
+              }}
+              title={isMobile ? "Minimize" : (isMinimized ? "Expand" : "Minimize")}
             >
-              {isMinimized ? (
-                <Maximize2 className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+              {isMobile ? (
+                <Minimize2 className="h-5 w-5" />
+              ) : isMinimized ? (
+                <Maximize2 className="h-4 w-4" />
               ) : (
-                <Minus className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+                <Minus className="h-4 w-4" />
               )}
             </Button>
             {/* Fullscreen (desktop only) */}
@@ -430,7 +444,11 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
                 isMobile ? "h-10 w-10" : "h-7 w-7",
                 "hover:bg-destructive/10 hover:text-destructive"
               )}
-              onClick={closeWidget}
+              onClick={() => {
+                // Close UI (do not end session)
+                setIsMinimized(false);
+                toggleOpen();
+              }}
               title="Close widget"
             >
               <X className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
