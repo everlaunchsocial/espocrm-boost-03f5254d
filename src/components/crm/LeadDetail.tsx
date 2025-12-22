@@ -43,6 +43,7 @@ import { LeadAtAGlance } from './LeadAtAGlance';
 import { LeadTeamNotes } from './LeadTeamNotes';
 import { LeadInsightsSidebar } from './LeadInsightsSidebar';
 import { AddToSequenceModal } from './AddToSequenceModal';
+import { LeadPriorityToggle } from './LeadPriorityToggle';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
 import { LeadSentimentTags } from './LeadSentimentTags';
@@ -233,6 +234,12 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                     <SheetTitle className="text-xl">
                       {lead.firstName} {lead.lastName}
                     </SheetTitle>
+                    {phase2Enabled && (
+                      <LeadPriorityToggle
+                        leadId={lead.id}
+                        priority={lead.priority ?? false}
+                      />
+                    )}
                     {phase2Enabled && <LeadStatusPredictionBadge leadId={lead.id} />}
                   </div>
                   <div className="flex items-center gap-3 flex-wrap">
