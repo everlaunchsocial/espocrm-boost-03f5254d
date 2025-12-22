@@ -42,6 +42,7 @@ import { LeadHealthScoreMeter } from './LeadHealthScoreMeter';
 import { LeadAtAGlance } from './LeadAtAGlance';
 import { LeadTeamNotes } from './LeadTeamNotes';
 import { LeadInsightsSidebar } from './LeadInsightsSidebar';
+import { AddToSequenceModal } from './AddToSequenceModal';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
 import { LeadSentimentTags } from './LeadSentimentTags';
@@ -69,6 +70,7 @@ import {
   Instagram,
   FileText,
   Presentation,
+  ListPlus,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -130,6 +132,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
   const [emailPrefillBody, setEmailPrefillBody] = useState<string>('');
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
+  const [sequenceModalOpen, setSequenceModalOpen] = useState(false);
   const [followUpConfirmOpen, setFollowUpConfirmOpen] = useState(false);
   const [pendingFollowUpDemoId, setPendingFollowUpDemoId] = useState<string | null>(null);
 
@@ -362,6 +365,12 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                 <Presentation className="h-4 w-4 mr-2" />
                 Create Demo
               </Button>
+              {phase2Enabled && (
+                <Button variant="outline" size="sm" onClick={() => setSequenceModalOpen(true)}>
+                  <ListPlus className="h-4 w-4 mr-2" />
+                  Add to Sequence
+                </Button>
+              )}
             </div>
           </div>
 
@@ -678,6 +687,16 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add to Sequence Modal - Phase 2 */}
+      {phase2Enabled && (
+        <AddToSequenceModal
+          leadId={lead.id}
+          leadName={`${lead.firstName} ${lead.lastName}`}
+          open={sequenceModalOpen}
+          onClose={() => setSequenceModalOpen(false)}
+        />
+      )}
     </>
   );
 }
