@@ -40,6 +40,8 @@ import { LeadSummaryCard } from './LeadSummaryCard';
 import { LeadSentimentTags } from './LeadSentimentTags';
 import { DemoEngagementHeatmap } from './DemoEngagementHeatmap';
 import { DoneForYouToggle } from './DoneForYouToggle';
+import { LeadIntentBadges } from './LeadIntentBadges';
+import { LeadIntentEditor } from './LeadIntentEditor';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -229,6 +231,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   )}
                   <LeadTagsEditor leadId={lead.id} />
                   <LeadStatusEditor lead={lead} />
+                  {phase2Enabled && <LeadIntentBadges leadId={lead.id} className="mt-2" />}
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">
@@ -239,10 +242,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   </Button>
                 )}
                 {phase2Enabled && (
-                  <DoneForYouToggle 
-                    leadId={lead.id} 
-                    doneForYou={lead.doneForYou ?? false} 
-                  />
+                  <>
+                    <LeadIntentEditor leadId={lead.id} />
+                    <DoneForYouToggle 
+                      leadId={lead.id} 
+                      doneForYou={lead.doneForYou ?? false} 
+                    />
+                  </>
                 )}
               </div>
             </div>
