@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePreCallSummary } from '@/hooks/usePreCallSummary';
 import { useLeadTags } from '@/hooks/useLeadTags';
+import { SendSummaryModal } from './SendSummaryModal';
 import { Lead } from '@/types/crm';
 import { 
   Phone, 
@@ -12,14 +15,13 @@ import {
   Loader2,
   User,
   Building2,
-  Globe,
-  Clock,
   MessageSquare,
   Video,
   Mail,
-  Calendar
+  Calendar,
+  Send
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 
 interface PreCallSummaryPanelProps {
   lead: Lead;
@@ -35,6 +37,7 @@ const ACTIVITY_ICONS: Record<string, React.ElementType> = {
 };
 
 export function PreCallSummaryPanel({ lead }: PreCallSummaryPanelProps) {
+  const [showSendModal, setShowSendModal] = useState(false);
   const { notes, activities, demoStatus, followUps, isLoading } = usePreCallSummary(lead.id);
   const { tags } = useLeadTags(lead.id);
 
@@ -56,14 +59,26 @@ export function PreCallSummaryPanel({ lead }: PreCallSummaryPanelProps) {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Phone className="h-4 w-4 text-primary" />
-        <h4 className="text-sm font-medium">Pre-Call Summary</h4>
-      </div>
+    <>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-primary" />
+            <h4 className="text-sm font-medium">Pre-Call Summary</h4>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-7 text-xs"
+            onClick={() => setShowSendModal(true)}
+          >
+            <Send className="h-3 w-3 mr-1" />
+            Send to Me
+          </Button>
+        </div>
 
-      {/* Lead Overview */}
+        {/* Lead Overview */}
       <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <User className="h-3 w-3" />
@@ -247,6 +262,19 @@ export function PreCallSummaryPanel({ lead }: PreCallSummaryPanelProps) {
           No recent activity or notes for this lead.
         </p>
       )}
-    </div>
+      </div>
+
+      {/* Send Summary Modal */}
+      <SendSummaryModal
+        open={showSendModal}
+        onClose={() => setShowSendModal(false)}
+        lead={lead}
+        notes={notes}
+        activities={activities}
+        demoStatus={demoStatus}
+        followUps={followUps}
+        tags={tags}
+      />
+    </>
   );
 }
