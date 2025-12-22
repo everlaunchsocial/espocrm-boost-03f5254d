@@ -209,3 +209,6 @@ verify_jwt = true
 
 [functions.classify-call-outcome]
 verify_jwt = true
+
+[functions.track-email-click]
+verify_jwt = false

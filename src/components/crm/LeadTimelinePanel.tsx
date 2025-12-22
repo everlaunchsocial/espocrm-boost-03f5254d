@@ -43,6 +43,8 @@ const EVENT_ICONS: Record<string, React.ElementType> = {
   followup: ArrowRight,
   task: FileText,
   'status-change': FileText,
+  email_open: Mail,
+  email_click: Mail,
 };
 
 const EVENT_COLORS: Record<string, string> = {
@@ -56,6 +58,8 @@ const EVENT_COLORS: Record<string, string> = {
   followup: 'bg-yellow-500/10 text-yellow-500',
   task: 'bg-slate-500/10 text-slate-500',
   'status-change': 'bg-cyan-500/10 text-cyan-500',
+  email_open: 'bg-violet-500/10 text-violet-500',
+  email_click: 'bg-sky-500/10 text-sky-500',
 };
 
 const EVENT_LABELS: Record<string, string> = {
@@ -69,6 +73,8 @@ const EVENT_LABELS: Record<string, string> = {
   followup: 'Follow-up',
   task: 'Task',
   'status-change': 'Status Change',
+  email_open: 'Email Opened',
+  email_click: 'Link Clicked',
 };
 
 function formatGroupLabel(date: Date): string {
@@ -102,6 +108,8 @@ function TimelineItem({ event, onSendFollowUp }: TimelineItemProps) {
 
   // Special rendering for demo_watched events
   const isDemoWatched = event.event_type === 'demo_watched';
+  const isEmailOpen = event.event_type === 'email_open';
+  const isEmailClick = event.event_type === 'email_click';
 
   return (
     <div className="flex gap-3 py-3 border-b border-border last:border-0">
@@ -109,6 +117,10 @@ function TimelineItem({ event, onSendFollowUp }: TimelineItemProps) {
       <div className={cn('h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0', colorClass)}>
         {isDemoWatched ? (
           <span className="text-base">👁️</span>
+        ) : isEmailOpen ? (
+          <span className="text-base">📬</span>
+        ) : isEmailClick ? (
+          <span className="text-base">🔗</span>
         ) : (
           <Icon className="h-4 w-4" />
         )}

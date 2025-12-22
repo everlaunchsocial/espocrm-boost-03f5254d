@@ -1984,12 +1984,61 @@ export type Database = {
           },
         ]
       }
+      email_events: {
+        Row: {
+          created_at: string
+          email_id: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          lead_id: string | null
+          url: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_id?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          lead_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_id?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          lead_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_events_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emails: {
         Row: {
           body: string
           contact_id: string
           created_at: string
           id: string
+          lead_id: string | null
           open_count: number
           opened_at: string | null
           sender_address: string
@@ -2006,6 +2055,7 @@ export type Database = {
           contact_id: string
           created_at?: string
           id?: string
+          lead_id?: string | null
           open_count?: number
           opened_at?: string | null
           sender_address: string
@@ -2022,6 +2072,7 @@ export type Database = {
           contact_id?: string
           created_at?: string
           id?: string
+          lead_id?: string | null
           open_count?: number
           opened_at?: string | null
           sender_address?: string
@@ -2033,7 +2084,15 @@ export type Database = {
           to_name?: string | null
           tracking_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "emails_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       estimate_items: {
         Row: {
