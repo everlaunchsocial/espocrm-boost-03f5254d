@@ -32,6 +32,7 @@ import { LeadTimelinePanel } from './LeadTimelinePanel';
 import { SuggestedContactWindows } from './SuggestedContactWindows';
 import { LeadPresenceIndicator } from './LeadPresenceIndicator';
 import { LeadViewsIndicator } from './LeadViewsIndicator';
+import { LeadTagsEditor } from './LeadTagsEditor';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -211,6 +212,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   {lead.company && (
                     <p className="text-sm text-muted-foreground mt-1">{lead.company}</p>
                   )}
+                  <LeadTagsEditor leadId={lead.id} />
                 </div>
               </div>
               {onEdit && (
