@@ -38,6 +38,7 @@ import { LeadPresenceIndicator } from './LeadPresenceIndicator';
 import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { LeadTagsEditor } from './LeadTagsEditor';
 import { LeadStatusPredictionBadge } from './LeadStatusPredictionBadge';
+import { LeadHealthScoreMeter } from './LeadHealthScoreMeter';
 import { LeadTeamNotes } from './LeadTeamNotes';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
@@ -517,6 +518,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
           {phase2Enabled && (
             <div className="py-4 border-b border-border">
               <MessagePerformanceInsights leadId={lead.id} />
+            </div>
+          )}
+
+          {/* Lead Health Score Meter - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <LeadHealthScoreMeter leadId={lead.id} />
             </div>
           )}
 
