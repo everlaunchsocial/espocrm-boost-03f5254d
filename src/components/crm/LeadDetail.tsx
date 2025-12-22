@@ -34,6 +34,7 @@ import { LeadPresenceIndicator } from './LeadPresenceIndicator';
 import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { LeadTagsEditor } from './LeadTagsEditor';
 import { LeadTeamNotes } from './LeadTeamNotes';
+import { LeadStatusEditor } from './LeadStatusEditor';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -214,6 +215,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                     <p className="text-sm text-muted-foreground mt-1">{lead.company}</p>
                   )}
                   <LeadTagsEditor leadId={lead.id} />
+                  <LeadStatusEditor lead={lead} />
                 </div>
               </div>
               {onEdit && (
@@ -225,43 +227,45 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             </div>
           </SheetHeader>
 
-          {/* Status Section */}
-          <div className="py-4 border-b border-border">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-3">Status</p>
-                <Select value={lead.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LEAD_STATUSES.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-3">Pipeline Status</p>
-                <Select 
-                  value={lead.pipelineStatus || 'new_lead'} 
-                  onValueChange={async (value) => {
-                    await updateLead.mutateAsync({ id: lead.id, lead: { pipelineStatus: value as Lead['pipelineStatus'] } });
-                    toast.success(`Pipeline status updated to ${PIPELINE_STATUSES.find(s => s.value === value)?.label || value}`);
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PIPELINE_STATUSES.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* Status Section - hide when Phase 2 is enabled (replaced by inline editor) */}
+          {!phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-3">Status</p>
+                  <Select value={lead.status} onValueChange={handleStatusChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LEAD_STATUSES.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-3">Pipeline Status</p>
+                  <Select 
+                    value={lead.pipelineStatus || 'new_lead'} 
+                    onValueChange={async (value) => {
+                      await updateLead.mutateAsync({ id: lead.id, lead: { pipelineStatus: value as Lead['pipelineStatus'] } });
+                      toast.success(`Pipeline status updated to ${PIPELINE_STATUSES.find(s => s.value === value)?.label || value}`);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PIPELINE_STATUSES.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Quick Actions */}
           <div className="py-4 border-b border-border">
