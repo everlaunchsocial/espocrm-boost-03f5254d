@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -69,12 +69,23 @@ const actionConfig: Record<SuggestionReason, { label: string; icon: typeof Refre
 
 export function FollowUpSuggestions() {
   const { isEnabled } = useFeatureFlags();
-  const { data: suggestions, isLoading, error, refetch } = useFollowUpSuggestions();
+  const { data: suggestions, isLoading, error, refetch, isFetching } = useFollowUpSuggestions();
   const { logAccepted, confirmAction } = useFollowupLearning();
   const navigate = useNavigate();
   const [selectedSuggestion, setSelectedSuggestion] = useState<FollowUpSuggestion | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  
+  // Regenerate throttle state
+  const [regenerateCooldown, setRegenerateCooldown] = useState(0);
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, []);
 
   // Feature flag check
   if (!isEnabled('aiCrmPhase1')) return null;
@@ -83,8 +94,28 @@ export function FollowUpSuggestions() {
   const [markAsDoneTarget, setMarkAsDoneTarget] = useState<FollowUpSuggestion | null>(null);
   const [showResolveAllDialog, setShowResolveAllDialog] = useState(false);
   
-  // Check if Phase 3 is enabled for Resolve All button
+  // Check if Phase 3 is enabled for Resolve All and Regenerate buttons
   const showResolveAll = isEnabled('aiCrmPhase2');
+  const showRegenerate = isEnabled('aiCrmPhase2');
+
+  const handleRegenerate = async () => {
+    if (regenerateCooldown > 0 || isFetching) return;
+    
+    await refetch();
+    toast.success('Suggestions updated');
+    
+    // Start 60-second cooldown
+    setRegenerateCooldown(60);
+    cooldownRef.current = setInterval(() => {
+      setRegenerateCooldown(prev => {
+        if (prev <= 1) {
+          if (cooldownRef.current) clearInterval(cooldownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
   const handleMarkAsDone = (e: React.MouseEvent, suggestion: FollowUpSuggestion) => {
     e.preventDefault();
     e.stopPropagation();
@@ -332,18 +363,33 @@ export function FollowUpSuggestions() {
               <AlertCircle className="h-5 w-5 text-primary" />
               Follow-Up Suggestions
             </CardTitle>
-            {showResolveAll && suggestions && suggestions.length > 0 && suggestions.some(s => !isResolved(s.id)) && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1.5"
-                onClick={handleResolveAll}
-                title="Mark all follow-up suggestions as done"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Resolve All
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {showRegenerate && suggestions && suggestions.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={handleRegenerate}
+                  disabled={regenerateCooldown > 0 || isFetching}
+                  title="Refresh AI follow-up suggestions based on recent activity"
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
+                  {regenerateCooldown > 0 ? `${regenerateCooldown}s` : 'Regenerate'}
+                </Button>
+              )}
+              {showResolveAll && suggestions && suggestions.length > 0 && suggestions.some(s => !isResolved(s.id)) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={handleResolveAll}
+                  title="Mark all follow-up suggestions as done"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Resolve All
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
