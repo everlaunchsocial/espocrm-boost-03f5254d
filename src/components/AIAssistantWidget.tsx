@@ -1,11 +1,13 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard, Copy, Trash2, Download, MessageSquare, User, Bot, Wrench, Sparkles, Settings } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard, Copy, Trash2, Download, MessageSquare, User, Bot, Wrench, Sparkles, Settings, Wifi, WifiOff, AlertCircle, RefreshCw, Send, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useAIAssistant, AIAssistantState, ActionHistoryItem, ConversationMessage, SuggestedQuestion } from '@/hooks/useAIAssistant';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAIAssistant, AIAssistantState, ActionHistoryItem, ConversationMessage, SuggestedQuestion, ConnectionStatus, AIError } from '@/hooks/useAIAssistant';
 import { useAIAssistantKeyboard, keyboardShortcuts } from '@/hooks/useAIAssistantKeyboard';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -85,6 +87,7 @@ const getActionIcon = (toolName: string) => {
 export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   const {
     state,
+    connectionStatus,
     aiResponse,
     isOpen,
     actionInProgress,
@@ -93,11 +96,16 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     conversationMessages,
     suggestedQuestions,
     suggestionsLoading,
+    currentError,
+    isTextInputMode,
+    microphonePermission,
     startSession,
     endSession,
     toggleOpen,
     sendTextCommand,
-    clearConversation
+    clearConversation,
+    clearError,
+    retrySession
   } = useAIAssistant();
 
   const { isEnabled } = useFeatureFlags();
@@ -108,8 +116,10 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   const [selectedAction, setSelectedAction] = useState<ActionHistoryItem | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  const [textInput, setTextInput] = useState('');
   
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -141,7 +151,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     }
 
     const text = conversationMessages.map(msg => {
-      const speaker = msg.role === 'user' ? 'You' : 'AI Assistant';
+      const speaker = msg.role === 'user' ? 'You' : msg.role === 'error' ? 'Error' : 'AI Assistant';
       const time = format(msg.timestamp, 'HH:mm');
       return `[${time}] ${speaker}: ${msg.content}`;
     }).join('\n\n');
@@ -155,6 +165,15 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     URL.revokeObjectURL(url);
     toast.success('Transcript exported');
   }, [conversationMessages]);
+
+  // Handle text input submission
+  const handleTextSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (!textInput.trim()) return;
+    
+    sendTextCommand(textInput.trim());
+    setTextInput('');
+  }, [textInput, sendTextCommand]);
 
   // Keyboard shortcut handlers
   const handleToggleHistory = useCallback(() => {
@@ -212,6 +231,21 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     }
   };
 
+  const getConnectionStatusInfo = (status: ConnectionStatus) => {
+    switch (status) {
+      case 'online':
+        return { color: 'bg-green-500', label: 'Connected', icon: <Wifi className="h-3 w-3" /> };
+      case 'connecting':
+        return { color: 'bg-yellow-500 animate-pulse', label: 'Connecting...', icon: <Loader2 className="h-3 w-3 animate-spin" /> };
+      case 'offline':
+        return { color: 'bg-red-500', label: 'Offline', icon: <WifiOff className="h-3 w-3" /> };
+      case 'error':
+        return { color: 'bg-red-500', label: 'Error', icon: <AlertCircle className="h-3 w-3" /> };
+      default:
+        return { color: 'bg-muted', label: 'Not connected', icon: null };
+    }
+  };
+
   const getContextLabel = () => {
     if (!pageContext?.entityType || !pageContext?.entityName) return null;
     
@@ -225,6 +259,8 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   };
 
   const contextLabel = getContextLabel();
+  const statusInfo = getConnectionStatusInfo(connectionStatus);
+  const isOffline = connectionStatus === 'offline';
 
   // Floating button when closed
   if (!isOpen) {
@@ -277,15 +313,23 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
-            <div className={cn(
-              "h-2 w-2 rounded-full",
-              state === 'idle' ? "bg-muted" :
-              state === 'connecting' ? "bg-yellow-500 animate-pulse" :
-              state === 'listening' ? "bg-green-500 animate-pulse" :
-              state === 'speaking' ? "bg-blue-500 animate-pulse" :
-              "bg-primary"
-            )} />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={cn("h-2.5 w-2.5 rounded-full cursor-help", statusInfo.color)} />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  <div className="flex items-center gap-1.5">
+                    {statusInfo.icon}
+                    <span>{statusInfo.label}</span>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <span className="text-sm font-medium">AI Assistant</span>
+            {isTextInputMode && (
+              <span className="text-[10px] px-1.5 py-0.5 bg-muted rounded text-muted-foreground">Text Mode</span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <Button
@@ -655,6 +699,52 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
               </div>
             )}
 
+            {/* Error Banner */}
+            {currentError && (
+              <div className="px-4 py-2 bg-destructive/10 border-t border-destructive/20 flex-shrink-0">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-destructive font-medium">{currentError.message}</p>
+                    {currentError.type === 'microphone' && (
+                      <a href="https://support.google.com/chrome/answer/2693767" target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-1 mt-1">
+                        How to enable microphone <ExternalLink className="h-2.5 w-2.5" />
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {currentError.retryAction && (
+                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={retrySession}>
+                        <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={clearError}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Text Input (fallback mode) */}
+            {(isTextInputMode || state !== 'idle') && (
+              <form onSubmit={handleTextSubmit} className="px-4 py-2 border-t border-border flex-shrink-0">
+                <div className="flex gap-2">
+                  <Input
+                    ref={textInputRef}
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    placeholder={isTextInputMode ? "Type your message..." : "Or type here..."}
+                    className="h-9 text-sm"
+                    disabled={state === 'idle' && !isTextInputMode}
+                  />
+                  <Button type="submit" size="sm" className="h-9 px-3" disabled={!textInput.trim() || (state === 'idle' && !isTextInputMode)}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </form>
+            )}
+
             {/* Controls */}
             <div className="p-4 pt-2 border-t border-border flex-shrink-0">
               {state === 'idle' ? (
@@ -662,9 +752,10 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
                   onClick={startSession}
                   className="w-full gap-2"
                   size="lg"
+                  disabled={isOffline}
                 >
-                  <Mic className="h-5 w-5" />
-                  Start Voice Assistant
+                  {isOffline ? <WifiOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  {isOffline ? "Offline" : (isTextInputMode ? "Try Voice Again" : "Start Voice Assistant")}
                 </Button>
               ) : (
                 <Button
@@ -685,9 +776,9 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
         {isMinimized && (
           <div className="flex items-center justify-center h-full px-4">
             {state === 'idle' ? (
-              <Button onClick={startSession} size="sm" className="gap-2">
-                <Mic className="h-4 w-4" />
-                Start
+              <Button onClick={startSession} size="sm" className="gap-2" disabled={isOffline}>
+                {isOffline ? <WifiOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {isOffline ? "Offline" : "Start"}
               </Button>
             ) : (
               <div className="flex items-center gap-3">
