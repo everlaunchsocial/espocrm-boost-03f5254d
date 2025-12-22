@@ -269,6 +269,13 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   const statusInfo = getConnectionStatusInfo(connectionStatus);
   const isOffline = connectionStatus === 'offline';
 
+  // Handle button tap for mobile (more reliable than onClick alone)
+  const handleFloatingButtonTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleOpen();
+  }, [toggleOpen]);
+
   // Floating button when closed
   if (!isOpen) {
     return (
@@ -287,16 +294,18 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
         )}
         <div className="relative group">
           <Button
-            onClick={toggleOpen}
+            onClick={handleFloatingButtonTap}
+            onTouchEnd={handleFloatingButtonTap}
             size="lg"
             className={cn(
-              "rounded-full shadow-lg",
+              "rounded-full shadow-lg select-none",
               isMobile ? "h-14 w-14 min-h-[56px] min-w-[56px]" : "h-14 w-14",
               "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
               "transition-all duration-300 hover:scale-110 active:scale-95",
               shortcutPulse && "ring-4 ring-primary/50 animate-pulse",
               className
             )}
+            style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
           >
             <Mic className={isMobile ? "h-6 w-6" : "h-6 w-6"} />
           </Button>
