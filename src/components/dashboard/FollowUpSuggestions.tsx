@@ -83,6 +83,7 @@ export function FollowUpSuggestions() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<FollowUpSuggestion | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'helpful' | 'not_helpful' | 'not_rated'>('all');
   
   // Regenerate throttle state
   const [regenerateCooldown, setRegenerateCooldown] = useState(0);
@@ -95,6 +96,17 @@ export function FollowUpSuggestions() {
     };
   }, []);
 
+  // Listen for filter-unrated-suggestions event from SuggestionRatingStats
+  useEffect(() => {
+    const handleFilterUnrated = () => {
+      setFeedbackFilter('not_rated');
+    };
+    window.addEventListener('filter-unrated-suggestions', handleFilterUnrated);
+    return () => {
+      window.removeEventListener('filter-unrated-suggestions', handleFilterUnrated);
+    };
+  }, []);
+
   // Feature flag check
   if (!isEnabled('aiCrmPhase1')) return null;
 
@@ -102,7 +114,6 @@ export function FollowUpSuggestions() {
   const { hasFeedback, getFeedback, submitFeedback } = useFollowUpFeedback();
   const [markAsDoneTarget, setMarkAsDoneTarget] = useState<FollowUpSuggestion | null>(null);
   const [showResolveAllDialog, setShowResolveAllDialog] = useState(false);
-  const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'helpful' | 'not_helpful' | 'not_rated'>('all');
   
   // Check if Phase 3 is enabled for Resolve All, Regenerate, Rating, and Filter
   const showResolveAll = isEnabled('aiCrmPhase2');

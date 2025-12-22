@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useContacts, useAccounts, useLeads, useDeals, useTasks, useActivities } from '@/hooks/useCRMData';
 import { StatCard } from '@/components/crm/StatCard';
 import { ActivityTimeline } from '@/components/crm/ActivityTimeline';
@@ -5,17 +6,26 @@ import { StatusBadge } from '@/components/crm/StatusBadge';
 import { VoiceExecutiveSummary } from '@/components/dashboard/VoiceExecutiveSummary';
 import { FollowUpSuggestions } from '@/components/dashboard/FollowUpSuggestions';
 import { RecentFollowUpActions } from '@/components/dashboard/RecentFollowUpActions';
+import { SuggestionRatingStats } from '@/components/dashboard/SuggestionRatingStats';
 import { Users, Building2, UserPlus, Handshake, TrendingUp, DollarSign } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 export default function Dashboard() {
+  const followUpSuggestionsRef = useRef<HTMLDivElement>(null);
+  
   const { data: contacts = [] } = useContacts();
   const { data: accounts = [] } = useAccounts();
   const { data: leads = [] } = useLeads();
   const { data: deals = [] } = useDeals();
   const { data: tasks = [] } = useTasks();
   const { data: activities = [] } = useActivities();
+
+  const scrollToSuggestions = () => {
+    followUpSuggestionsRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Trigger unrated filter - we'll dispatch a custom event
+    window.dispatchEvent(new CustomEvent('filter-unrated-suggestions'));
+  };
 
   const openDeals = deals.filter(d => !d.stage.includes('closed'));
   const wonDeals = deals.filter(d => d.stage === 'closed-won');
@@ -52,10 +62,19 @@ export default function Dashboard() {
       <VoiceExecutiveSummary />
 
       {/* Follow-Up Suggestions - Below Voice Summary */}
-      <FollowUpSuggestions />
+      <div ref={followUpSuggestionsRef}>
+        <FollowUpSuggestions />
+      </div>
 
-      {/* Recent Follow-Up Actions - Below Suggestions */}
-      <RecentFollowUpActions />
+      {/* Suggestion Rating Stats - Compact card beside Recent Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <RecentFollowUpActions />
+        </div>
+        <div>
+          <SuggestionRatingStats onViewUnrated={scrollToSuggestions} />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
