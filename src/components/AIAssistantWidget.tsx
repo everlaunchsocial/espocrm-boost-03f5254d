@@ -1,15 +1,17 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard } from 'lucide-react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard, Copy, Trash2, Download, MessageSquare, User, Bot, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useAIAssistant, AIAssistantState, ActionHistoryItem } from '@/hooks/useAIAssistant';
+import { useAIAssistant, AIAssistantState, ActionHistoryItem, ConversationMessage } from '@/hooks/useAIAssistant';
 import { useAIAssistantKeyboard, keyboardShortcuts } from '@/hooks/useAIAssistantKeyboard';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
+import { toast } from 'sonner';
 
 interface AIAssistantWidgetProps {
   className?: string;
@@ -87,18 +89,30 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     actionInProgress,
     pageContext,
     actionHistory,
+    conversationMessages,
     startSession,
     endSession,
     toggleOpen,
-    sendTextCommand
+    sendTextCommand,
+    clearConversation
   } = useAIAssistant();
 
   const { isEnabled } = useFeatureFlags();
   const { role } = useUserRole();
   const [isMinimized, setIsMinimized] = useState(false);
-  const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
+  const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(true);
   const [selectedAction, setSelectedAction] = useState<ActionHistoryItem | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (transcriptEndRef.current && isTranscriptExpanded) {
+      transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [conversationMessages, isTranscriptExpanded]);
 
   // Filter quick actions based on user role
   const filteredQuickActions = useMemo(() => {
@@ -108,6 +122,35 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
 
   const isProcessing = state === 'connecting' || state === 'processing';
   const isRecording = state === 'listening' || state === 'speaking';
+
+  // Copy message to clipboard
+  const copyMessage = useCallback((content: string) => {
+    navigator.clipboard.writeText(content);
+    toast.success('Copied to clipboard');
+  }, []);
+
+  // Export transcript as text file
+  const exportTranscript = useCallback(() => {
+    if (conversationMessages.length === 0) {
+      toast.error('No messages to export');
+      return;
+    }
+
+    const text = conversationMessages.map(msg => {
+      const speaker = msg.role === 'user' ? 'You' : 'AI Assistant';
+      const time = format(msg.timestamp, 'HH:mm');
+      return `[${time}] ${speaker}: ${msg.content}`;
+    }).join('\n\n');
+
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-assistant-transcript-${format(new Date(), 'yyyy-MM-dd-HHmm')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Transcript exported');
+  }, [conversationMessages]);
 
   // Keyboard shortcut handlers
   const handleToggleHistory = useCallback(() => {
@@ -330,6 +373,148 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
                   </ul>
                 </div>
               )}
+            </div>
+
+            {/* Conversation Transcript Panel */}
+            <div className="border-t border-border flex-1 flex flex-col min-h-0">
+              <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
+                <button
+                  onClick={() => setIsTranscriptExpanded(!isTranscriptExpanded)}
+                  className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                >
+                  <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Conversation {conversationMessages.length > 0 && `(${conversationMessages.length})`}
+                  </span>
+                  {isTranscriptExpanded ? (
+                    <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </button>
+                
+                {conversationMessages.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={exportTranscript}
+                      title="Export transcript"
+                    >
+                      <Download className="h-3 w-3" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          title="Clear transcript"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Clear Conversation?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove all messages from the current transcript. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={clearConversation}>Clear</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
+              </div>
+
+              <div className={cn(
+                "overflow-hidden transition-all duration-300 flex-1",
+                isTranscriptExpanded ? "max-h-48" : "max-h-0"
+              )}>
+                {conversationMessages.length === 0 ? (
+                  <div className="px-4 py-6 text-center">
+                    <MessageSquare className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground/70">
+                      Start talking to see the conversation here...
+                    </p>
+                  </div>
+                ) : (
+                  <div className="h-48 overflow-y-auto px-3 pb-2 space-y-2">
+                    {conversationMessages.map((msg, index) => (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "flex gap-2 group",
+                          msg.role === 'user' ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        {msg.role === 'assistant' && (
+                          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Bot className="h-3 w-3 text-primary" />
+                          </div>
+                        )}
+                        
+                        <div className={cn(
+                          "max-w-[85%] rounded-lg px-2.5 py-1.5 relative",
+                          msg.role === 'user' 
+                            ? "bg-primary text-primary-foreground" 
+                            : index % 2 === 0 ? "bg-muted" : "bg-muted/60"
+                        )}>
+                          <p className="text-xs leading-relaxed break-words">{msg.content}</p>
+                          
+                          <div className={cn(
+                            "flex items-center gap-1.5 mt-1",
+                            msg.role === 'user' ? "justify-end" : "justify-start"
+                          )}>
+                            <span className={cn(
+                              "text-[10px]",
+                              msg.role === 'user' ? "text-primary-foreground/70" : "text-muted-foreground"
+                            )}>
+                              {format(msg.timestamp, 'HH:mm')}
+                            </span>
+                            
+                            {msg.toolName && (
+                              <span className={cn(
+                                "flex items-center gap-0.5 text-[10px]",
+                                msg.role === 'user' ? "text-primary-foreground/70" : "text-muted-foreground"
+                              )}>
+                                <Wrench className="h-2.5 w-2.5" />
+                                {msg.toolName.replace(/_/g, ' ')}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* Copy button - shows on hover */}
+                          <button
+                            onClick={() => copyMessage(msg.content)}
+                            className={cn(
+                              "absolute -right-1 -top-1 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity",
+                              msg.role === 'user' 
+                                ? "bg-primary-foreground/20 hover:bg-primary-foreground/30" 
+                                : "bg-muted-foreground/10 hover:bg-muted-foreground/20"
+                            )}
+                            title="Copy message"
+                          >
+                            <Copy className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                        
+                        {msg.role === 'user' && (
+                          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-secondary flex items-center justify-center">
+                            <User className="h-3 w-3 text-secondary-foreground" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div ref={transcriptEndRef} />
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Action History Panel */}
