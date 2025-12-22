@@ -203,3 +203,6 @@ verify_jwt = true
 
 [functions.generate-timeline-summary]
 verify_jwt = true
+
+[functions.generate-timeline-highlights]
+verify_jwt = true

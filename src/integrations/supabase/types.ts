@@ -2778,6 +2778,36 @@ export type Database = {
           },
         ]
       }
+      lead_timeline_highlights: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_type: string
+          id: string
+          lead_id: string
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_type: string
+          id?: string
+          lead_id: string
+          summary: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          lead_id?: string
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lead_timeline_summaries: {
         Row: {
           created_at: string

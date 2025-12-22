@@ -24,6 +24,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { TimelineSummaryCard } from './TimelineSummaryCard';
 import { TimelineFilters } from './TimelineFilters';
+import { TimelineHighlights } from './TimelineHighlights';
 
 interface LeadTimelinePanelProps {
   leadId: string;
@@ -270,6 +271,9 @@ export function LeadTimelinePanel({ leadId, leadName, onSendFollowUp }: LeadTime
         isGroupSelected={isGroupSelected}
         resetFilters={resetFilters}
       />
+
+      {/* AI Highlights Bubbles */}
+      <TimelineHighlights leadId={leadId} />
       
       {filteredEvents.length === 0 ? (
         <div className="text-center py-8 text-sm text-muted-foreground">
