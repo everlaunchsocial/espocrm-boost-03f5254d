@@ -4543,6 +4543,10 @@ export type Database = {
       }
       user_preferences: {
         Row: {
+          ai_assistant_voice: string | null
+          ai_auto_play_responses: boolean | null
+          ai_speech_speed: number | null
+          ai_voice_sensitivity: string | null
           created_at: string
           enable_voice_summary: boolean
           id: string
@@ -4552,6 +4556,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_assistant_voice?: string | null
+          ai_auto_play_responses?: boolean | null
+          ai_speech_speed?: number | null
+          ai_voice_sensitivity?: string | null
           created_at?: string
           enable_voice_summary?: boolean
           id?: string
@@ -4561,6 +4569,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_assistant_voice?: string | null
+          ai_auto_play_responses?: boolean | null
+          ai_speech_speed?: number | null
+          ai_voice_sensitivity?: string | null
           created_at?: string
           enable_voice_summary?: boolean
           id?: string
