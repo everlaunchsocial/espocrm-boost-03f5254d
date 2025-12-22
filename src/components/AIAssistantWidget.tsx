@@ -134,7 +134,8 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
 
   // Filter quick actions based on user role
   const filteredQuickActions = useMemo(() => {
-    const userRole = role === 'admin' ? 'admin' : role === 'customer' ? 'customer' : 'affiliate';
+    // Map super_admin to admin for quick actions
+    const userRole = (role === 'admin' || role === 'super_admin') ? 'admin' : role === 'customer' ? 'customer' : 'affiliate';
     return quickActions.filter(action => action.roles.includes(userRole));
   }, [role]);
 
