@@ -11,6 +11,7 @@ import { EntityForm } from '@/components/crm/EntityForm';
 import { LeadDetail } from '@/components/crm/LeadDetail';
 import { LeadTagFilter, TagFilterMode } from '@/components/crm/LeadTagFilter';
 import { LeadTagBadges } from '@/components/crm/LeadTagBadges';
+import { LeadLastSeenBadge } from '@/components/crm/LeadLastSeenBadge';
 import { Button } from '@/components/ui/button';
 import { Plus, MoreHorizontal, Pencil, Trash2, UserCheck, Globe, Star, MapPin } from 'lucide-react';
 import {
@@ -201,6 +202,12 @@ export default function Leads() {
         const leadTags = tagsMap.get(lead.id) || [];
         return <LeadTagBadges tags={leadTags} maxVisible={2} />;
       },
+    }] : []),
+    // Last Seen column - Phase 2
+    ...(isEnabled('aiCrmPhase2') ? [{
+      key: 'lastSeen',
+      label: 'Last Seen',
+      render: (lead: Lead) => <LeadLastSeenBadge leadId={lead.id} />,
     }] : []),
     {
       key: 'status',

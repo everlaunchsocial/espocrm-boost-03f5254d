@@ -46,6 +46,7 @@ import { AddToSequenceModal } from './AddToSequenceModal';
 import { LeadPriorityToggle } from './LeadPriorityToggle';
 import { LeadQuietModeToggle } from './LeadQuietModeToggle';
 import { LeadReassignmentModal } from './LeadReassignmentModal';
+import { LeadLastSeenBadge } from './LeadLastSeenBadge';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
 import { LeadSentimentTags } from './LeadSentimentTags';
@@ -255,6 +256,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   <div className="flex items-center gap-3 flex-wrap">
                     <LeadPresenceIndicator leadId={lead.id} />
                     <LeadViewsIndicator leadId={lead.id} />
+                    {phase2Enabled && <LeadLastSeenBadge leadId={lead.id} />}
                   </div>
                   <p className="text-muted-foreground">{lead.title || 'No title'}</p>
                   {lead.company && (
