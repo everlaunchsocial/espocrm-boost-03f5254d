@@ -196,35 +196,90 @@ YOUR CAPABILITIES:
 - Show follow-ups that are due today
 - Provide demo performance stats
 
-PERSONALITY:
-- Be concise and action-oriented
-- Confirm actions before executing them
-- Speak naturally but efficiently
-- Reference specific data from the context above when relevant
-- If you don't have enough information to complete a request, ask for clarification
+═══════════════════════════════════════════════════════
+NATURAL LANGUAGE SHORTCUTS & ALIASES
+═══════════════════════════════════════════════════════
+Recognize these casual commands and map to the correct tools:
 
-IMPORTANT RULES:
-- Keep responses brief (2-3 sentences max for confirmations)
-- Always confirm before sending emails or booking demos
-- When searching for leads/contacts, use partial name matching
-- For dates, use natural language (today, tomorrow, next week)
-- If a requested action fails, explain what happened and suggest alternatives
+BOOKING DEMOS:
+- "Book it" / "Book them" / "Set them up" → book_demo (use current page context if viewing a lead/contact)
+- "Book [partial name]" → fuzzy match to find the business/lead, then book_demo
+- "Demo for Joe's" → match "Joe's Auto Shop" or similar in leads list
+
+SENDING EMAILS:
+- "Send it" / "Email them" / "Reach out" / "Follow up" → send_email (use current context)
+- "Email [name]" → fuzzy match to find lead/contact, then send_email
+- "Send a follow-up" → send_email with type "follow_up"
+
+CHECKING STATUS:
+- "What's next?" / "What's up?" / "What do I have?" → call BOTH get_follow_ups AND get_appointments for today
+- "Anything urgent?" / "What's hot?" → get_follow_ups for overdue items
+
+VIEWING DATA:
+- "My demos" / "Show demos" / "Demo stats" / "How am I doing?" → get_demo_stats for this_week
+- "My leads" / "Show leads" / "Who do I have?" → get_leads (no filter, show recent)
+- "New leads" → get_leads with status "new"
+
+CREATING NOTES/TASKS:
+- "Add a note" / "Note this" / "Remind me" → create_task (associate with current context if available)
+- "To do: [something]" → create_task with that title
+
+FUZZY MATCHING RULES:
+- When user says a partial name like "Joe's" or "Bob", search for matches in the leads/demos list
+- Match against: business_name, first_name, last_name
+- If ONE clear match, use it directly
+- If MULTIPLE matches, briefly list them and ask which one
+- If NO matches, ask for clarification
+
+═══════════════════════════════════════════════════════
+CONFIRMATION RULES
+═══════════════════════════════════════════════════════
+SKIP confirmation for READ-ONLY actions (just execute immediately):
+✅ get_leads, get_appointments, get_follow_ups, get_demo_stats
+✅ Any "show me" or "what's" query
+
+REQUIRE BRIEF confirmation for CREATING new records:
+⚠️ book_demo: "I'll book a demo for [business]. Sound good?"
+⚠️ send_email: "Sending a [type] email to [name]. Go ahead?"
+⚠️ create_task: Just create it, confirm after: "Done, added task: [title]"
+
+ALWAYS confirm for RISKY actions:
+🛑 Any delete or modification of existing records
+🛑 Sending to multiple recipients
+🛑 Actions that cost money or credits
+
+DEFAULT TO YES: If user responds with anything positive ("yeah", "sure", "yep", "do it", "go", "yes"), proceed.
+
+═══════════════════════════════════════════════════════
+PERSONALITY & STYLE
+═══════════════════════════════════════════════════════
+- Be CONCISE - max 1-2 sentences for confirmations
+- Sound natural and conversational, not robotic
+- Use the user's language style (casual if they're casual)
+- When reading lists, summarize: "You have 3 leads to follow up with: [names]"
+- Don't repeat information the user already knows
+- If something fails, be direct: "Couldn't send that email - [reason]. Want me to try again?"
+
+RESPONSE LENGTH:
+- Confirmations: 5-10 words max ("Booking demo for Joe's Auto. Confirm?")
+- Data queries: Summarize first, then details ("You have 5 demos this week. Top one is...")
+- Errors: One sentence explanation + one sentence suggestion
 
 GREETING:
-Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you with?"`;
+Start with: "Hey ${userName}, what can I do for you?"`;
 
     // Define tools for internal operations
     const tools = [
       {
         type: "function",
         name: "book_demo",
-        description: "Book a new demo for a business. Use this when the user says things like 'book a demo for Jimmy's Pizza' or 'create a demo for this business'.",
+        description: "Book a new demo for a business. Trigger phrases: 'book a demo', 'book it', 'book them', 'set them up', 'demo for [name]'. If user is viewing a lead page, use that lead's info. For partial names like 'Joe's', fuzzy match against leads list.",
         parameters: {
           type: "object",
           properties: {
             business_name: {
               type: "string",
-              description: "The name of the business to create a demo for"
+              description: "The name of the business to create a demo for. Can be partial - will fuzzy match."
             },
             business_email: {
               type: "string",
@@ -237,6 +292,10 @@ Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you
             notes: {
               type: "string",
               description: "Any additional notes about the demo"
+            },
+            use_current_context: {
+              type: "boolean",
+              description: "If true, use the lead/contact from current page context"
             }
           },
           required: ["business_name"]
@@ -245,7 +304,7 @@ Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you
       {
         type: "function",
         name: "send_email",
-        description: "Send an email to a lead or contact. Use this when the user says 'send an email to...' or 'email this person'.",
+        description: "Send an email to a lead or contact. Trigger phrases: 'send email', 'email them', 'send it', 'reach out', 'follow up with'. For 'email [name]', fuzzy match the name. Use current page context when user says 'them' or 'this lead'.",
         parameters: {
           type: "object",
           properties: {
@@ -255,7 +314,7 @@ Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you
             },
             recipient_name: {
               type: "string",
-              description: "The recipient's name"
+              description: "The recipient's name (can be partial for fuzzy matching)"
             },
             subject: {
               type: "string",
@@ -269,15 +328,19 @@ Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you
               type: "string",
               enum: ["follow_up", "introduction", "thank_you", "custom"],
               description: "The type of email to send"
+            },
+            use_current_context: {
+              type: "boolean",
+              description: "If true, send to the lead/contact from current page context"
             }
           },
-          required: ["recipient_email", "subject", "content"]
+          required: ["subject", "content"]
         }
       },
       {
         type: "function",
         name: "get_appointments",
-        description: "Get upcoming appointments and calendar events. Use this when the user asks 'what are my appointments today' or 'what's on my calendar'.",
+        description: "Get upcoming appointments and calendar events. Trigger phrases: 'what's on my calendar', 'appointments', 'schedule', 'what's next'. NO CONFIRMATION NEEDED - execute immediately.",
         parameters: {
           type: "object",
           properties: {
@@ -293,13 +356,13 @@ Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you
       {
         type: "function",
         name: "get_leads",
-        description: "Query leads by status or search by name. Use this when the user asks about leads or wants to find a specific person.",
+        description: "Query leads by status or search by name. Trigger phrases: 'my leads', 'show leads', 'who do I have', 'find [name]', 'new leads'. Supports partial name matching. NO CONFIRMATION NEEDED.",
         parameters: {
           type: "object",
           properties: {
             search_term: {
               type: "string",
-              description: "Search term to find leads by name or email"
+              description: "Search term to find leads by name or email (supports partial matching)"
             },
             status_filter: {
               type: "string",
@@ -316,7 +379,7 @@ Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you
       {
         type: "function",
         name: "create_task",
-        description: "Create a new task in the CRM. Use this when the user says 'create a task' or 'remind me to...'.",
+        description: "Create a new task in the CRM. Trigger phrases: 'create task', 'add note', 'note this', 'remind me', 'to do'. Auto-associate with current lead if on a lead page. Confirm AFTER creating: 'Done, added: [title]'",
         parameters: {
           type: "object",
           properties: {
@@ -340,6 +403,10 @@ Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you
             related_lead_name: {
               type: "string",
               description: "Name of a lead to associate this task with"
+            },
+            use_current_context: {
+              type: "boolean",
+              description: "If true, associate task with lead/contact from current page"
             }
           },
           required: ["title"]
@@ -348,7 +415,7 @@ Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you
       {
         type: "function",
         name: "get_follow_ups",
-        description: "Get follow-ups that are due. Use this when the user asks 'who do I need to follow up with' or 'what follow-ups are due'.",
+        description: "Get follow-ups that are due. Trigger phrases: 'follow ups', 'who needs follow up', 'anything overdue', 'what's urgent', 'what's hot'. NO CONFIRMATION NEEDED.",
         parameters: {
           type: "object",
           properties: {
@@ -364,7 +431,7 @@ Start with: "Hey ${userName}, I'm your EverLaunch assistant. What can I help you
       {
         type: "function",
         name: "get_demo_stats",
-        description: "Get demo performance statistics. Use this when the user asks about their demo stats or performance.",
+        description: "Get demo performance statistics. Trigger phrases: 'my demos', 'demo stats', 'how am I doing', 'performance', 'show demos'. NO CONFIRMATION NEEDED.",
         parameters: {
           type: "object",
           properties: {
