@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2, CheckCircle2, Undo2 } from 'lucide-react';
+import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2, CheckCircle2, Undo2, Trash2 } from 'lucide-react';
 import { useFollowUpSuggestions, SuggestionReason, FollowUpSuggestion } from '@/hooks/useFollowUpSuggestions';
 import { useFollowUpResolutions } from '@/hooks/useFollowUpResolutions';
 import { useFollowupLearning } from '@/hooks/useFollowupLearning';
@@ -79,9 +79,12 @@ export function FollowUpSuggestions() {
   // Feature flag check
   if (!isEnabled('aiCrmPhase1')) return null;
 
-  const { isResolved, markAsResolved, unmarkResolved } = useFollowUpResolutions();
+  const { isResolved, markAsResolved, markAllAsResolved, unmarkResolved } = useFollowUpResolutions();
   const [markAsDoneTarget, setMarkAsDoneTarget] = useState<FollowUpSuggestion | null>(null);
+  const [showResolveAllDialog, setShowResolveAllDialog] = useState(false);
   
+  // Check if Phase 3 is enabled for Resolve All button
+  const showResolveAll = isEnabled('aiCrmPhase2');
   const handleMarkAsDone = (e: React.MouseEvent, suggestion: FollowUpSuggestion) => {
     e.preventDefault();
     e.stopPropagation();
@@ -96,6 +99,25 @@ export function FollowUpSuggestions() {
       });
       setMarkAsDoneTarget(null);
     }
+  };
+
+  const handleResolveAll = () => {
+    setShowResolveAllDialog(true);
+  };
+
+  const confirmResolveAll = () => {
+    if (suggestions && suggestions.length > 0) {
+      const unresolvedSuggestions = suggestions.filter(s => !isResolved(s.id));
+      if (unresolvedSuggestions.length > 0) {
+        markAllAsResolved.mutate(
+          unresolvedSuggestions.map(s => ({
+            suggestionKey: s.id,
+            leadId: s.leadId,
+          }))
+        );
+      }
+    }
+    setShowResolveAllDialog(false);
   };
 
   const handleUndo = (e: React.MouseEvent, suggestionId: string) => {
@@ -305,10 +327,24 @@ export function FollowUpSuggestions() {
     <>
       <Card className="bg-card border-border">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-primary" />
-            Follow-Up Suggestions
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-primary" />
+              Follow-Up Suggestions
+            </CardTitle>
+            {showResolveAll && suggestions && suggestions.length > 0 && suggestions.some(s => !isResolved(s.id)) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1.5"
+                onClick={handleResolveAll}
+                title="Mark all follow-up suggestions as done"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Resolve All
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -512,6 +548,25 @@ export function FollowUpSuggestions() {
             <AlertDialogAction onClick={confirmMarkAsDone}>
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Mark as Done
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resolve All Confirmation */}
+      <AlertDialog open={showResolveAllDialog} onOpenChange={setShowResolveAllDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resolve All Suggestions?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark all follow-up suggestions as done. No messages will be sent.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmResolveAll}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
