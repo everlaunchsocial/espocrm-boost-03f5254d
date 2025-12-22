@@ -13,6 +13,8 @@ import { LeadTagFilter, TagFilterMode } from '@/components/crm/LeadTagFilter';
 import { LeadTagBadges } from '@/components/crm/LeadTagBadges';
 import { LeadLastSeenBadge } from '@/components/crm/LeadLastSeenBadge';
 import { InlineVoiceSummaryButton } from '@/components/crm/InlineVoiceSummaryButton';
+import { SmartFilters, SmartFilterType } from '@/components/crm/SmartFilters';
+import { useLeadsNeedingFollowUp, useLeadsWithRecentActivity } from '@/hooks/useLeadsNeedingFollowUp';
 import { Button } from '@/components/ui/button';
 import { Plus, MoreHorizontal, Pencil, Trash2, UserCheck, Globe, Star, MapPin } from 'lucide-react';
 import {
@@ -86,6 +88,9 @@ export default function Leads() {
   // Tag filter state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagFilterMode, setTagFilterMode] = useState<TagFilterMode>('any');
+  
+  // Smart filter state
+  const [activeSmartFilters, setActiveSmartFilters] = useState<SmartFilterType[]>([]);
 
   // Get lead IDs for tag fetching
   const leadIds = useMemo(() => leads.map(l => l.id), [leads]);
@@ -93,19 +98,43 @@ export default function Leads() {
   
   // Get filtered lead IDs based on tags
   const { data: filteredLeadIds = [] } = useLeadsWithTags(selectedTags, tagFilterMode);
+  
+  // Get smart filter lead IDs
+  const { data: followUpLeadIds = new Set<string>() } = useLeadsNeedingFollowUp();
+  const { data: recentActivityLeadIds = new Set<string>() } = useLeadsWithRecentActivity();
 
-  // Apply tag filter to leads
+  // Toggle smart filter
+  const toggleSmartFilter = (filter: SmartFilterType) => {
+    setActiveSmartFilters(prev =>
+      prev.includes(filter)
+        ? prev.filter(f => f !== filter)
+        : [...prev, filter]
+    );
+  };
+
+  // Apply all filters to leads
   const filteredLeads = useMemo(() => {
-    if (selectedTags.length === 0) return leads;
+    let result = leads;
     
-    if (tagFilterMode === 'exclude') {
-      // Exclude leads that have any of the selected tags
-      return leads.filter(lead => !filteredLeadIds.includes(lead.id));
+    // Apply tag filter
+    if (selectedTags.length > 0) {
+      if (tagFilterMode === 'exclude') {
+        result = result.filter(lead => !filteredLeadIds.includes(lead.id));
+      } else {
+        result = result.filter(lead => filteredLeadIds.includes(lead.id));
+      }
     }
     
-    // Include leads that match the filter
-    return leads.filter(lead => filteredLeadIds.includes(lead.id));
-  }, [leads, selectedTags, tagFilterMode, filteredLeadIds]);
+    // Apply smart filters (combine with AND logic)
+    if (activeSmartFilters.includes('needsFollowUp')) {
+      result = result.filter(lead => followUpLeadIds.has(lead.id));
+    }
+    if (activeSmartFilters.includes('newAiSummary')) {
+      result = result.filter(lead => recentActivityLeadIds.has(lead.id));
+    }
+    
+    return result;
+  }, [leads, selectedTags, tagFilterMode, filteredLeadIds, activeSmartFilters, followUpLeadIds, recentActivityLeadIds]);
 
   // Use persisted form state for new leads only (not editing)
   const { 
@@ -339,16 +368,20 @@ export default function Leads() {
         </Button>
       </div>
 
-      {/* Tag filter */}
+      {/* Filters */}
       {isEnabled('aiCrmPhase2') && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <SmartFilters
+            activeFilters={activeSmartFilters}
+            onToggleFilter={toggleSmartFilter}
+          />
           <LeadTagFilter
             selectedTags={selectedTags}
             onSelectedTagsChange={setSelectedTags}
             filterMode={tagFilterMode}
             onFilterModeChange={setTagFilterMode}
           />
-          {selectedTags.length > 0 && (
+          {(selectedTags.length > 0 || activeSmartFilters.length > 0) && (
             <span className="text-sm text-muted-foreground">
               Showing {filteredLeads.length} of {leads.length} leads
             </span>
