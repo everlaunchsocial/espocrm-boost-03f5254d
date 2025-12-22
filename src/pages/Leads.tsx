@@ -12,6 +12,7 @@ import { LeadDetail } from '@/components/crm/LeadDetail';
 import { LeadTagFilter, TagFilterMode } from '@/components/crm/LeadTagFilter';
 import { LeadTagBadges } from '@/components/crm/LeadTagBadges';
 import { LeadLastSeenBadge } from '@/components/crm/LeadLastSeenBadge';
+import { InlineVoiceSummaryButton } from '@/components/crm/InlineVoiceSummaryButton';
 import { Button } from '@/components/ui/button';
 import { Plus, MoreHorizontal, Pencil, Trash2, UserCheck, Globe, Star, MapPin } from 'lucide-react';
 import {
@@ -208,6 +209,17 @@ export default function Leads() {
       key: 'lastSeen',
       label: 'Last Seen',
       render: (lead: Lead) => <LeadLastSeenBadge leadId={lead.id} />,
+    }] : []),
+    // Voice Summary column - Phase 3
+    ...(isEnabled('aiCrmPhase2') ? [{
+      key: 'voiceSummary',
+      label: '',
+      render: (lead: Lead) => (
+        <InlineVoiceSummaryButton 
+          leadId={lead.id} 
+          leadName={`${lead.firstName} ${lead.lastName}`} 
+        />
+      ),
     }] : []),
     {
       key: 'status',
