@@ -12,6 +12,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -95,11 +102,23 @@ export function FollowUpSuggestions() {
   const { hasFeedback, getFeedback, submitFeedback } = useFollowUpFeedback();
   const [markAsDoneTarget, setMarkAsDoneTarget] = useState<FollowUpSuggestion | null>(null);
   const [showResolveAllDialog, setShowResolveAllDialog] = useState(false);
+  const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'helpful' | 'not_helpful' | 'not_rated'>('all');
   
-  // Check if Phase 3 is enabled for Resolve All, Regenerate, and Rating buttons
+  // Check if Phase 3 is enabled for Resolve All, Regenerate, Rating, and Filter
   const showResolveAll = isEnabled('aiCrmPhase2');
   const showRegenerate = isEnabled('aiCrmPhase2');
   const showRating = isEnabled('aiCrmPhase2');
+  const showFeedbackFilter = isEnabled('aiCrmPhase2');
+
+  // Filter suggestions based on feedback
+  const filteredSuggestions = suggestions?.filter(suggestion => {
+    if (feedbackFilter === 'all') return true;
+    const feedback = getFeedback(suggestion.id);
+    if (feedbackFilter === 'helpful') return feedback === 'helpful';
+    if (feedbackFilter === 'not_helpful') return feedback === 'not_helpful';
+    if (feedbackFilter === 'not_rated') return !hasFeedback(suggestion.id);
+    return true;
+  });
 
   const handleFeedback = (e: React.MouseEvent, suggestion: FollowUpSuggestion, feedback: 'helpful' | 'not_helpful') => {
     e.preventDefault();
@@ -380,6 +399,19 @@ export function FollowUpSuggestions() {
               Follow-Up Suggestions
             </CardTitle>
             <div className="flex items-center gap-2">
+              {showFeedbackFilter && suggestions && suggestions.length > 0 && (
+                <Select value={feedbackFilter} onValueChange={(v) => setFeedbackFilter(v as typeof feedbackFilter)}>
+                  <SelectTrigger className="h-7 w-[130px] text-xs">
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Suggestions</SelectItem>
+                    <SelectItem value="helpful">Rated Helpful</SelectItem>
+                    <SelectItem value="not_helpful">Not Helpful</SelectItem>
+                    <SelectItem value="not_rated">Not Yet Rated</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               {showRegenerate && suggestions && suggestions.length > 0 && (
                 <Button
                   variant="ghost"
@@ -421,9 +453,9 @@ export function FollowUpSuggestions() {
                 </div>
               ))}
             </div>
-          ) : suggestions && suggestions.length > 0 ? (
+          ) : filteredSuggestions && filteredSuggestions.length > 0 ? (
             <ul className="space-y-3">
-              {suggestions.map((suggestion) => {
+              {filteredSuggestions.map((suggestion) => {
                 const config = reasonConfig[suggestion.reason];
                 const action = actionConfig[suggestion.reason];
                 const Icon = config.icon;
