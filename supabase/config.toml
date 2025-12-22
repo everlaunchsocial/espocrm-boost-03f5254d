@@ -218,3 +218,9 @@ verify_jwt = true
 
 [functions.send-precall-summary]
 verify_jwt = true
+
+[functions.ai-assistant-session]
+verify_jwt = true
+
+[functions.ai-assistant-tool-handler]
+verify_jwt = true
