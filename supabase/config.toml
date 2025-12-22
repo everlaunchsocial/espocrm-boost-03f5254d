@@ -191,3 +191,6 @@ verify_jwt = false
 
 [functions.retry-voice-summary]
 verify_jwt = true
+
+[functions.generate-lead-summary]
+verify_jwt = true
