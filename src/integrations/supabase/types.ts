@@ -2377,6 +2377,44 @@ export type Database = {
         }
         Relationships: []
       }
+      follow_up_feedback: {
+        Row: {
+          created_at: string
+          feedback: string
+          id: string
+          lead_id: string
+          suggestion_key: string
+          suggestion_text: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          feedback: string
+          id?: string
+          lead_id: string
+          suggestion_key: string
+          suggestion_text: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          feedback?: string
+          id?: string
+          lead_id?: string
+          suggestion_key?: string
+          suggestion_text?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_feedback_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follow_up_resolutions: {
         Row: {
           created_at: string

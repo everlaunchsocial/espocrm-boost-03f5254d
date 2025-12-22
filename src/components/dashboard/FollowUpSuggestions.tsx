@@ -21,9 +21,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2, CheckCircle2, Undo2, Trash2 } from 'lucide-react';
+import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2, CheckCircle2, Undo2, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useFollowUpSuggestions, SuggestionReason, FollowUpSuggestion } from '@/hooks/useFollowUpSuggestions';
 import { useFollowUpResolutions } from '@/hooks/useFollowUpResolutions';
+import { useFollowUpFeedback } from '@/hooks/useFollowUpFeedback';
 import { useFollowupLearning } from '@/hooks/useFollowupLearning';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { Link, useNavigate } from 'react-router-dom';
@@ -91,12 +92,27 @@ export function FollowUpSuggestions() {
   if (!isEnabled('aiCrmPhase1')) return null;
 
   const { isResolved, markAsResolved, markAllAsResolved, unmarkResolved } = useFollowUpResolutions();
+  const { hasFeedback, getFeedback, submitFeedback } = useFollowUpFeedback();
   const [markAsDoneTarget, setMarkAsDoneTarget] = useState<FollowUpSuggestion | null>(null);
   const [showResolveAllDialog, setShowResolveAllDialog] = useState(false);
   
-  // Check if Phase 3 is enabled for Resolve All and Regenerate buttons
+  // Check if Phase 3 is enabled for Resolve All, Regenerate, and Rating buttons
   const showResolveAll = isEnabled('aiCrmPhase2');
   const showRegenerate = isEnabled('aiCrmPhase2');
+  const showRating = isEnabled('aiCrmPhase2');
+
+  const handleFeedback = (e: React.MouseEvent, suggestion: FollowUpSuggestion, feedback: 'helpful' | 'not_helpful') => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (hasFeedback(suggestion.id)) return;
+    
+    submitFeedback.mutate({
+      suggestionKey: suggestion.id,
+      leadId: suggestion.leadId,
+      suggestionText: suggestion.suggestionText,
+      feedback,
+    });
+  };
 
   const handleRegenerate = async () => {
     if (regenerateCooldown > 0 || isFetching) return;
@@ -455,6 +471,42 @@ export function FollowUpSuggestions() {
                           <Badge variant={resolved ? "outline" : config.badgeVariant} className="text-xs font-normal">
                             {suggestion.reasonLabel}
                           </Badge>
+                          {/* Rating buttons */}
+                          {showRating && !resolved && (
+                            <div className="flex items-center gap-1 ml-1">
+                              {hasFeedback(suggestion.id) ? (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  {getFeedback(suggestion.id) === 'helpful' ? (
+                                    <ThumbsUp className="h-3 w-3 text-success" />
+                                  ) : (
+                                    <ThumbsDown className="h-3 w-3 text-destructive" />
+                                  )}
+                                  Rated
+                                </span>
+                              ) : (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 opacity-50 hover:opacity-100"
+                                    onClick={(e) => handleFeedback(e, suggestion, 'helpful')}
+                                    title="Helpful"
+                                  >
+                                    <ThumbsUp className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 opacity-50 hover:opacity-100"
+                                    onClick={(e) => handleFeedback(e, suggestion, 'not_helpful')}
+                                    title="Not helpful"
+                                  >
+                                    <ThumbsDown className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                           {suggestion.suggestionText}
