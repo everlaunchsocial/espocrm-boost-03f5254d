@@ -26,30 +26,27 @@ export function useUserRole(): UseUserRoleResult {
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
+  const inFlightRef = useState({ inFlight: false, lastRun: 0 })[0];
+  const queuedRef = useState({ queued: false })[0];
+
   const fetchUserRole = useCallback(async () => {
+    // Prevent stampedes (multiple components mount + auth events)
+    const now = Date.now();
+    if (inFlightRef.inFlight) return;
+    if (now - inFlightRef.lastRun < 500) return;
+
+    inFlightRef.inFlight = true;
+    inFlightRef.lastRun = now;
     setIsLoading(true);
-    
+
     try {
-      // Wait for session with retry logic for initial page load
-      let session = null;
-      let attempts = 0;
-      const maxAttempts = 3;
-      
-      while (!session && attempts < maxAttempts) {
-        const { data, error } = await supabase.auth.getSession();
-        session = data?.session;
-        
-        if (!session && attempts < maxAttempts - 1) {
-          // Brief delay to allow auth to initialize
-          await new Promise(r => setTimeout(r, 150));
-        }
-        attempts++;
-      }
-      
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+
+      const session = data?.session ?? null;
       if (!session) {
         setRole('customer');
         setUserId(null);
-        setIsLoading(false);
         return;
       }
 
@@ -57,17 +54,16 @@ export function useUserRole(): UseUserRoleResult {
       setUserId(currentUserId);
 
       // Try the standard RPC first
-      const { data: globalRole, error } = await supabase.rpc('get_my_global_role');
-
-      if (!error && globalRole) {
+      const { data: globalRole, error: roleError } = await supabase.rpc('get_my_global_role');
+      if (!roleError && globalRole) {
         setRole(getGlobalRole({ global_role: globalRole }));
-        setIsLoading(false);
         return;
       }
 
       // Fallback: use the user_id-based RPC for reliability
-      const { data: fallbackRole, error: fallbackError } = await supabase
-        .rpc('get_global_role_for_user', { p_user_id: currentUserId });
+      const { data: fallbackRole, error: fallbackError } = await supabase.rpc('get_global_role_for_user', {
+        p_user_id: currentUserId,
+      });
 
       if (!fallbackError && fallbackRole) {
         setRole(getGlobalRole({ global_role: fallbackRole }));
@@ -77,17 +73,25 @@ export function useUserRole(): UseUserRoleResult {
     } catch (error) {
       console.error('[useUserRole] Unexpected error:', error);
       setRole('customer');
+      setUserId(null);
     } finally {
+      inFlightRef.inFlight = false;
       setIsLoading(false);
     }
-  }, []);
+  }, [inFlightRef]);
 
   useEffect(() => {
     fetchUserRole();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        fetchUserRole();
+      // Never call supabase inside the callback; defer to avoid deadlocks / loops.
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (queuedRef.queued) return;
+        queuedRef.queued = true;
+        setTimeout(() => {
+          queuedRef.queued = false;
+          fetchUserRole();
+        }, 0);
       } else if (event === 'SIGNED_OUT') {
         setRole('customer');
         setUserId(null);
@@ -97,7 +101,7 @@ export function useUserRole(): UseUserRoleResult {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserRole]);
+  }, [fetchUserRole, queuedRef]);
 
   return {
     role,
