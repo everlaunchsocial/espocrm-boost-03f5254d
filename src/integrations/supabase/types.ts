@@ -3166,6 +3166,59 @@ export type Database = {
           },
         ]
       }
+      manual_follow_ups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          lead_id: string
+          notes: string | null
+          resolved_at: string | null
+          source: string
+          status: string
+          summary: string
+          triggered_at: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          summary: string
+          triggered_at?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          resolved_at?: string | null
+          source?: string
+          status?: string
+          summary?: string
+          triggered_at?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manual_follow_ups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_library: {
         Row: {
           created_at: string
