@@ -3033,6 +3033,7 @@ export type Database = {
         Row: {
           address: string | null
           affiliate_id: string | null
+          assigned_to_user_id: string | null
           city: string | null
           company: string | null
           created_at: string
@@ -3065,6 +3066,7 @@ export type Database = {
         Insert: {
           address?: string | null
           affiliate_id?: string | null
+          assigned_to_user_id?: string | null
           city?: string | null
           company?: string | null
           created_at?: string
@@ -3097,6 +3099,7 @@ export type Database = {
         Update: {
           address?: string | null
           affiliate_id?: string | null
+          assigned_to_user_id?: string | null
           city?: string | null
           company?: string | null
           created_at?: string
@@ -5023,6 +5026,14 @@ export type Database = {
       get_affiliate_id_by_username: {
         Args: { p_username: string }
         Returns: string
+      }
+      get_crm_team_members: {
+        Args: never
+        Returns: {
+          email: string
+          global_role: string
+          user_id: string
+        }[]
       }
       get_global_role_for_user: { Args: { p_user_id: string }; Returns: string }
       get_my_global_role: { Args: never; Returns: string }
