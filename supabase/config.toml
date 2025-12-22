@@ -197,3 +197,6 @@ verify_jwt = true
 
 [functions.analyze-lead-sentiment]
 verify_jwt = true
+
+[functions.auto-assign-lead-tags]
+verify_jwt = true
