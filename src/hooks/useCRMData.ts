@@ -68,6 +68,7 @@ const toLead = (row: any): Lead => ({
   googleReviewCount: row.google_review_count,
   // Flags
   hasWebsite: row.has_website,
+  doneForYou: row.done_for_you,
   notes: row.notes,
   // Import tracking
   importBatchId: row.import_batch_id,
@@ -411,6 +412,7 @@ export function useUpdateLead() {
       if (lead.googleRating !== undefined) updateData.google_rating = lead.googleRating;
       if (lead.googleReviewCount !== undefined) updateData.google_review_count = lead.googleReviewCount;
       if (lead.hasWebsite !== undefined) updateData.has_website = lead.hasWebsite;
+      if (lead.doneForYou !== undefined) updateData.done_for_you = lead.doneForYou;
       if (lead.notes !== undefined) updateData.notes = lead.notes;
 
       const { error } = await supabase.from('leads').update(updateData).eq('id', id);

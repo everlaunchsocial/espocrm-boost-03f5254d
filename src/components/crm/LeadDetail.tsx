@@ -39,6 +39,7 @@ import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
 import { LeadSentimentTags } from './LeadSentimentTags';
 import { DemoEngagementHeatmap } from './DemoEngagementHeatmap';
+import { DoneForYouToggle } from './DoneForYouToggle';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -230,12 +231,20 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   <LeadStatusEditor lead={lead} />
                 </div>
               </div>
-              {onEdit && (
-                <Button variant="outline" size="sm" onClick={() => onEdit(lead)}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-              )}
+              <div className="flex flex-col items-end gap-2">
+                {onEdit && (
+                  <Button variant="outline" size="sm" onClick={() => onEdit(lead)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+                {phase2Enabled && (
+                  <DoneForYouToggle 
+                    leadId={lead.id} 
+                    doneForYou={lead.doneForYou ?? false} 
+                  />
+                )}
+              </div>
             </div>
           </SheetHeader>
 
