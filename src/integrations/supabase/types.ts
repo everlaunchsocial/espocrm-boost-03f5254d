@@ -2950,6 +2950,7 @@ export type Database = {
           city: string | null
           company: string | null
           created_at: string
+          done_for_you: boolean
           email: string | null
           facebook_url: string | null
           first_name: string
@@ -2979,6 +2980,7 @@ export type Database = {
           city?: string | null
           company?: string | null
           created_at?: string
+          done_for_you?: boolean
           email?: string | null
           facebook_url?: string | null
           first_name: string
@@ -3008,6 +3010,7 @@ export type Database = {
           city?: string | null
           company?: string | null
           created_at?: string
+          done_for_you?: boolean
           email?: string | null
           facebook_url?: string | null
           first_name?: string

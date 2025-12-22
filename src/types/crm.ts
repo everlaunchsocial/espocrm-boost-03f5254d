@@ -97,6 +97,7 @@ export interface Lead {
   googleReviewCount?: number;
   // Flags
   hasWebsite?: boolean;
+  doneForYou?: boolean; // True = HQ handles follow-ups
   notes?: string;
   // Import tracking
   importBatchId?: string;
