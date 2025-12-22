@@ -45,6 +45,7 @@ import { LeadInsightsSidebar } from './LeadInsightsSidebar';
 import { AddToSequenceModal } from './AddToSequenceModal';
 import { LeadPriorityToggle } from './LeadPriorityToggle';
 import { LeadQuietModeToggle } from './LeadQuietModeToggle';
+import { LeadReassignmentModal } from './LeadReassignmentModal';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
 import { LeadSentimentTags } from './LeadSentimentTags';
@@ -73,6 +74,7 @@ import {
   FileText,
   Presentation,
   ListPlus,
+  UserPlus,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -135,6 +137,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const [sequenceModalOpen, setSequenceModalOpen] = useState(false);
+  const [reassignModalOpen, setReassignModalOpen] = useState(false);
   const [followUpConfirmOpen, setFollowUpConfirmOpen] = useState(false);
   const [pendingFollowUpDemoId, setPendingFollowUpDemoId] = useState<string | null>(null);
 
@@ -276,6 +279,14 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                       leadId={lead.id} 
                       doneForYou={lead.doneForYou ?? false} 
                     />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setReassignModalOpen(true)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Reassign
+                    </Button>
                   </>
                 )}
               </div>
@@ -709,6 +720,17 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
           leadName={`${lead.firstName} ${lead.lastName}`}
           open={sequenceModalOpen}
           onClose={() => setSequenceModalOpen(false)}
+        />
+      )}
+
+      {/* Lead Reassignment Modal - Phase 2 */}
+      {phase2Enabled && (
+        <LeadReassignmentModal
+          leadId={lead.id}
+          leadName={`${lead.firstName} ${lead.lastName}`}
+          currentAssignedUserId={lead.assignedToUserId}
+          open={reassignModalOpen}
+          onClose={() => setReassignModalOpen(false)}
         />
       )}
     </>

@@ -100,6 +100,8 @@ export interface Lead {
   doneForYou?: boolean; // True = HQ handles follow-ups
   priority?: boolean; // True = marked as priority lead
   quietMode?: boolean; // True = suppress AI suggestions
+  // Assignment
+  assignedToUserId?: string | null;
   notes?: string;
   // Import tracking
   importBatchId?: string;
