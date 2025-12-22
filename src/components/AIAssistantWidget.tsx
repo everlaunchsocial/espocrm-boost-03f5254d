@@ -303,12 +303,14 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     <>
       <div
         className={cn(
-          "fixed bottom-6 right-6 z-50 bg-card border rounded-2xl shadow-2xl",
+          "fixed right-6 bg-card border rounded-2xl shadow-2xl",
           "transition-all duration-300 flex flex-col",
-          isMinimized ? "w-72 h-16" : "w-80 max-h-[520px]",
+          isMinimized ? "w-72 h-16 bottom-6" : "w-80 bottom-5",
+          !isMinimized && "max-h-[calc(100vh-100px)]",
           shortcutPulse ? "border-primary ring-2 ring-primary/30" : "border-border",
           className
         )}
+        style={{ zIndex: 9999 }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
@@ -374,7 +376,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
         </div>
 
         {!isMinimized && (
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
             {/* Context Badge */}
             {contextLabel && (
               <div className="px-4 pt-3 flex-shrink-0">
@@ -433,7 +435,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
             </div>
 
             {/* Conversation Transcript Panel */}
-            <div className="border-t border-border flex-1 flex flex-col min-h-0">
+            <div className="border-t border-border flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
                 <button
                   onClick={() => setIsTranscriptExpanded(!isTranscriptExpanded)}
@@ -490,8 +492,8 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
               </div>
 
               <div className={cn(
-                "overflow-hidden transition-all duration-300 flex-1",
-                isTranscriptExpanded ? "max-h-48" : "max-h-0"
+                "transition-all duration-300 flex-1 min-h-0",
+                isTranscriptExpanded ? "flex flex-col" : "hidden"
               )}>
                 {conversationMessages.length === 0 ? (
                   <div className="px-4 py-6 text-center">
@@ -501,7 +503,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
                     </p>
                   </div>
                 ) : (
-                  <div className="h-48 overflow-y-auto px-3 pb-2 space-y-2">
+                  <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-2 min-h-[100px] max-h-[200px]">
                     {conversationMessages.map((msg, index) => (
                       <div
                         key={msg.id}

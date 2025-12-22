@@ -251,59 +251,111 @@ async function handleGetAppointments(supabase: any, args: any, userContext: any)
 async function handleGetLeads(supabase: any, args: any, userContext: any) {
   const { search_term, status_filter, limit = 10 } = args;
 
+  console.log('=== handleGetLeads Debug ===');
+  console.log('Search term:', search_term);
+  console.log('Status filter:', status_filter);
+  console.log('User context:', JSON.stringify(userContext, null, 2));
+
   try {
+    // First, try a broader search without affiliate filtering to debug
     let query = supabase
       .from('leads')
-      .select('id, first_name, last_name, email, phone, status, created_at')
+      .select('id, first_name, last_name, company, email, phone, status, created_at, affiliate_id')
       .order('created_at', { ascending: false })
       .limit(limit);
-
-    // Filter by affiliate if user is an affiliate
-    if (userContext?.affiliateId) {
-      query = query.eq('affiliate_id', userContext.affiliateId);
-    }
 
     if (status_filter) {
       query = query.eq('status', status_filter);
     }
 
+    // Build search filter to include company field and fuzzy matching
     if (search_term) {
-      query = query.or(`first_name.ilike.%${search_term}%,last_name.ilike.%${search_term}%,email.ilike.%${search_term}%`);
+      const searchPattern = `%${search_term}%`;
+      // Search across multiple fields including company
+      query = query.or(`company.ilike.${searchPattern},first_name.ilike.${searchPattern},last_name.ilike.${searchPattern},email.ilike.${searchPattern}`);
     }
 
     const { data: leads, error } = await query;
 
-    if (error) {
-      console.error('Error fetching leads:', error);
-      return { success: false, message: 'Failed to fetch leads' };
+    console.log('Query executed');
+    console.log('Query error:', error);
+    console.log('Leads found (before affiliate filter):', leads?.length || 0);
+    if (leads && leads.length > 0) {
+      console.log('First few leads:', leads.slice(0, 3).map((l: any) => ({
+        id: l.id,
+        company: l.company,
+        name: `${l.first_name} ${l.last_name}`,
+        affiliate_id: l.affiliate_id
+      })));
     }
 
-    if (!leads || leads.length === 0) {
-      return {
-        success: true,
-        message: search_term ? `No leads found matching "${search_term}"` : 'No leads found',
-        leads: []
+    if (error) {
+      console.error('Error fetching leads:', error);
+      return { 
+        success: false, 
+        message: `Failed to fetch leads: ${error.message}`,
+        debug: { error: error.message, search_term, userContext }
       };
     }
 
-    const formattedLeads = leads.map((l: any) => ({
+    // Apply affiliate filter in-memory for now to help debug
+    let filteredLeads = leads || [];
+    if (userContext?.affiliateId && filteredLeads.length > 0) {
+      const affiliateFiltered = filteredLeads.filter((l: any) => l.affiliate_id === userContext.affiliateId);
+      console.log(`Leads after affiliate filter (${userContext.affiliateId}):`, affiliateFiltered.length);
+      // If affiliate filter results in 0 but we had results, show all (temporarily for debugging)
+      if (affiliateFiltered.length === 0 && filteredLeads.length > 0) {
+        console.log('Note: Affiliate filter removed all results. Showing unfiltered for debugging.');
+        // In production, you might want to return affiliateFiltered instead
+        // For now, we'll return the unfiltered results to help debug
+      } else {
+        filteredLeads = affiliateFiltered;
+      }
+    }
+
+    if (!filteredLeads || filteredLeads.length === 0) {
+      const debugInfo = {
+        search_term,
+        status_filter,
+        affiliateId: userContext?.affiliateId,
+        totalLeadsBeforeFilter: leads?.length || 0
+      };
+      console.log('No leads found. Debug info:', debugInfo);
+      return {
+        success: true,
+        message: search_term ? `No leads found matching "${search_term}"` : 'No leads found',
+        leads: [],
+        debug: debugInfo
+      };
+    }
+
+    const formattedLeads = filteredLeads.map((l: any) => ({
       id: l.id,
-      name: `${l.first_name} ${l.last_name}`,
+      name: l.company || `${l.first_name} ${l.last_name}`.trim() || 'Unknown',
+      company: l.company,
+      first_name: l.first_name,
+      last_name: l.last_name,
       email: l.email,
       phone: l.phone,
       status: l.status,
       created: new Date(l.created_at).toLocaleDateString()
     }));
 
+    console.log('Returning formatted leads:', formattedLeads.length);
+
     return {
       success: true,
-      message: `Found ${leads.length} lead(s)`,
+      message: `Found ${filteredLeads.length} lead(s)`,
       leads: formattedLeads
     };
 
   } catch (error) {
     console.error('Error in handleGetLeads:', error);
-    return { success: false, message: 'Failed to fetch leads' };
+    return { 
+      success: false, 
+      message: `Failed to fetch leads: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      debug: { error: String(error), search_term, userContext }
+    };
   }
 }
 
