@@ -1,5 +1,5 @@
 import { Activity } from '@/types/crm';
-import { Phone, Mail, Calendar, FileText, CheckSquare, RefreshCw } from 'lucide-react';
+import { Phone, Mail, Calendar, FileText, CheckSquare, RefreshCw, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -15,6 +15,7 @@ const activityIcons: Record<Activity['type'], typeof Phone> = {
   note: FileText,
   task: CheckSquare,
   'status-change': RefreshCw,
+  followup: ArrowRight,
 };
 
 const activityColors: Record<Activity['type'], string> = {
@@ -24,6 +25,7 @@ const activityColors: Record<Activity['type'], string> = {
   note: 'bg-warning/10 text-warning',
   task: 'bg-chart-5/10 text-chart-5',
   'status-change': 'bg-muted text-muted-foreground',
+  followup: 'bg-yellow-500/10 text-yellow-600',
 };
 
 export function ActivityTimeline({ activities, limit }: ActivityTimelineProps) {
