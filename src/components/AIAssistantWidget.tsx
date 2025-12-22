@@ -1,15 +1,62 @@
-import { useState } from 'react';
-import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAIAssistant, AIAssistantState, ActionHistoryItem } from '@/hooks/useAIAssistant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 
 interface AIAssistantWidgetProps {
   className?: string;
 }
+
+interface QuickAction {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  command: string;
+  roles: ('affiliate' | 'customer' | 'admin')[];
+}
+
+const quickActions: QuickAction[] = [
+  { 
+    id: 'today', 
+    label: 'Today', 
+    icon: <Calendar className="h-3.5 w-3.5" />, 
+    command: "What's on my calendar today?", 
+    roles: ['affiliate', 'customer', 'admin'] 
+  },
+  { 
+    id: 'demos', 
+    label: 'My Demos', 
+    icon: <BarChart3 className="h-3.5 w-3.5" />, 
+    command: 'Show me my demo stats', 
+    roles: ['affiliate', 'admin'] 
+  },
+  { 
+    id: 'followups', 
+    label: 'Follow-Ups', 
+    icon: <ListTodo className="h-3.5 w-3.5" />, 
+    command: "What follow-ups do I have?", 
+    roles: ['affiliate', 'admin'] 
+  },
+  { 
+    id: 'leads', 
+    label: 'Leads', 
+    icon: <Users className="h-3.5 w-3.5" />, 
+    command: 'Show me my leads', 
+    roles: ['affiliate', 'admin'] 
+  },
+  { 
+    id: 'usage', 
+    label: 'Usage', 
+    icon: <BarChart3 className="h-3.5 w-3.5" />, 
+    command: "What's my usage this month?", 
+    roles: ['customer'] 
+  },
+];
 
 const getActionIcon = (toolName: string) => {
   switch (toolName) {
@@ -22,6 +69,7 @@ const getActionIcon = (toolName: string) => {
     case 'get_leads':
     case 'get_follow_ups':
     case 'get_demo_stats':
+    case 'quick_action':
       return <FileText className="h-3.5 w-3.5" />;
     default:
       return <Phone className="h-3.5 w-3.5" />;
@@ -38,13 +86,23 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     actionHistory,
     startSession,
     endSession,
-    toggleOpen
+    toggleOpen,
+    sendTextCommand
   } = useAIAssistant();
 
   const { isEnabled } = useFeatureFlags();
+  const { role } = useUserRole();
   const [isMinimized, setIsMinimized] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
   const [selectedAction, setSelectedAction] = useState<ActionHistoryItem | null>(null);
+
+  // Filter quick actions based on user role
+  const filteredQuickActions = useMemo(() => {
+    const userRole = role === 'admin' ? 'admin' : role === 'customer' ? 'customer' : 'affiliate';
+    return quickActions.filter(action => action.roles.includes(userRole));
+  }, [role]);
+
+  const isProcessing = state === 'connecting' || state === 'processing';
 
   if (!isEnabled('aiCrmPhase3')) {
     return null;
@@ -288,6 +346,32 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
                 )}
               </div>
             </div>
+
+            {/* Quick Actions Bar */}
+            {state !== 'idle' && (
+              <div className="px-4 py-2 border-t border-border flex-shrink-0">
+                <div className="flex flex-wrap gap-1.5 sm:flex-nowrap sm:overflow-x-auto">
+                  {filteredQuickActions.map((action) => (
+                    <button
+                      key={action.id}
+                      onClick={() => sendTextCommand(action.command, action.label)}
+                      disabled={isProcessing}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium",
+                        "bg-muted/60 hover:bg-muted text-foreground",
+                        "border border-border/50 hover:border-border",
+                        "transition-all duration-200",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                        "focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      )}
+                    >
+                      {action.icon}
+                      <span className="whitespace-nowrap">{action.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Controls */}
             <div className="p-4 pt-2 border-t border-border flex-shrink-0">
