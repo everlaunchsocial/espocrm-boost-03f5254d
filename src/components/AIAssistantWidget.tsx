@@ -1,8 +1,11 @@
-import { useState, useMemo } from 'react';
-import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useAIAssistant, AIAssistantState, ActionHistoryItem } from '@/hooks/useAIAssistant';
+import { useAIAssistantKeyboard, keyboardShortcuts } from '@/hooks/useAIAssistantKeyboard';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
@@ -95,6 +98,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(true);
   const [selectedAction, setSelectedAction] = useState<ActionHistoryItem | null>(null);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   // Filter quick actions based on user role
   const filteredQuickActions = useMemo(() => {
@@ -103,6 +107,29 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   }, [role]);
 
   const isProcessing = state === 'connecting' || state === 'processing';
+  const isRecording = state === 'listening' || state === 'speaking';
+
+  // Keyboard shortcut handlers
+  const handleToggleHistory = useCallback(() => {
+    setIsHistoryExpanded(prev => !prev);
+  }, []);
+
+  const handleTriggerQuickAction = useCallback((index: number) => {
+    if (index >= 0 && index < filteredQuickActions.length && state !== 'idle') {
+      const action = filteredQuickActions[index];
+      sendTextCommand(action.command, action.label);
+    }
+  }, [filteredQuickActions, state, sendTextCommand]);
+
+  const { shortcutPulse, keyboardEnabled, setKeyboardEnabled } = useAIAssistantKeyboard({
+    toggleWidget: toggleOpen,
+    startRecording: startSession,
+    stopRecording: endSession,
+    toggleHistory: handleToggleHistory,
+    triggerQuickAction: handleTriggerQuickAction,
+    isOpen,
+    isRecording,
+  });
 
   if (!isEnabled('aiCrmPhase3')) {
     return null;
@@ -162,18 +189,28 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
             <span className="max-w-[180px] truncate">{contextLabel}</span>
           </div>
         )}
-        <Button
-          onClick={toggleOpen}
-          size="lg"
-          className={cn(
-            "rounded-full h-14 w-14 shadow-lg",
-            "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
-            "transition-all duration-300 hover:scale-110",
-            className
-          )}
-        >
-          <Mic className="h-6 w-6" />
-        </Button>
+        <div className="relative group">
+          <Button
+            onClick={toggleOpen}
+            size="lg"
+            className={cn(
+              "rounded-full h-14 w-14 shadow-lg",
+              "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
+              "transition-all duration-300 hover:scale-110",
+              shortcutPulse && "ring-4 ring-primary/50 animate-pulse",
+              className
+            )}
+          >
+            <Mic className="h-6 w-6" />
+          </Button>
+          {/* Keyboard shortcut hint on hover */}
+          <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <div className="bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-lg border border-border whitespace-nowrap">
+              <span className="text-muted-foreground">Press </span>
+              <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">⌘K</kbd>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -183,9 +220,10 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     <>
       <div
         className={cn(
-          "fixed bottom-6 right-6 z-50 bg-card border border-border rounded-2xl shadow-2xl",
+          "fixed bottom-6 right-6 z-50 bg-card border rounded-2xl shadow-2xl",
           "transition-all duration-300 flex flex-col",
           isMinimized ? "w-72 h-16" : "w-80 max-h-[520px]",
+          shortcutPulse ? "border-primary ring-2 ring-primary/30" : "border-border",
           className
         )}
       >
@@ -203,6 +241,15 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
             <span className="text-sm font-medium">AI Assistant</span>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setShowShortcutsModal(true)}
+              title="Keyboard shortcuts"
+            >
+              <Keyboard className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -478,6 +525,63 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Keyboard Shortcuts Modal */}
+      <Dialog open={showShortcutsModal} onOpenChange={setShowShortcutsModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Keyboard className="h-5 w-5" />
+              Keyboard Shortcuts
+            </DialogTitle>
+            <DialogDescription>
+              Control the AI Assistant with your keyboard
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Settings toggle */}
+            <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
+              <Label htmlFor="keyboard-enabled" className="text-sm font-medium cursor-pointer">
+                Enable keyboard shortcuts
+              </Label>
+              <Switch
+                id="keyboard-enabled"
+                checked={keyboardEnabled}
+                onCheckedChange={setKeyboardEnabled}
+              />
+            </div>
+
+            {/* Shortcuts list */}
+            <div className="space-y-3">
+              {keyboardShortcuts.map((shortcut, index) => (
+                <div key={index} className="flex items-center justify-between py-2">
+                  <span className="text-sm text-muted-foreground">{shortcut.description}</span>
+                  <div className="flex items-center gap-1">
+                    {shortcut.keys.map((key, keyIndex) => (
+                      <span key={keyIndex} className="flex items-center">
+                        <kbd className="px-2 py-1 bg-muted text-xs font-mono rounded border border-border">
+                          {key}
+                        </kbd>
+                        {keyIndex < shortcut.keys.length - 1 && (
+                          <span className="mx-0.5 text-muted-foreground">+</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick actions note */}
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                Quick actions (⌘1-4) correspond to the buttons shown when the assistant is active.
+              </p>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
