@@ -7,6 +7,7 @@ import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export type AIAssistantState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking';
+export type ConnectionStatus = 'online' | 'connecting' | 'offline' | 'error';
 
 interface UserContext {
   userRole: string;
@@ -37,11 +38,13 @@ export interface ActionHistoryItem {
 
 export interface ConversationMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'error';
   content: string;
   timestamp: Date;
   toolName?: string;
   toolResult?: any;
+  errorType?: 'network' | 'session' | 'microphone' | 'tool' | 'timeout' | 'webrtc';
+  retryAction?: () => void;
 }
 
 export interface SuggestedQuestion {
@@ -51,8 +54,18 @@ export interface SuggestedQuestion {
   category: 'calendar' | 'email' | 'stats' | 'leads' | 'general';
 }
 
+export interface AIError {
+  type: 'network' | 'session' | 'microphone' | 'tool' | 'timeout' | 'webrtc';
+  message: string;
+  details?: string;
+  retryAction?: () => void;
+}
+
 const MAX_MESSAGES = 100;
 const SUGGESTION_CACHE_MS = 60000; // 60 seconds
+const SESSION_TIMEOUT_MS = 30000; // 30 seconds
+const MAX_RECONNECT_ATTEMPTS = 3;
+const MAX_SESSION_RETRIES = 3;
 
 const getCategoryIcon = (category: string): string => {
   switch (category) {
@@ -66,6 +79,7 @@ const getCategoryIcon = (category: string): string => {
 
 export function useAIAssistant() {
   const [state, setState] = useState<AIAssistantState>('idle');
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('online');
   const [transcript, setTranscript] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -75,15 +89,71 @@ export function useAIAssistant() {
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
   const [suggestedQuestions, setSuggestedQuestions] = useState<SuggestedQuestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [currentError, setCurrentError] = useState<AIError | null>(null);
+  const [isTextInputMode, setIsTextInputMode] = useState(false);
+  const [microphonePermission, setMicrophonePermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
 
   const chatRef = useRef<RealtimeChat | null>(null);
   const userContextRef = useRef<UserContext | null>(null);
   const currentAiMessageRef = useRef<string>('');
   const suggestionsCacheRef = useRef<{ questions: SuggestedQuestion[]; timestamp: number } | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const sessionRetryCountRef = useRef(0);
+  const sessionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
   
   const { role } = useUserRole();
   const { affiliate } = useCurrentAffiliate();
   const location = useLocation();
+
+  // Network status detection
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('Network status: online');
+      setConnectionStatus('online');
+      setCurrentError(null);
+    };
+    
+    const handleOffline = () => {
+      console.log('Network status: offline');
+      setConnectionStatus('offline');
+      setCurrentError({
+        type: 'network',
+        message: "You're offline. Voice assistant unavailable."
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial check
+    if (!navigator.onLine) {
+      handleOffline();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Check microphone permission
+  useEffect(() => {
+    const checkMicPermission = async () => {
+      try {
+        const permission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        setMicrophonePermission(permission.state as 'granted' | 'denied' | 'prompt');
+        
+        permission.addEventListener('change', () => {
+          setMicrophonePermission(permission.state as 'granted' | 'denied' | 'prompt');
+        });
+      } catch {
+        // Browser doesn't support permission query, assume prompt
+        setMicrophonePermission('prompt');
+      }
+    };
+    checkMicPermission();
+  }, []);
 
   // Get customer ID for customer users
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -316,10 +386,12 @@ export function useAIAssistant() {
   }, [conversationMessages, pageContext, role, getDefaultSuggestions]);
 
   const addConversationMessage = useCallback((
-    role: 'user' | 'assistant',
+    role: 'user' | 'assistant' | 'error',
     content: string,
     toolName?: string,
-    toolResult?: any
+    toolResult?: any,
+    errorType?: 'network' | 'session' | 'microphone' | 'tool' | 'timeout' | 'webrtc',
+    retryAction?: () => void
   ) => {
     const newMessage: ConversationMessage = {
       id: crypto.randomUUID(),
@@ -328,9 +400,70 @@ export function useAIAssistant() {
       timestamp: new Date(),
       toolName,
       toolResult,
+      errorType,
+      retryAction,
     };
     setConversationMessages(prev => [...prev, newMessage].slice(-MAX_MESSAGES));
   }, []);
+
+  // Log error for telemetry
+  const logError = useCallback((
+    errorType: string,
+    errorMessage: string,
+    details?: Record<string, any>
+  ) => {
+    const sessionId = chatRef.current ? 'active' : 'none';
+    
+    // Log to console (always)
+    console.error('AI Assistant Error:', {
+      type: errorType,
+      message: errorMessage,
+      details,
+      sessionId,
+      userRole: role,
+      pageRoute: location.pathname,
+      timestamp: new Date().toISOString()
+    });
+  }, [role, location.pathname]);
+
+  // Handle WebRTC reconnection
+  const attemptReconnect = useCallback(async () => {
+    if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+      setCurrentError({
+        type: 'webrtc',
+        message: 'Connection lost. Please restart the session.',
+        retryAction: () => {
+          reconnectAttemptsRef.current = 0;
+          startSession();
+        }
+      });
+      addConversationMessage(
+        'error',
+        '❌ Connection lost after multiple attempts',
+        undefined,
+        undefined,
+        'webrtc'
+      );
+      setState('idle');
+      return;
+    }
+
+    reconnectAttemptsRef.current++;
+    setConnectionStatus('connecting');
+    toast.info(`Reconnecting... (${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`);
+    
+    // Exponential backoff
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 5000);
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    try {
+      await startSession();
+      reconnectAttemptsRef.current = 0;
+      setConnectionStatus('online');
+    } catch {
+      attemptReconnect();
+    }
+  }, [addConversationMessage]);
 
   const handleMessage = useCallback((message: any) => {
     console.log('AI Assistant message:', message.type);
@@ -364,8 +497,59 @@ export function useAIAssistant() {
   }, []);
 
   const startSession = useCallback(async () => {
+    // Check network first
+    if (!navigator.onLine) {
+      setCurrentError({
+        type: 'network',
+        message: "You're offline. Voice assistant unavailable."
+      });
+      toast.error("You're offline. Please check your connection.");
+      return;
+    }
+
+    // Check microphone permission
+    if (microphonePermission === 'denied') {
+      setCurrentError({
+        type: 'microphone',
+        message: 'Microphone access denied. Enable in browser settings.'
+      });
+      addConversationMessage(
+        'error',
+        '🎤 Microphone access denied. Enable in browser settings or use text input.',
+        undefined,
+        undefined,
+        'microphone'
+      );
+      setIsTextInputMode(true);
+      return;
+    }
+
     try {
       setState('connecting');
+      setConnectionStatus('connecting');
+      setCurrentError(null);
+      
+      // Start session timeout
+      sessionTimeoutRef.current = setTimeout(() => {
+        if (state === 'connecting') {
+          logError('timeout', 'Session creation timed out');
+          setCurrentError({
+            type: 'timeout',
+            message: 'AI is unresponsive. Please try again.',
+            retryAction: () => startSession()
+          });
+          addConversationMessage(
+            'error',
+            '⏱️ Connection timed out. Try again?',
+            undefined,
+            undefined,
+            'timeout',
+            () => startSession()
+          );
+          setState('idle');
+          setConnectionStatus('error');
+        }
+      }, SESSION_TIMEOUT_MS);
       
       const userRole = role || 'user';
       const affiliateId = affiliate?.id;
@@ -402,6 +586,12 @@ export function useAIAssistant() {
         }
       });
 
+      // Clear timeout on response
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+        sessionTimeoutRef.current = null;
+      }
+
       if (error) {
         throw new Error(error.message);
       }
@@ -418,10 +608,18 @@ export function useAIAssistant() {
         handleTranscript
       );
 
+      // Handle WebRTC connection errors
+      (chat as any).onConnectionError = (err: any) => {
+        console.error('WebRTC connection error:', err);
+        logError('webrtc', 'WebRTC connection error', { error: err.message });
+        attemptReconnect();
+      };
+
       (chat as any).executeToolCall = async (callId: string, toolName: string, argsString: string) => {
         try {
           console.log(`AI Assistant executing tool: ${toolName}`);
           setActionInProgress(`${toolName.replace(/_/g, ' ')}...`);
+          lastActivityRef.current = Date.now();
           
           let args: Record<string, any>;
           try {
@@ -442,6 +640,17 @@ export function useAIAssistant() {
           if (toolError) {
             console.error('Tool execution error:', toolError);
             (chat as any).sendToolResult(callId, { error: toolError.message });
+            
+            // Add error to transcript
+            addConversationMessage(
+              'error',
+              `❌ Failed to ${toolName.replace(/_/g, ' ')}: ${toolError.message}`,
+              toolName,
+              undefined,
+              'tool'
+            );
+            
+            logError('tool', `Tool ${toolName} failed`, { error: toolError.message, args });
             toast.error(`Failed to ${toolName.replace(/_/g, ' ')}`);
             addActionToHistory(toolName, args, { error: toolError.message }, false);
           } else {
@@ -456,6 +665,16 @@ export function useAIAssistant() {
         } catch (error) {
           console.error('Error executing tool:', error);
           (chat as any).sendToolResult(callId, { error: 'Failed to execute action' });
+          
+          addConversationMessage(
+            'error',
+            `❌ Failed to execute: ${toolName.replace(/_/g, ' ')}`,
+            toolName,
+            undefined,
+            'tool'
+          );
+          
+          logError('tool', `Tool ${toolName} crashed`, { error: String(error) });
           addActionToHistory(toolName, {}, { error: 'Failed to execute action' }, false);
         } finally {
           setActionInProgress(null);
@@ -466,17 +685,64 @@ export function useAIAssistant() {
       chatRef.current = chat;
       
       setState('listening');
+      setConnectionStatus('online');
       setTranscript('');
       setAiResponse('');
+      sessionRetryCountRef.current = 0;
       
       toast.success('AI Assistant connected');
 
     } catch (error) {
       console.error('Failed to start AI assistant session:', error);
+      
+      // Clear timeout
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+        sessionTimeoutRef.current = null;
+      }
+      
+      sessionRetryCountRef.current++;
+      logError('session', 'Failed to start session', { error: String(error), retryCount: sessionRetryCountRef.current });
+      
+      if (sessionRetryCountRef.current >= MAX_SESSION_RETRIES) {
+        // Fallback to text-only mode
+        setIsTextInputMode(true);
+        setCurrentError({
+          type: 'session',
+          message: "Voice failed. Switched to text mode.",
+          retryAction: () => {
+            sessionRetryCountRef.current = 0;
+            setIsTextInputMode(false);
+            startSession();
+          }
+        });
+        addConversationMessage(
+          'error',
+          "🔇 Voice connection failed after 3 attempts. Using text input mode.",
+          undefined,
+          undefined,
+          'session',
+          () => {
+            sessionRetryCountRef.current = 0;
+            setIsTextInputMode(false);
+            startSession();
+          }
+        );
+        toast.error('Switched to text-only mode');
+      } else {
+        // Retry with exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, sessionRetryCountRef.current - 1), 5000);
+        toast.info(`Retrying in ${delay/1000}s...`);
+        
+        setTimeout(() => {
+          startSession();
+        }, delay);
+      }
+      
       setState('idle');
-      toast.error('Failed to connect to AI Assistant');
+      setConnectionStatus('error');
     }
-  }, [role, affiliate, customerId, location.pathname, pageContext, handleMessage, handleSpeakingChange, handleTranscript, addActionToHistory]);
+  }, [role, affiliate, customerId, location.pathname, pageContext, handleMessage, handleSpeakingChange, handleTranscript, addActionToHistory, microphonePermission, logError, addConversationMessage, attemptReconnect, state]);
 
   const sendTextCommand = useCallback(async (command: string, actionLabel?: string) => {
     if (!chatRef.current || state === 'idle') {
@@ -520,11 +786,18 @@ export function useAIAssistant() {
       chatRef.current.disconnect();
       chatRef.current = null;
     }
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current);
+      sessionTimeoutRef.current = null;
+    }
     setState('idle');
     setTranscript('');
     setAiResponse('');
     setActionInProgress(null);
+    setCurrentError(null);
     currentAiMessageRef.current = '';
+    reconnectAttemptsRef.current = 0;
+    sessionRetryCountRef.current = 0;
   }, []);
 
   const toggleOpen = useCallback(() => {
@@ -534,6 +807,8 @@ export function useAIAssistant() {
       setConversationMessages([]);
       setSuggestedQuestions([]);
       suggestionsCacheRef.current = null;
+      setIsTextInputMode(false);
+      setCurrentError(null);
     }
     setIsOpen(!isOpen);
   }, [isOpen, endSession]);
@@ -545,6 +820,18 @@ export function useAIAssistant() {
   const clearConversation = useCallback(() => {
     setConversationMessages([]);
   }, []);
+
+  const clearError = useCallback(() => {
+    setCurrentError(null);
+  }, []);
+
+  const retrySession = useCallback(() => {
+    sessionRetryCountRef.current = 0;
+    reconnectAttemptsRef.current = 0;
+    setIsTextInputMode(false);
+    setCurrentError(null);
+    startSession();
+  }, [startSession]);
 
   // Generate suggestions when conversation changes
   useEffect(() => {
@@ -566,11 +853,15 @@ export function useAIAssistant() {
       if (chatRef.current) {
         chatRef.current.disconnect();
       }
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+      }
     };
   }, []);
 
   return {
     state,
+    connectionStatus,
     transcript,
     aiResponse,
     isOpen,
@@ -580,12 +871,17 @@ export function useAIAssistant() {
     conversationMessages,
     suggestedQuestions,
     suggestionsLoading,
+    currentError,
+    isTextInputMode,
+    microphonePermission,
     startSession,
     endSession,
     toggleOpen,
     clearActionHistory,
     clearConversation,
     sendTextCommand,
-    generateSuggestions
+    generateSuggestions,
+    clearError,
+    retrySession
   };
 }
