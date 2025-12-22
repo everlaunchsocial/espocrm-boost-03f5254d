@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Lead, EmailRecipient } from '@/types/crm';
 import { useActivities, useTasks, useNotes, useUpdateLead, useConvertLeadToContact, useAddActivity } from '@/hooks/useCRMData';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useAutoTagLead } from '@/hooks/useAutoTagLead';
 import {
   Sheet,
   SheetContent,
@@ -103,6 +104,14 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
   const convertLeadToContact = useConvertLeadToContact();
   const { isEnabled } = useFeatureFlags();
   const phase2Enabled = isEnabled('aiCrmPhase2');
+  const { autoTag } = useAutoTagLead();
+
+  // Auto-tag lead when opened (Phase 2)
+  useEffect(() => {
+    if (phase2Enabled && lead?.id && open) {
+      autoTag(lead.id);
+    }
+  }, [phase2Enabled, lead?.id, open, autoTag]);
 
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [activityType, setActivityType] = useState<'call' | 'email' | 'meeting' | 'note'>('call');
