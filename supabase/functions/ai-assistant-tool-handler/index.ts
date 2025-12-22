@@ -41,6 +41,9 @@ serve(async (req) => {
       case 'get_leads':
         result = await handleGetLeads(supabase, args, userContext);
         break;
+      case 'create_lead':
+        result = await handleCreateLead(supabase, args, userContext);
+        break;
       case 'create_task':
         result = await handleCreateTask(supabase, args, userContext);
         break;
@@ -329,24 +332,36 @@ async function handleGetLeads(supabase: any, args: any, userContext: any) {
       };
     }
 
-    const formattedLeads = filteredLeads.map((l: any) => ({
+    const formattedLeads = filteredLeads.map((l: any, index: number) => ({
       id: l.id,
+      index: index + 1,
       name: l.company || `${l.first_name} ${l.last_name}`.trim() || 'Unknown',
       company: l.company,
+      contact_name: `${l.first_name || ''} ${l.last_name || ''}`.trim() || null,
       first_name: l.first_name,
       last_name: l.last_name,
       email: l.email,
       phone: l.phone,
       status: l.status,
-      created: new Date(l.created_at).toLocaleDateString()
+      created: new Date(l.created_at).toLocaleDateString(),
+      // For disambiguation: "1. Company Name (Contact: John Smith, Status: New Lead)"
+      display: `${index + 1}. ${l.company || `${l.first_name} ${l.last_name}`.trim() || 'Unknown'}${l.first_name || l.last_name ? ` (Contact: ${l.first_name || ''} ${l.last_name || ''}`.trim() + ')' : ''} - Status: ${l.status || 'unknown'}`
     }));
 
     console.log('Returning formatted leads:', formattedLeads.length);
 
+    // If multiple leads found, include disambiguation text
+    const disambiguationNote = filteredLeads.length > 1 
+      ? `Multiple leads found. Please specify which one:\n${formattedLeads.map((l: any) => l.display).join('\n')}`
+      : null;
+
     return {
       success: true,
-      message: `Found ${filteredLeads.length} lead(s)`,
-      leads: formattedLeads
+      message: filteredLeads.length === 1 
+        ? `Found lead: ${formattedLeads[0].name}`
+        : `Found ${filteredLeads.length} lead(s)${disambiguationNote ? `. ${disambiguationNote}` : ''}`,
+      leads: formattedLeads,
+      disambiguation: disambiguationNote
     };
 
   } catch (error) {
@@ -540,5 +555,85 @@ async function handleGetDemoStats(supabase: any, args: any, userContext: any) {
   } catch (error) {
     console.error('Error in handleGetDemoStats:', error);
     return { success: false, message: 'Failed to fetch demo statistics' };
+  }
+}
+
+async function handleCreateLead(supabase: any, args: any, userContext: any) {
+  const { business_name, company, email, phone, first_name, last_name, notes, source } = args;
+
+  console.log('=== handleCreateLead Debug ===');
+  console.log('Args:', JSON.stringify(args, null, 2));
+  console.log('User context:', JSON.stringify(userContext, null, 2));
+
+  // Determine business/company name
+  const companyName = company || business_name;
+  
+  if (!companyName && !first_name && !last_name) {
+    return { 
+      success: false, 
+      message: 'Please provide a business name or contact name for the lead.' 
+    };
+  }
+
+  try {
+    const leadData: any = {
+      company: companyName || null,
+      first_name: first_name || '',
+      last_name: last_name || '',
+      email: email || null,
+      phone: phone || null,
+      status: 'new_lead',
+      pipeline_status: 'new',
+      source: source || 'ai_assistant',
+      notes: notes || null,
+    };
+
+    // Add affiliate_id if available
+    if (userContext?.affiliateId) {
+      leadData.affiliate_id = userContext.affiliateId;
+    }
+
+    console.log('Inserting lead data:', leadData);
+
+    const { data: lead, error } = await supabase
+      .from('leads')
+      .insert(leadData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating lead:', error);
+      return { 
+        success: false, 
+        message: `Failed to create lead: ${error.message}`,
+        debug: { error: error.message, leadData }
+      };
+    }
+
+    console.log('Lead created successfully:', lead);
+
+    const displayName = companyName || `${first_name || ''} ${last_name || ''}`.trim() || 'Unknown';
+
+    return {
+      success: true,
+      message: `Lead created: "${displayName}"${email ? ` (${email})` : ''}`,
+      lead_id: lead.id,
+      lead: {
+        id: lead.id,
+        name: displayName,
+        company: lead.company,
+        email: lead.email,
+        phone: lead.phone,
+        status: lead.status
+      }
+    };
+
+  } catch (error) {
+    console.error('Error in handleCreateLead:', error);
+    return { 
+      success: false, 
+      message: `Failed to create lead: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      debug: { error: String(error) }
+    };
   }
 }

@@ -102,6 +102,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     startSession,
     endSession,
     toggleOpen,
+    closeWidget,
     sendTextCommand,
     clearConversation,
     clearError,
@@ -367,8 +368,9 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
-              onClick={toggleOpen}
+              className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
+              onClick={closeWidget}
+              title="Close widget"
             >
               <X className="h-4 w-4" />
             </Button>
