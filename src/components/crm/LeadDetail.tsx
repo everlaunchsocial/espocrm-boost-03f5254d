@@ -37,6 +37,7 @@ import { LeadTeamNotes } from './LeadTeamNotes';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
 import { LeadSentimentTags } from './LeadSentimentTags';
+import { DemoEngagementHeatmap } from './DemoEngagementHeatmap';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -460,6 +461,16 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
           {phase2Enabled && (
             <div className="py-4 border-b border-border">
               <LeadTeamNotes leadId={lead.id} />
+            </div>
+          )}
+
+          {/* Demo Engagement Heatmap - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <DemoEngagementHeatmap 
+                leadId={lead.id} 
+                onSendFollowUp={() => setEmailComposerOpen(true)} 
+              />
             </div>
           )}
 
