@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useLeadTimeline, LeadTimelineEvent } from '@/hooks/useLeadTimeline';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useTimelineFilters } from '@/hooks/useTimelineFilters';
 import { formatDistanceToNow, isToday, isYesterday, format, parseISO, startOfDay } from 'date-fns';
 import { 
   MessageSquare, 
@@ -22,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { TimelineSummaryCard } from './TimelineSummaryCard';
+import { TimelineFilters } from './TimelineFilters';
 
 interface LeadTimelinePanelProps {
   leadId: string;
@@ -199,12 +201,25 @@ export function LeadTimelinePanel({ leadId, leadName, onSendFollowUp }: LeadTime
   const phase2Enabled = isEnabled('aiCrmPhase2');
   
   const { data: events = [], isLoading, error } = useLeadTimeline(leadId);
+  
+  const {
+    filters,
+    toggleEventTypeGroup,
+    setDateRange,
+    setCustomDateRange,
+    isGroupSelected,
+    filterEvents,
+    resetFilters,
+  } = useTimelineFilters();
+
+  // Filter events based on current filters
+  const filteredEvents = useMemo(() => filterEvents(events), [events, filterEvents]);
 
   // Group events by day
   const groupedEvents = useMemo(() => {
     const groups: Map<string, LeadTimelineEvent[]> = new Map();
     
-    events.forEach((event) => {
+    filteredEvents.forEach((event) => {
       const eventDate = parseISO(event.event_at);
       const dayKey = startOfDay(eventDate).toISOString();
       
@@ -219,7 +234,7 @@ export function LeadTimelinePanel({ leadId, leadName, onSendFollowUp }: LeadTime
       label: formatGroupLabel(parseISO(dayKey)),
       events: dayEvents,
     }));
-  }, [events]);
+  }, [filteredEvents]);
 
   if (!phase2Enabled) {
     return null;
@@ -241,35 +256,45 @@ export function LeadTimelinePanel({ leadId, leadName, onSendFollowUp }: LeadTime
     );
   }
 
-  if (events.length === 0) {
-    return (
-      <div className="text-center py-8 text-sm text-muted-foreground">
-        No activity yet
-      </div>
-    );
-  }
-
   return (
     <div>
       {/* AI Timeline Summary */}
       <TimelineSummaryCard leadId={leadId} leadName={leadName} />
       
-      <ScrollArea className="h-[400px] pr-4">
-        <div className="space-y-4">
-        {groupedEvents.map((group) => (
-          <div key={group.label}>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 sticky top-0 bg-background py-1">
-              {group.label}
-            </h4>
-            <div className="space-y-0">
-              {group.events.map((event) => (
-                <TimelineItem key={event.id} event={event} onSendFollowUp={onSendFollowUp} />
-              ))}
-            </div>
+      {/* Timeline Filters */}
+      <TimelineFilters
+        filters={filters}
+        toggleEventTypeGroup={toggleEventTypeGroup}
+        setDateRange={setDateRange}
+        setCustomDateRange={setCustomDateRange}
+        isGroupSelected={isGroupSelected}
+        resetFilters={resetFilters}
+      />
+      
+      {filteredEvents.length === 0 ? (
+        <div className="text-center py-8 text-sm text-muted-foreground">
+          {events.length === 0 
+            ? "No activity yet" 
+            : "No timeline events match your current filters."}
+        </div>
+      ) : (
+        <ScrollArea className="h-[400px] pr-4">
+          <div className="space-y-4">
+            {groupedEvents.map((group) => (
+              <div key={group.label}>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 sticky top-0 bg-background py-1">
+                  {group.label}
+                </h4>
+                <div className="space-y-0">
+                  {group.events.map((event) => (
+                    <TimelineItem key={event.id} event={event} onSendFollowUp={onSendFollowUp} />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </ScrollArea>
+        </ScrollArea>
+      )}
     </div>
   );
 }
