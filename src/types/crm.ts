@@ -138,7 +138,7 @@ export interface Task {
 
 export interface Activity {
   id: string;
-  type: 'call' | 'email' | 'meeting' | 'note' | 'task' | 'status-change';
+  type: 'call' | 'email' | 'meeting' | 'note' | 'task' | 'status-change' | 'followup';
   subject: string;
   description?: string;
   relatedTo?: {

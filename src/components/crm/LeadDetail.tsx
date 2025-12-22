@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Lead, EmailRecipient } from '@/types/crm';
-import { useActivities, useTasks, useNotes, useUpdateLead, useConvertLeadToContact } from '@/hooks/useCRMData';
+import { useActivities, useTasks, useNotes, useUpdateLead, useConvertLeadToContact, useAddActivity } from '@/hooks/useCRMData';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import {
   Sheet,
@@ -8,6 +8,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { ActivityTimeline } from './ActivityTimeline';
@@ -92,6 +102,40 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
+  const [followUpConfirmOpen, setFollowUpConfirmOpen] = useState(false);
+  const [pendingFollowUpDemoId, setPendingFollowUpDemoId] = useState<string | null>(null);
+
+  const addActivity = useAddActivity();
+
+  const handleSendFollowUp = (demoId: string) => {
+    setPendingFollowUpDemoId(demoId);
+    setFollowUpConfirmOpen(true);
+  };
+
+  const confirmFollowUp = () => {
+    if (!lead) return;
+    
+    addActivity.mutate({
+      type: 'followup',
+      subject: 'Follow-up sent',
+      description: 'Follow-up sent after demo was watched',
+      relatedTo: {
+        type: 'lead',
+        id: lead.id,
+        name: `${lead.firstName} ${lead.lastName}`,
+      },
+      isSystemGenerated: false,
+    }, {
+      onSuccess: () => {
+        toast.success('Follow-up logged');
+        setFollowUpConfirmOpen(false);
+        setPendingFollowUpDemoId(null);
+      },
+      onError: () => {
+        toast.error('Failed to log follow-up');
+      }
+    });
+  };
 
   if (!lead) return null;
 
@@ -407,7 +451,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
               {phase2Enabled ? (
                 <LeadTimelinePanel 
                   leadId={lead.id} 
-                  onSendFollowUp={() => setEmailComposerOpen(true)}
+                  onSendFollowUp={handleSendFollowUp}
                 />
               ) : (
                 leadActivities.length > 0 ? (
@@ -480,6 +524,27 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
         defaultBusinessName={lead.company || `${lead.firstName} ${lead.lastName}`}
         defaultWebsiteUrl={lead.website || ''}
       />
+
+      {/* Follow-up Confirmation Modal */}
+      <AlertDialog open={followUpConfirmOpen} onOpenChange={setFollowUpConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send Follow-Up?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will log a follow-up and notify the lead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmFollowUp}
+              disabled={addActivity.isPending}
+            >
+              {addActivity.isPending ? 'Sending...' : 'Send Follow-Up'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
