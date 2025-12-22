@@ -33,6 +33,7 @@ import { LeadTimelinePanel } from './LeadTimelinePanel';
 import { SuggestedContactWindows } from './SuggestedContactWindows';
 import { SuggestedFirstMessage } from './SuggestedFirstMessage';
 import { MessagePerformanceInsights } from './MessagePerformanceInsights';
+import { PreCallSummaryPanel } from './PreCallSummaryPanel';
 import { LeadPresenceIndicator } from './LeadPresenceIndicator';
 import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { LeadTagsEditor } from './LeadTagsEditor';
@@ -474,6 +475,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             <div className="py-4 border-b border-border space-y-3">
               <p className="text-sm font-medium text-muted-foreground">Lead Notes</p>
               <p className="text-sm whitespace-pre-wrap">{lead.notes}</p>
+            </div>
+          )}
+
+          {/* Pre-Call Summary - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <PreCallSummaryPanel lead={lead} />
             </div>
           )}
 
