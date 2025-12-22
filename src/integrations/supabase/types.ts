@@ -525,6 +525,95 @@ export type Database = {
           },
         ]
       }
+      ai_assistant_actions: {
+        Row: {
+          action_type: string
+          ai_response: string | null
+          error_message: string | null
+          executed_at: string
+          id: string
+          parameters: Json | null
+          response_time_ms: number | null
+          session_id: string
+          success: boolean
+          user_transcript: string | null
+        }
+        Insert: {
+          action_type: string
+          ai_response?: string | null
+          error_message?: string | null
+          executed_at?: string
+          id?: string
+          parameters?: Json | null
+          response_time_ms?: number | null
+          session_id: string
+          success?: boolean
+          user_transcript?: string | null
+        }
+        Update: {
+          action_type?: string
+          ai_response?: string | null
+          error_message?: string | null
+          executed_at?: string
+          id?: string
+          parameters?: Json | null
+          response_time_ms?: number | null
+          session_id?: string
+          success?: boolean
+          user_transcript?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistant_actions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistant_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_assistant_sessions: {
+        Row: {
+          actions_count: number
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          errors_count: number
+          id: string
+          page_route: string | null
+          started_at: string
+          user_id: string
+          user_role: string | null
+          voice_settings: Json | null
+        }
+        Insert: {
+          actions_count?: number
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          errors_count?: number
+          id?: string
+          page_route?: string | null
+          started_at?: string
+          user_id: string
+          user_role?: string | null
+          voice_settings?: Json | null
+        }
+        Update: {
+          actions_count?: number
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          errors_count?: number
+          id?: string
+          page_route?: string | null
+          started_at?: string
+          user_id?: string
+          user_role?: string | null
+          voice_settings?: Json | null
+        }
+        Relationships: []
+      }
       backlog_assignees: {
         Row: {
           assigned_at: string

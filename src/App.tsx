@@ -90,6 +90,7 @@ import UploadBackground from "./pages/admin/UploadBackground";
 import RegressionTests from "./pages/admin/RegressionTests";
 import AdminEvertrak from "./pages/admin/AdminEvertrak";
 import SuggestionLog from "./pages/admin/SuggestionLog";
+import AIAssistantAnalytics from "./pages/admin/AIAssistantAnalytics";
 
 
 // Customer Portal pages
@@ -258,6 +259,7 @@ const App = () => (
             <Route path="/admin/usage" element={<UsageDashboard />} />
             <Route path="/admin/operations" element={<Operations />} />
             <Route path="/admin/suggestion-log" element={<SuggestionLog />} />
+            <Route path="/admin/ai-analytics" element={<AIAssistantAnalytics />} />
             <Route path="/admin/upload-background" element={<UploadBackground />} />
             <Route path="/admin/affiliate-videos" element={<AdminAffiliateVideos />} />
             <Route path="/admin/affiliate-videos/create-profile" element={<AdminCreateAvatarProfile />} />

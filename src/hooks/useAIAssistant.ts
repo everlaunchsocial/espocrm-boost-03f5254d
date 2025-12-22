@@ -5,6 +5,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAIAssistantTracking } from '@/hooks/useAIAssistantTracking';
 
 export type AIAssistantState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking';
 export type ConnectionStatus = 'online' | 'connecting' | 'offline' | 'error';
@@ -101,10 +102,18 @@ export function useAIAssistant() {
   const sessionRetryCountRef = useRef(0);
   const sessionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
-  
   const { role } = useUserRole();
   const { affiliate } = useCurrentAffiliate();
   const location = useLocation();
+  const { 
+    startSessionTracking, 
+    endSessionTracking, 
+    trackActionStart, 
+    trackAction 
+  } = useAIAssistantTracking();
+  
+  const actionsCountRef = useRef(0);
+  const errorsCountRef = useRef(0);
 
   // Network status detection
   useEffect(() => {
@@ -620,6 +629,7 @@ export function useAIAssistant() {
           console.log(`AI Assistant executing tool: ${toolName}`);
           setActionInProgress(`${toolName.replace(/_/g, ' ')}...`);
           lastActivityRef.current = Date.now();
+          trackActionStart();
           
           let args: Record<string, any>;
           try {
@@ -653,10 +663,19 @@ export function useAIAssistant() {
             logError('tool', `Tool ${toolName} failed`, { error: toolError.message, args });
             toast.error(`Failed to ${toolName.replace(/_/g, ' ')}`);
             addActionToHistory(toolName, args, { error: toolError.message }, false);
+            
+            // Track failed action
+            errorsCountRef.current++;
+            actionsCountRef.current++;
+            trackAction(toolName, args, false, toolError.message);
           } else {
             console.log('Tool result:', result);
             (chat as any).sendToolResult(callId, result.result);
             addActionToHistory(toolName, args, result.result, result.result?.success !== false);
+            
+            // Track successful action
+            actionsCountRef.current++;
+            trackAction(toolName, args, result.result?.success !== false);
             
             if (result.result?.success) {
               toast.success(result.result.message);
@@ -676,6 +695,11 @@ export function useAIAssistant() {
           
           logError('tool', `Tool ${toolName} crashed`, { error: String(error) });
           addActionToHistory(toolName, {}, { error: 'Failed to execute action' }, false);
+          
+          // Track crashed action
+          errorsCountRef.current++;
+          actionsCountRef.current++;
+          trackAction(toolName, {}, false, String(error));
         } finally {
           setActionInProgress(null);
         }
@@ -689,6 +713,11 @@ export function useAIAssistant() {
       setTranscript('');
       setAiResponse('');
       sessionRetryCountRef.current = 0;
+      actionsCountRef.current = 0;
+      errorsCountRef.current = 0;
+      
+      // Start analytics tracking
+      startSessionTracking(userRole, currentPage, voiceSettings);
       
       toast.success('AI Assistant connected');
 
@@ -782,6 +811,9 @@ export function useAIAssistant() {
   }, [state, addConversationMessage]);
 
   const endSession = useCallback(() => {
+    // End analytics tracking before cleanup
+    endSessionTracking(actionsCountRef.current, errorsCountRef.current);
+    
     if (chatRef.current) {
       chatRef.current.disconnect();
       chatRef.current = null;
@@ -798,7 +830,9 @@ export function useAIAssistant() {
     currentAiMessageRef.current = '';
     reconnectAttemptsRef.current = 0;
     sessionRetryCountRef.current = 0;
-  }, []);
+    actionsCountRef.current = 0;
+    errorsCountRef.current = 0;
+  }, [endSessionTracking]);
 
   const toggleOpen = useCallback(() => {
     if (isOpen) {
