@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export type AIAssistantState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking';
@@ -24,6 +24,17 @@ interface PageContext {
   entityEmail?: string | null;
 }
 
+export interface ActionHistoryItem {
+  id: string;
+  toolName: string;
+  summary: string;
+  timestamp: Date;
+  success: boolean;
+  parameters?: Record<string, any>;
+  result?: any;
+  aiResponse?: string;
+}
+
 export function useAIAssistant() {
   const [state, setState] = useState<AIAssistantState>('idle');
   const [transcript, setTranscript] = useState('');
@@ -31,6 +42,7 @@ export function useAIAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [pageContext, setPageContext] = useState<PageContext | null>(null);
+  const [actionHistory, setActionHistory] = useState<ActionHistoryItem[]>([]);
 
   const chatRef = useRef<RealtimeChat | null>(null);
   const userContextRef = useRef<UserContext | null>(null);
@@ -77,7 +89,6 @@ export function useAIAssistant() {
         context.entityType = 'lead';
         context.entityId = leadId;
 
-        // Fetch lead details
         const { data: lead } = await supabase
           .from('leads')
           .select('first_name, last_name, email, pipeline_status, status')
@@ -94,7 +105,6 @@ export function useAIAssistant() {
         context.entityType = 'demo';
         context.entityId = demoId;
 
-        // Fetch demo details
         const { data: demo } = await supabase
           .from('demos')
           .select('business_name, status, website_url')
@@ -110,7 +120,6 @@ export function useAIAssistant() {
         context.entityType = 'contact';
         context.entityId = contactId;
 
-        // Fetch contact details
         const { data: contact } = await supabase
           .from('contacts')
           .select('first_name, last_name, email, status')
@@ -130,10 +139,40 @@ export function useAIAssistant() {
     detectPageContext();
   }, [location.pathname]);
 
+  const addActionToHistory = useCallback((
+    toolName: string,
+    parameters: Record<string, any>,
+    result: any,
+    success: boolean
+  ) => {
+    const summaryMap: Record<string, (params: any, result: any) => string> = {
+      book_demo: (p) => `Booked demo for ${p.business_name || 'business'}`,
+      send_email: (p) => `Sent email to ${p.recipient_name || p.recipient_email || 'contact'}`,
+      get_appointments: (p) => `Checked ${p.date_range || 'upcoming'} appointments`,
+      get_leads: (p) => p.search_term ? `Searched leads: "${p.search_term}"` : 'Listed leads',
+      create_task: (p) => `Created task: ${p.title || 'New task'}`,
+      get_follow_ups: (p) => `Checked ${p.date_range || 'due'} follow-ups`,
+      get_demo_stats: (p) => `Got ${p.time_period || 'recent'} demo stats`,
+    };
+
+    const summary = summaryMap[toolName]?.(parameters, result) || `Executed ${toolName.replace(/_/g, ' ')}`;
+
+    const newAction: ActionHistoryItem = {
+      id: crypto.randomUUID(),
+      toolName,
+      summary,
+      timestamp: new Date(),
+      success,
+      parameters,
+      result,
+    };
+
+    setActionHistory(prev => [newAction, ...prev].slice(0, 10));
+  }, []);
+
   const handleMessage = useCallback((message: any) => {
     console.log('AI Assistant message:', message.type);
     
-    // Handle tool calls
     if (message.type === 'response.function_call_arguments.done') {
       setActionInProgress(`Executing: ${message.name}`);
     }
@@ -148,11 +187,7 @@ export function useAIAssistant() {
   }, []);
 
   const handleTranscript = useCallback((text: string, isFinal: boolean) => {
-    if (isFinal) {
-      setAiResponse(prev => prev + text);
-    } else {
-      setAiResponse(prev => prev + text);
-    }
+    setAiResponse(prev => prev + text);
   }, []);
 
   const startSession = useCallback(async () => {
@@ -165,7 +200,6 @@ export function useAIAssistant() {
 
       console.log('Starting AI assistant session:', { userRole, affiliateId, customerId, currentPage, pageContext });
 
-      // Get ephemeral token from edge function
       const { data, error } = await supabase.functions.invoke('ai-assistant-session', {
         body: {
           userRole,
@@ -184,31 +218,26 @@ export function useAIAssistant() {
         throw new Error('No ephemeral key received');
       }
 
-      // Store user context for tool handler
       userContextRef.current = data.userContext;
 
-      // Initialize RealtimeChat with tool handler
       const chat = new RealtimeChat(
         handleMessage,
         handleSpeakingChange,
         handleTranscript
       );
 
-      // Override tool execution to use our AI assistant tool handler
-      const originalExecuteTool = (chat as any).executeToolCall.bind(chat);
       (chat as any).executeToolCall = async (callId: string, toolName: string, argsString: string) => {
         try {
           console.log(`AI Assistant executing tool: ${toolName}`);
-          setActionInProgress(`${toolName.replace('_', ' ')}...`);
+          setActionInProgress(`${toolName.replace(/_/g, ' ')}...`);
           
-          let args: any;
+          let args: Record<string, any>;
           try {
             args = JSON.parse(argsString);
           } catch {
             args = {};
           }
 
-          // Call our AI assistant tool handler with page context
           const { data: result, error: toolError } = await supabase.functions.invoke('ai-assistant-tool-handler', {
             body: {
               tool_name: toolName,
@@ -221,12 +250,13 @@ export function useAIAssistant() {
           if (toolError) {
             console.error('Tool execution error:', toolError);
             (chat as any).sendToolResult(callId, { error: toolError.message });
-            toast.error(`Failed to ${toolName.replace('_', ' ')}`);
+            toast.error(`Failed to ${toolName.replace(/_/g, ' ')}`);
+            addActionToHistory(toolName, args, { error: toolError.message }, false);
           } else {
             console.log('Tool result:', result);
             (chat as any).sendToolResult(callId, result.result);
+            addActionToHistory(toolName, args, result.result, result.result?.success !== false);
             
-            // Show success toast for actions
             if (result.result?.success) {
               toast.success(result.result.message);
             }
@@ -234,6 +264,7 @@ export function useAIAssistant() {
         } catch (error) {
           console.error('Error executing tool:', error);
           (chat as any).sendToolResult(callId, { error: 'Failed to execute action' });
+          addActionToHistory(toolName, {}, { error: 'Failed to execute action' }, false);
         } finally {
           setActionInProgress(null);
         }
@@ -253,7 +284,7 @@ export function useAIAssistant() {
       setState('idle');
       toast.error('Failed to connect to AI Assistant');
     }
-  }, [role, affiliate, customerId, location.pathname, pageContext, handleMessage, handleSpeakingChange, handleTranscript]);
+  }, [role, affiliate, customerId, location.pathname, pageContext, handleMessage, handleSpeakingChange, handleTranscript, addActionToHistory]);
 
   const endSession = useCallback(() => {
     if (chatRef.current) {
@@ -269,11 +300,15 @@ export function useAIAssistant() {
   const toggleOpen = useCallback(() => {
     if (isOpen) {
       endSession();
+      setActionHistory([]);
     }
     setIsOpen(!isOpen);
   }, [isOpen, endSession]);
 
-  // Cleanup on unmount
+  const clearActionHistory = useCallback(() => {
+    setActionHistory([]);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (chatRef.current) {
@@ -289,8 +324,10 @@ export function useAIAssistant() {
     isOpen,
     actionInProgress,
     pageContext,
+    actionHistory,
     startSession,
     endSession,
-    toggleOpen
+    toggleOpen,
+    clearActionHistory
   };
 }
