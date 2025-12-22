@@ -31,6 +31,7 @@ import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { LeadTimelinePanel } from './LeadTimelinePanel';
 import { SuggestedContactWindows } from './SuggestedContactWindows';
 import { LeadPresenceIndicator } from './LeadPresenceIndicator';
+import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -202,7 +203,10 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   <SheetTitle className="text-xl">
                     {lead.firstName} {lead.lastName}
                   </SheetTitle>
-                  <LeadPresenceIndicator leadId={lead.id} />
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <LeadPresenceIndicator leadId={lead.id} />
+                    <LeadViewsIndicator leadId={lead.id} />
+                  </div>
                   <p className="text-muted-foreground">{lead.title || 'No title'}</p>
                   {lead.company && (
                     <p className="text-sm text-muted-foreground mt-1">{lead.company}</p>
