@@ -2817,6 +2817,57 @@ export type Database = {
           },
         ]
       }
+      lead_sequences: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          current_step: number
+          id: string
+          lead_id: string
+          scheduled_start_at: string
+          sequence_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          lead_id: string
+          scheduled_start_at: string
+          sequence_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          lead_id?: string
+          scheduled_start_at?: string
+          sequence_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_sequences_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_sequences_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_tags: {
         Row: {
           created_at: string
@@ -3522,6 +3573,42 @@ export type Database = {
           id?: string
           is_default?: boolean
           name?: string
+        }
+        Relationships: []
+      }
+      sequences: {
+        Row: {
+          channel: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          steps_count: number
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          steps_count?: number
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          steps_count?: number
+          updated_at?: string
         }
         Relationships: []
       }
