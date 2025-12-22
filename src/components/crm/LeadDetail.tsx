@@ -500,7 +500,8 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             <TabsContent value="activity" className="mt-4">
               {phase2Enabled ? (
                 <LeadTimelinePanel 
-                  leadId={lead.id} 
+                  leadId={lead.id}
+                  leadName={`${lead.firstName} ${lead.lastName}`}
                   onSendFollowUp={handleSendFollowUp}
                 />
               ) : (

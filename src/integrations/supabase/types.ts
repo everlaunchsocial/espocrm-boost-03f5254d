@@ -2778,6 +2778,41 @@ export type Database = {
           },
         ]
       }
+      lead_timeline_summaries: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          lead_id: string
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          lead_id: string
+          summary: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          lead_id?: string
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_timeline_summaries_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_views: {
         Row: {
           id: string
