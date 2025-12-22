@@ -543,6 +543,31 @@ export function FollowUpSuggestions() {
                         <p className="text-sm text-muted-foreground mt-1">
                           {suggestion.suggestionText}
                         </p>
+                        
+                        {/* Inline feedback nudge for unrated suggestions */}
+                        {showRating && !resolved && !hasFeedback(suggestion.id) && (
+                          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+                            <span className="text-xs text-muted-foreground">Was this helpful?</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 text-xs gap-1"
+                              onClick={(e) => handleFeedback(e, suggestion, 'helpful')}
+                            >
+                              <ThumbsUp className="h-3 w-3" />
+                              Yes
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 text-xs gap-1"
+                              onClick={(e) => handleFeedback(e, suggestion, 'not_helpful')}
+                            >
+                              <ThumbsDown className="h-3 w-3" />
+                              No
+                            </Button>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {resolved ? (
