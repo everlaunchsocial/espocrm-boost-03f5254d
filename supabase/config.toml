@@ -212,3 +212,6 @@ verify_jwt = true
 
 [functions.track-email-click]
 verify_jwt = false
+
+[functions.generate-first-message]
+verify_jwt = true
