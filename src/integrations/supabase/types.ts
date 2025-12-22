@@ -3051,6 +3051,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           pipeline_status: string
+          priority: boolean
           service_category: string | null
           source: string
           state: string | null
@@ -3081,6 +3082,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           pipeline_status?: string
+          priority?: boolean
           service_category?: string | null
           source?: string
           state?: string | null
@@ -3111,6 +3113,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           pipeline_status?: string
+          priority?: boolean
           service_category?: string | null
           source?: string
           state?: string | null

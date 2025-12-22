@@ -98,6 +98,7 @@ export interface Lead {
   // Flags
   hasWebsite?: boolean;
   doneForYou?: boolean; // True = HQ handles follow-ups
+  priority?: boolean; // True = marked as priority lead
   notes?: string;
   // Import tracking
   importBatchId?: string;
