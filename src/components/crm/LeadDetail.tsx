@@ -32,6 +32,7 @@ import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { LeadTimelinePanel } from './LeadTimelinePanel';
 import { SuggestedContactWindows } from './SuggestedContactWindows';
 import { SuggestedFirstMessage } from './SuggestedFirstMessage';
+import { MessagePerformanceInsights } from './MessagePerformanceInsights';
 import { LeadPresenceIndicator } from './LeadPresenceIndicator';
 import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { LeadTagsEditor } from './LeadTagsEditor';
@@ -497,6 +498,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   setEmailComposerOpen(true);
                 }}
               />
+            </div>
+          )}
+
+          {/* Message Performance Insights - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <MessagePerformanceInsights leadId={lead.id} />
             </div>
           )}
 
