@@ -227,3 +227,6 @@ verify_jwt = true
 
 [functions.ai-assistant-suggestions]
 verify_jwt = true
+
+[functions.ai-assistant-preview-voice]
+verify_jwt = true

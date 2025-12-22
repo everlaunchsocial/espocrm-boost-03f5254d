@@ -30,9 +30,20 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get request body
-    const { userRole, affiliateId, customerId, currentPage, pageContext } = await req.json();
+    const { userRole, affiliateId, customerId, currentPage, pageContext, voiceSettings } = await req.json();
 
-    console.log('AI Assistant session request:', { userRole, affiliateId, customerId, currentPage, pageContext });
+    console.log('AI Assistant session request:', { userRole, affiliateId, customerId, currentPage, pageContext, voiceSettings });
+
+    // Voice settings with defaults
+    const voice = voiceSettings?.voice || 'alloy';
+    const voiceSensitivity = voiceSettings?.voiceSensitivity || 'medium';
+    
+    // Map sensitivity to VAD threshold (higher threshold = less sensitive)
+    const vadThresholds: Record<string, number> = {
+      low: 0.7,
+      medium: 0.5,
+      high: 0.3,
+    };
 
     // Fetch user context based on role
     let userContext = '';
@@ -457,7 +468,7 @@ Start with: "Hey ${userName}, what can I do for you?"`;
       },
       body: JSON.stringify({
         model: "gpt-4o-realtime-preview-2024-12-17",
-        voice: "alloy",
+        voice: voice,
         instructions: systemPrompt,
         input_audio_format: "pcm16",
         output_audio_format: "pcm16",
@@ -466,9 +477,9 @@ Start with: "Hey ${userName}, what can I do for you?"`;
         },
         turn_detection: {
           type: "server_vad",
-          threshold: 0.5,
+          threshold: vadThresholds[voiceSensitivity] || 0.5,
           prefix_padding_ms: 300,
-          silence_duration_ms: 800
+          silence_duration_ms: voiceSensitivity === 'high' ? 600 : voiceSensitivity === 'low' ? 1000 : 800
         },
         tools: tools,
         tool_choice: "auto"

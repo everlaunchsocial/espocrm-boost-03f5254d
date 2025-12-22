@@ -371,7 +371,25 @@ export function useAIAssistant() {
       const affiliateId = affiliate?.id;
       const currentPage = location.pathname;
 
-      console.log('Starting AI assistant session:', { userRole, affiliateId, customerId, currentPage, pageContext });
+      // Fetch voice settings
+      let voiceSettings = { voice: 'alloy', voiceSensitivity: 'medium' };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: prefs } = await supabase
+          .from('user_preferences')
+          .select('ai_assistant_voice, ai_voice_sensitivity')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (prefs) {
+          voiceSettings = {
+            voice: prefs.ai_assistant_voice || 'alloy',
+            voiceSensitivity: prefs.ai_voice_sensitivity || 'medium'
+          };
+        }
+      }
+
+      console.log('Starting AI assistant session:', { userRole, affiliateId, customerId, currentPage, pageContext, voiceSettings });
 
       const { data, error } = await supabase.functions.invoke('ai-assistant-session', {
         body: {
@@ -379,7 +397,8 @@ export function useAIAssistant() {
           affiliateId,
           customerId,
           currentPage,
-          pageContext
+          pageContext,
+          voiceSettings
         }
       });
 

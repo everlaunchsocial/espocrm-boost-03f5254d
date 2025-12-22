@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard, Copy, Trash2, Download, MessageSquare, User, Bot, Wrench, Sparkles } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard, Copy, Trash2, Download, MessageSquare, User, Bot, Wrench, Sparkles, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -12,6 +12,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
+import { AIAssistantVoiceSettings } from './AIAssistantVoiceSettings';
 
 interface AIAssistantWidgetProps {
   className?: string;
@@ -106,6 +107,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(true);
   const [selectedAction, setSelectedAction] = useState<ActionHistoryItem | null>(null);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
@@ -286,6 +288,15 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
             <span className="text-sm font-medium">AI Assistant</span>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setShowVoiceSettings(true)}
+              title="Voice settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -808,6 +819,12 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Voice Settings Modal */}
+      <AIAssistantVoiceSettings
+        open={showVoiceSettings}
+        onOpenChange={setShowVoiceSettings}
+      />
     </>
   );
 }
