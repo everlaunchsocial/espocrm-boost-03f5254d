@@ -3052,6 +3052,7 @@ export type Database = {
           phone: string | null
           pipeline_status: string
           priority: boolean
+          quiet_mode: boolean
           service_category: string | null
           source: string
           state: string | null
@@ -3083,6 +3084,7 @@ export type Database = {
           phone?: string | null
           pipeline_status?: string
           priority?: boolean
+          quiet_mode?: boolean
           service_category?: string | null
           source?: string
           state?: string | null
@@ -3114,6 +3116,7 @@ export type Database = {
           phone?: string | null
           pipeline_status?: string
           priority?: boolean
+          quiet_mode?: boolean
           service_category?: string | null
           source?: string
           state?: string | null

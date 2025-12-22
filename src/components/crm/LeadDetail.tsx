@@ -44,6 +44,7 @@ import { LeadTeamNotes } from './LeadTeamNotes';
 import { LeadInsightsSidebar } from './LeadInsightsSidebar';
 import { AddToSequenceModal } from './AddToSequenceModal';
 import { LeadPriorityToggle } from './LeadPriorityToggle';
+import { LeadQuietModeToggle } from './LeadQuietModeToggle';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
 import { LeadSentimentTags } from './LeadSentimentTags';
@@ -238,6 +239,12 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                       <LeadPriorityToggle
                         leadId={lead.id}
                         priority={lead.priority ?? false}
+                      />
+                    )}
+                    {phase2Enabled && (
+                      <LeadQuietModeToggle
+                        leadId={lead.id}
+                        quietMode={lead.quietMode ?? false}
                       />
                     )}
                     {phase2Enabled && <LeadStatusPredictionBadge leadId={lead.id} />}
