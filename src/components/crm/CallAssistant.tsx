@@ -55,6 +55,7 @@ export function CallAssistant({
 
   const [callEnded, setCallEnded] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [savedCallLogId, setSavedCallLogId] = useState<string | null>(null);
   const [aiResults, setAiResults] = useState<{
     summary: string;
     actionItems: ActionItem[];
@@ -65,6 +66,7 @@ export function CallAssistant({
   const handleStartCall = () => {
     setCallEnded(false);
     setAiResults(null);
+    setSavedCallLogId(null);
     resetTranscript();
     startListening();
   };
@@ -93,7 +95,7 @@ export function CallAssistant({
       setAiResults(results);
 
       // Save call log
-      await addCallLog.mutateAsync({
+      const savedLog = await addCallLog.mutateAsync({
         contactId: entityType === 'contact' ? entityId : null,
         leadId: entityType === 'lead' ? entityId : null,
         entityType,
@@ -104,6 +106,8 @@ export function CallAssistant({
         suggestedStatus: results.suggestedStatus,
         durationSeconds: duration,
       });
+
+      setSavedCallLogId(savedLog?.id || null);
 
       // Log call activity
       await addActivity.mutateAsync({
@@ -284,6 +288,9 @@ export function CallAssistant({
             entityType={entityType}
             entityId={entityId}
             entityName={entityName}
+            callLogId={savedCallLogId || undefined}
+            durationSeconds={duration}
+            transcript={transcript}
             onCreateTask={handleCreateTask}
             onCreateAllTasks={handleCreateAllTasks}
             onUpdateStatus={handleUpdateStatus}
