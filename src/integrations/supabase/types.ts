@@ -2728,6 +2728,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_ai_generated: boolean
           lead_id: string
           tag_text: string
         }
@@ -2735,6 +2736,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_ai_generated?: boolean
           lead_id: string
           tag_text: string
         }
@@ -2742,6 +2744,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_ai_generated?: boolean
           lead_id?: string
           tag_text?: string
         }
