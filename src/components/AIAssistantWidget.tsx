@@ -269,8 +269,28 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   const statusInfo = getConnectionStatusInfo(connectionStatus);
   const isOffline = connectionStatus === 'offline';
 
-  // Handle button tap for mobile (more reliable than onClick alone)
-  const handleFloatingButtonTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const suppressNextFloatingClickRef = useRef(false);
+
+  // Mobile Safari can fire touch + click; also ensure this never submits surrounding forms (type="button")
+  const handleFloatingButtonTouchEnd = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    suppressNextFloatingClickRef.current = true;
+    window.setTimeout(() => {
+      suppressNextFloatingClickRef.current = false;
+    }, 450);
+
+    toggleOpen();
+  }, [toggleOpen]);
+
+  const handleFloatingButtonClick = useCallback((e: React.MouseEvent) => {
+    if (suppressNextFloatingClickRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
     toggleOpen();
@@ -294,8 +314,9 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
         )}
         <div className="relative group">
           <Button
-            onClick={handleFloatingButtonTap}
-            onTouchEnd={handleFloatingButtonTap}
+            type="button"
+            onClick={handleFloatingButtonClick}
+            onTouchEnd={handleFloatingButtonTouchEnd}
             size="lg"
             className={cn(
               "rounded-full shadow-lg select-none",
