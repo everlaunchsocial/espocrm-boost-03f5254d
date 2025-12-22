@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { TimelineSummaryCard } from './TimelineSummaryCard';
 import { TimelineFilters } from './TimelineFilters';
 import { TimelineHighlights } from './TimelineHighlights';
+import { QuickAddNote } from './QuickAddNote';
 
 interface LeadTimelinePanelProps {
   leadId: string;
@@ -286,6 +287,9 @@ export function LeadTimelinePanel({ leadId, leadName, onSendFollowUp }: LeadTime
 
       {/* AI Highlights Bubbles */}
       <TimelineHighlights leadId={leadId} />
+
+      {/* Quick Add Note with Voice-to-Text */}
+      <QuickAddNote leadId={leadId} leadName={leadName} />
       
       {filteredEvents.length === 0 ? (
         <div className="text-center py-8 text-sm text-muted-foreground">
