@@ -55,6 +55,7 @@ import { DoneForYouToggle } from './DoneForYouToggle';
 import { LeadIntentBadges } from './LeadIntentBadges';
 import { LeadIntentEditor } from './LeadIntentEditor';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
+import { FollowUpHistoryTab } from './FollowUpHistoryTab';
 import {
   Phone,
   PhoneCall,
@@ -86,6 +87,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface LeadDetailProps {
   lead: Lead | null;
@@ -599,12 +601,15 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
 
           {/* Tabs */}
           <Tabs defaultValue="notes" className="mt-4">
-            <TabsList className="w-full">
+            <TabsList className={cn("w-full", phase2Enabled && "grid grid-cols-4")}>
               <TabsTrigger value="notes" className="flex-1">Notes ({leadNotes.length})</TabsTrigger>
               <TabsTrigger value="activity" className="flex-1">
                 {phase2Enabled ? 'Timeline' : `Activity (${leadActivities.length})`}
               </TabsTrigger>
               <TabsTrigger value="tasks" className="flex-1">Tasks ({leadTasks.length})</TabsTrigger>
+              {phase2Enabled && (
+                <TabsTrigger value="followups" className="flex-1">Follow-Ups</TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="notes" className="mt-4">
@@ -649,6 +654,12 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                 <p className="text-sm text-muted-foreground text-center py-8">No tasks.</p>
               )}
             </TabsContent>
+
+            {phase2Enabled && (
+              <TabsContent value="followups" className="mt-4">
+                <FollowUpHistoryTab leadId={lead.id} />
+              </TabsContent>
+            )}
           </Tabs>
         </SheetContent>
       </Sheet>
