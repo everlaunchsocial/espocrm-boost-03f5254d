@@ -36,6 +36,7 @@ import { LeadTagsEditor } from './LeadTagsEditor';
 import { LeadTeamNotes } from './LeadTeamNotes';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
+import { LeadSentimentTags } from './LeadSentimentTags';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -228,9 +229,10 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             </div>
           </SheetHeader>
 
-          {/* AI Summary - Phase 2 */}
+          {/* AI Summary & Sentiment Tags - Phase 2 */}
           {phase2Enabled && (
-            <div className="py-4 border-b border-border">
+            <div className="py-4 border-b border-border space-y-3">
+              <LeadSentimentTags leadId={lead.id} leadName={`${lead.firstName} ${lead.lastName}`} />
               <LeadSummaryCard leadId={lead.id} leadName={`${lead.firstName} ${lead.lastName}`} />
             </div>
           )}
