@@ -30,6 +30,7 @@ import { DemoCreationModal } from '@/components/demos/DemoCreationModal';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { LeadTimelinePanel } from './LeadTimelinePanel';
 import { SuggestedContactWindows } from './SuggestedContactWindows';
+import { LeadPresenceIndicator } from './LeadPresenceIndicator';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -201,6 +202,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   <SheetTitle className="text-xl">
                     {lead.firstName} {lead.lastName}
                   </SheetTitle>
+                  <LeadPresenceIndicator leadId={lead.id} />
                   <p className="text-muted-foreground">{lead.title || 'No title'}</p>
                   {lead.company && (
                     <p className="text-sm text-muted-foreground mt-1">{lead.company}</p>
