@@ -12,6 +12,9 @@ export interface CallLog {
   suggestedEmail: SuggestedEmail | null;
   suggestedStatus: string | null;
   durationSeconds: number | null;
+  aiOutcome: string | null;
+  aiOutcomeConfidence: number | null;
+  aiOutcomeReason: string | null;
   createdAt: Date;
 }
 
@@ -37,6 +40,9 @@ const toCallLog = (row: any): CallLog => ({
   suggestedEmail: row.suggested_email,
   suggestedStatus: row.suggested_status,
   durationSeconds: row.duration_seconds,
+  aiOutcome: row.ai_outcome,
+  aiOutcomeConfidence: row.ai_outcome_confidence,
+  aiOutcomeReason: row.ai_outcome_reason,
   createdAt: new Date(row.created_at),
 });
 
@@ -68,7 +74,7 @@ export function useCallLogs(entityId?: string, entityType?: 'contact' | 'lead') 
 export function useAddCallLog() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (log: Omit<CallLog, 'id' | 'createdAt'>) => {
+    mutationFn: async (log: Omit<CallLog, 'id' | 'createdAt' | 'aiOutcome' | 'aiOutcomeConfidence' | 'aiOutcomeReason'>) => {
       const { data, error } = await supabase.from('call_logs').insert([{
         contact_id: log.contactId,
         lead_id: log.leadId,

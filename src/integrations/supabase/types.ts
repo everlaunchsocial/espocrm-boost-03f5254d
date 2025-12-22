@@ -1286,6 +1286,9 @@ export type Database = {
       call_logs: {
         Row: {
           action_items: Json | null
+          ai_outcome: string | null
+          ai_outcome_confidence: number | null
+          ai_outcome_reason: string | null
           contact_id: string | null
           created_at: string
           duration_seconds: number | null
@@ -1299,6 +1302,9 @@ export type Database = {
         }
         Insert: {
           action_items?: Json | null
+          ai_outcome?: string | null
+          ai_outcome_confidence?: number | null
+          ai_outcome_reason?: string | null
           contact_id?: string | null
           created_at?: string
           duration_seconds?: number | null
@@ -1312,6 +1318,9 @@ export type Database = {
         }
         Update: {
           action_items?: Json | null
+          ai_outcome?: string | null
+          ai_outcome_confidence?: number | null
+          ai_outcome_reason?: string | null
           contact_id?: string | null
           created_at?: string
           duration_seconds?: number | null

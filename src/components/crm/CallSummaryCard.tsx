@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { EmailComposerModal } from './EmailComposerModal';
+import { CallOutcomeBadge } from './CallOutcomeBadge';
 import { EmailRecipient } from '@/types/crm';
 import { ActionItem, SuggestedEmail } from '@/hooks/useCallLogs';
 import {
@@ -12,6 +13,7 @@ import {
   RefreshCw,
   Check,
   Plus,
+  Phone,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -23,6 +25,12 @@ interface CallSummaryCardProps {
   entityType: 'contact' | 'lead';
   entityId: string;
   entityName: string;
+  callLogId?: string;
+  durationSeconds?: number | null;
+  transcript?: string;
+  aiOutcome?: string | null;
+  aiOutcomeConfidence?: number | null;
+  aiOutcomeReason?: string | null;
   onCreateTask: (item: ActionItem) => Promise<void>;
   onCreateAllTasks: () => Promise<void>;
   onUpdateStatus: (status: string) => Promise<void>;
@@ -37,6 +45,12 @@ export function CallSummaryCard({
   entityType,
   entityId,
   entityName,
+  callLogId,
+  durationSeconds,
+  transcript,
+  aiOutcome,
+  aiOutcomeConfidence,
+  aiOutcomeReason,
   onCreateTask,
   onCreateAllTasks,
   onUpdateStatus,
@@ -78,6 +92,28 @@ export function CallSummaryCard({
   return (
     <ScrollArea className="flex-1 pr-4">
       <div className="space-y-6 py-4">
+        {/* Call Outcome */}
+        {callLogId && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Phone className="h-4 w-4 text-primary" />
+              Call Outcome
+            </div>
+            <div className="p-3 rounded-lg border bg-card">
+              <CallOutcomeBadge
+                callLogId={callLogId}
+                outcome={aiOutcome}
+                confidence={aiOutcomeConfidence}
+                reason={aiOutcomeReason}
+                durationSeconds={durationSeconds}
+                transcript={transcript}
+              />
+            </div>
+          </div>
+        )}
+
+        {callLogId && <Separator />}
+
         {/* Summary */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium">

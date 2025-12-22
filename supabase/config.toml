@@ -206,3 +206,6 @@ verify_jwt = true
 
 [functions.generate-timeline-highlights]
 verify_jwt = true
+
+[functions.classify-call-outcome]
+verify_jwt = true
