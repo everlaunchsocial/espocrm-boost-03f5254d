@@ -224,3 +224,6 @@ verify_jwt = true
 
 [functions.ai-assistant-tool-handler]
 verify_jwt = true
+
+[functions.ai-assistant-suggestions]
+verify_jwt = true

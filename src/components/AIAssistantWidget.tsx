@@ -1,11 +1,11 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard, Copy, Trash2, Download, MessageSquare, User, Bot, Wrench } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard, Copy, Trash2, Download, MessageSquare, User, Bot, Wrench, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useAIAssistant, AIAssistantState, ActionHistoryItem, ConversationMessage } from '@/hooks/useAIAssistant';
+import { useAIAssistant, AIAssistantState, ActionHistoryItem, ConversationMessage, SuggestedQuestion } from '@/hooks/useAIAssistant';
 import { useAIAssistantKeyboard, keyboardShortcuts } from '@/hooks/useAIAssistantKeyboard';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -90,6 +90,8 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     pageContext,
     actionHistory,
     conversationMessages,
+    suggestedQuestions,
+    suggestionsLoading,
     startSession,
     endSession,
     toggleOpen,
@@ -578,6 +580,43 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
                 )}
               </div>
             </div>
+
+            {/* Suggested Questions */}
+            {state !== 'idle' && suggestedQuestions.length > 0 && (
+              <div className="px-4 py-2 border-t border-border flex-shrink-0">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Sparkles className="h-3 w-3 text-primary" />
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                    Suggested
+                  </span>
+                  {suggestionsLoading && (
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground ml-auto" />
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5 sm:flex-nowrap sm:overflow-x-auto">
+                  {suggestedQuestions.map((suggestion) => (
+                    <button
+                      key={suggestion.id}
+                      onClick={() => sendTextCommand(suggestion.text)}
+                      disabled={isProcessing}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs",
+                        "bg-primary/10 hover:bg-primary/20 text-foreground",
+                        "border border-primary/20 hover:border-primary/30",
+                        "transition-all duration-200 animate-in fade-in slide-in-from-bottom-1",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                        "focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      )}
+                    >
+                      <span>{suggestion.icon}</span>
+                      <span className="whitespace-nowrap max-w-[120px] truncate sm:max-w-none">
+                        {suggestion.text}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quick Actions Bar */}
             {state !== 'idle' && (
