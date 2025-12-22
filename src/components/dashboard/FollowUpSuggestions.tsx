@@ -28,7 +28,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2, CheckCircle2, Undo2, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2, CheckCircle2, Undo2, Trash2, ThumbsUp, ThumbsDown, CheckCheck } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useFollowUpSuggestions, SuggestionReason, FollowUpSuggestion } from '@/hooks/useFollowUpSuggestions';
 import { useFollowUpResolutions } from '@/hooks/useFollowUpResolutions';
 import { useFollowUpFeedback } from '@/hooks/useFollowUpFeedback';
@@ -514,69 +520,62 @@ export function FollowUpSuggestions() {
                           <Badge variant={resolved ? "outline" : config.badgeVariant} className="text-xs font-normal">
                             {suggestion.reasonLabel}
                           </Badge>
-                          {/* Rating buttons */}
-                          {showRating && !resolved && (
-                            <div className="flex items-center gap-1 ml-1">
-                              {hasFeedback(suggestion.id) ? (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  {getFeedback(suggestion.id) === 'helpful' ? (
-                                    <ThumbsUp className="h-3 w-3 text-success" />
-                                  ) : (
-                                    <ThumbsDown className="h-3 w-3 text-destructive" />
-                                  )}
-                                  Rated
-                                </span>
+                          {/* Rating status indicator */}
+                          {!resolved && hasFeedback(suggestion.id) && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 ml-1">
+                              {getFeedback(suggestion.id) === 'helpful' ? (
+                                <ThumbsUp className="h-3 w-3 text-success" />
                               ) : (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 opacity-50 hover:opacity-100"
-                                    onClick={(e) => handleFeedback(e, suggestion, 'helpful')}
-                                    title="Helpful"
-                                  >
-                                    <ThumbsUp className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 opacity-50 hover:opacity-100"
-                                    onClick={(e) => handleFeedback(e, suggestion, 'not_helpful')}
-                                    title="Not helpful"
-                                  >
-                                    <ThumbsDown className="h-3.5 w-3.5" />
-                                  </Button>
-                                </>
+                                <ThumbsDown className="h-3 w-3 text-destructive" />
                               )}
-                            </div>
+                              Rated
+                            </span>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                           {suggestion.suggestionText}
                         </p>
                         
-                        {/* Inline feedback nudge for unrated suggestions */}
-                        {showRating && !resolved && !hasFeedback(suggestion.id) && (
+                        {/* Inline feedback - always visible when not resolved */}
+                        {!resolved && (
                           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
-                            <span className="text-xs text-muted-foreground">Was this helpful?</span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-6 px-2 text-xs gap-1"
-                              onClick={(e) => handleFeedback(e, suggestion, 'helpful')}
-                            >
-                              <ThumbsUp className="h-3 w-3" />
-                              Yes
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-6 px-2 text-xs gap-1"
-                              onClick={(e) => handleFeedback(e, suggestion, 'not_helpful')}
-                            >
-                              <ThumbsDown className="h-3 w-3" />
-                              No
-                            </Button>
+                            {hasFeedback(suggestion.id) ? (
+                              <span className="text-xs text-success flex items-center gap-1.5">
+                                <CheckCheck className="h-3.5 w-3.5" />
+                                Thanks for your feedback
+                              </span>
+                            ) : (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-muted-foreground">Rate this suggestion:</span>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs gap-1 border-muted-foreground/30"
+                                        onClick={(e) => handleFeedback(e, suggestion, 'helpful')}
+                                      >
+                                        <ThumbsUp className="h-3 w-3" />
+                                        Helpful
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 px-2 text-xs gap-1 border-muted-foreground/30"
+                                        onClick={(e) => handleFeedback(e, suggestion, 'not_helpful')}
+                                      >
+                                        <ThumbsDown className="h-3 w-3" />
+                                        Not helpful
+                                      </Button>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    <p>Tell us if this suggestion was useful</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         )}
                       </div>
