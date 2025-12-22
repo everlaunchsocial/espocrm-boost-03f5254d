@@ -200,3 +200,6 @@ verify_jwt = true
 
 [functions.auto-assign-lead-tags]
 verify_jwt = true
+
+[functions.generate-timeline-summary]
+verify_jwt = true

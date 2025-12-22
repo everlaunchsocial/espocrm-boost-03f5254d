@@ -21,9 +21,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { TimelineSummaryCard } from './TimelineSummaryCard';
 
 interface LeadTimelinePanelProps {
   leadId: string;
+  leadName: string;
   onSendFollowUp?: (demoId: string) => void;
 }
 
@@ -192,7 +194,7 @@ function TimelineItem({ event, onSendFollowUp }: TimelineItemProps) {
   );
 }
 
-export function LeadTimelinePanel({ leadId, onSendFollowUp }: LeadTimelinePanelProps) {
+export function LeadTimelinePanel({ leadId, leadName, onSendFollowUp }: LeadTimelinePanelProps) {
   const { isEnabled } = useFeatureFlags();
   const phase2Enabled = isEnabled('aiCrmPhase2');
   
@@ -248,8 +250,12 @@ export function LeadTimelinePanel({ leadId, onSendFollowUp }: LeadTimelinePanelP
   }
 
   return (
-    <ScrollArea className="h-[400px] pr-4">
-      <div className="space-y-4">
+    <div>
+      {/* AI Timeline Summary */}
+      <TimelineSummaryCard leadId={leadId} leadName={leadName} />
+      
+      <ScrollArea className="h-[400px] pr-4">
+        <div className="space-y-4">
         {groupedEvents.map((group) => (
           <div key={group.label}>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 sticky top-0 bg-background py-1">
@@ -264,5 +270,6 @@ export function LeadTimelinePanel({ leadId, onSendFollowUp }: LeadTimelinePanelP
         ))}
       </div>
     </ScrollArea>
+    </div>
   );
 }
