@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLeads, useAddLead, useUpdateLead, useDeleteLead, useConvertLeadToContact } from '@/hooks/useCRMData';
 import { usePersistedFormState } from '@/hooks/usePersistedFormState';
+import { useLeadTagsMap } from '@/hooks/useLeadTagsMap';
+import { useLeadsWithTags } from '@/hooks/useLeadTags';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { DataTable } from '@/components/crm/DataTable';
 import { StatusBadge } from '@/components/crm/StatusBadge';
 import { PipelineStatusBadge } from '@/components/crm/PipelineStatusBadge';
 import { EntityForm } from '@/components/crm/EntityForm';
 import { LeadDetail } from '@/components/crm/LeadDetail';
+import { LeadTagFilter, TagFilterMode } from '@/components/crm/LeadTagFilter';
+import { LeadTagBadges } from '@/components/crm/LeadTagBadges';
 import { Button } from '@/components/ui/button';
 import { Plus, MoreHorizontal, Pencil, Trash2, UserCheck, Globe, Star, MapPin } from 'lucide-react';
 import {
@@ -64,6 +69,7 @@ const leadFields = [
 const defaultFormValues = { source: 'web', status: 'new' };
 
 export default function Leads() {
+  const { isEnabled } = useFeatureFlags();
   const { data: leads = [], isLoading } = useLeads();
   const addLead = useAddLead();
   const updateLead = useUpdateLead();
@@ -74,6 +80,30 @@ export default function Leads() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  
+  // Tag filter state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagFilterMode, setTagFilterMode] = useState<TagFilterMode>('any');
+
+  // Get lead IDs for tag fetching
+  const leadIds = useMemo(() => leads.map(l => l.id), [leads]);
+  const { data: tagsMap = new Map() } = useLeadTagsMap(leadIds);
+  
+  // Get filtered lead IDs based on tags
+  const { data: filteredLeadIds = [] } = useLeadsWithTags(selectedTags, tagFilterMode);
+
+  // Apply tag filter to leads
+  const filteredLeads = useMemo(() => {
+    if (selectedTags.length === 0) return leads;
+    
+    if (tagFilterMode === 'exclude') {
+      // Exclude leads that have any of the selected tags
+      return leads.filter(lead => !filteredLeadIds.includes(lead.id));
+    }
+    
+    // Include leads that match the filter
+    return leads.filter(lead => filteredLeadIds.includes(lead.id));
+  }, [leads, selectedTags, tagFilterMode, filteredLeadIds]);
 
   // Use persisted form state for new leads only (not editing)
   const { 
@@ -163,6 +193,15 @@ export default function Leads() {
       label: 'Pipeline',
       render: (lead: Lead) => <PipelineStatusBadge status={lead.pipelineStatus} />,
     },
+    // Tags column - conditionally shown with feature flag
+    ...(isEnabled('aiCrmPhase2') ? [{
+      key: 'tags',
+      label: 'Tags',
+      render: (lead: Lead) => {
+        const leadTags = tagsMap.get(lead.id) || [];
+        return <LeadTagBadges tags={leadTags} maxVisible={2} />;
+      },
+    }] : []),
     {
       key: 'status',
       label: 'Status',
@@ -281,8 +320,25 @@ export default function Leads() {
         </Button>
       </div>
 
+      {/* Tag filter */}
+      {isEnabled('aiCrmPhase2') && (
+        <div className="flex items-center gap-2">
+          <LeadTagFilter
+            selectedTags={selectedTags}
+            onSelectedTagsChange={setSelectedTags}
+            filterMode={tagFilterMode}
+            onFilterModeChange={setTagFilterMode}
+          />
+          {selectedTags.length > 0 && (
+            <span className="text-sm text-muted-foreground">
+              Showing {filteredLeads.length} of {leads.length} leads
+            </span>
+          )}
+        </div>
+      )}
+
       <DataTable
-        data={leads}
+        data={filteredLeads}
         columns={columns}
         searchPlaceholder="Search leads..."
         searchKeys={['firstName', 'lastName', 'email', 'company', 'city', 'serviceCategory']}

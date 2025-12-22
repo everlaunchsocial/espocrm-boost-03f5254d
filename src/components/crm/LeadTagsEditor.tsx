@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -8,9 +8,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLeadTags, SUGGESTED_TAGS } from '@/hooks/useLeadTags';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface LeadTagsEditorProps {
   leadId: string;
@@ -31,7 +33,7 @@ export function LeadTagsEditor({ leadId }: LeadTagsEditorProps) {
       return;
     }
     try {
-      await addTag.mutateAsync(tagText);
+      await addTag.mutateAsync({ tagText, isAiGenerated: false });
       setNewTag('');
       toast.success('Tag added');
     } catch (error) {
@@ -54,20 +56,34 @@ export function LeadTagsEditor({ leadId }: LeadTagsEditorProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {tags.map((tag) => (
-        <Badge
-          key={tag.id}
-          variant="secondary"
-          className="gap-1 pr-1 text-xs"
-        >
-          {tag.tag_text}
-          <button
-            onClick={() => handleRemoveTag(tag.id)}
-            className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
-            disabled={removeTag.isPending}
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        <TooltipProvider key={tag.id}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                variant={tag.is_ai_generated ? "outline" : "secondary"}
+                className={cn(
+                  "gap-1 pr-1 text-xs",
+                  tag.is_ai_generated && "border-amber-500/50"
+                )}
+              >
+                {tag.is_ai_generated && (
+                  <Sparkles className="h-3 w-3 text-amber-500" />
+                )}
+                {tag.tag_text}
+                <button
+                  onClick={() => handleRemoveTag(tag.id)}
+                  className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
+                  disabled={removeTag.isPending}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              {tag.is_ai_generated ? 'AI-generated tag' : 'Manual tag'}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       ))}
 
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
