@@ -2377,6 +2377,33 @@ export type Database = {
         }
         Relationships: []
       }
+      follow_up_resolutions: {
+        Row: {
+          created_at: string
+          id: string
+          lead_id: string
+          resolved_at: string
+          resolved_by: string | null
+          suggestion_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_id: string
+          resolved_at?: string
+          resolved_by?: string | null
+          suggestion_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_id?: string
+          resolved_at?: string
+          resolved_by?: string | null
+          suggestion_key?: string
+        }
+        Relationships: []
+      }
       followup_learning_log: {
         Row: {
           accepted: boolean

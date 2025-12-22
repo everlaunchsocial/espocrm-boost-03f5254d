@@ -11,13 +11,25 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2, CheckCircle2, Undo2 } from 'lucide-react';
 import { useFollowUpSuggestions, SuggestionReason, FollowUpSuggestion } from '@/hooks/useFollowUpSuggestions';
+import { useFollowUpResolutions } from '@/hooks/useFollowUpResolutions';
 import { useFollowupLearning } from '@/hooks/useFollowupLearning';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const reasonConfig: Record<SuggestionReason, { icon: typeof Clock; color: string; badgeVariant: 'destructive' | 'secondary' | 'outline' }> = {
   demo_not_viewed: {
@@ -66,6 +78,32 @@ export function FollowUpSuggestions() {
 
   // Feature flag check
   if (!isEnabled('aiCrmPhase1')) return null;
+
+  const { isResolved, markAsResolved, unmarkResolved } = useFollowUpResolutions();
+  const [markAsDoneTarget, setMarkAsDoneTarget] = useState<FollowUpSuggestion | null>(null);
+  
+  const handleMarkAsDone = (e: React.MouseEvent, suggestion: FollowUpSuggestion) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMarkAsDoneTarget(suggestion);
+  };
+
+  const confirmMarkAsDone = () => {
+    if (markAsDoneTarget) {
+      markAsResolved.mutate({
+        suggestionKey: markAsDoneTarget.id,
+        leadId: markAsDoneTarget.leadId,
+      });
+      setMarkAsDoneTarget(null);
+    }
+  };
+
+  const handleUndo = (e: React.MouseEvent, suggestionId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    unmarkResolved.mutate(suggestionId);
+  };
+  
   const handleActionClick = (e: React.MouseEvent, suggestion: FollowUpSuggestion) => {
     e.preventDefault();
     e.stopPropagation();
@@ -292,19 +330,32 @@ export function FollowUpSuggestions() {
                 const action = actionConfig[suggestion.reason];
                 const Icon = config.icon;
                 const ActionIcon = action.icon;
+                const resolved = isResolved(suggestion.id);
 
                 return (
                   <li key={suggestion.id}>
                     <Link
                       to={`/leads?selected=${suggestion.leadId}`}
-                      className="flex items-start gap-3 p-3 -mx-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                      className={cn(
+                        "flex items-start gap-3 p-3 -mx-3 rounded-lg transition-colors group",
+                        resolved 
+                          ? "opacity-60 bg-muted/30" 
+                          : "hover:bg-muted/50"
+                      )}
                     >
-                      <div className={`mt-0.5 ${config.color}`}>
-                        <Icon className="h-5 w-5" />
+                      <div className={cn("mt-0.5", resolved ? "text-muted-foreground" : config.color)}>
+                        {resolved ? (
+                          <CheckCircle2 className="h-5 w-5 text-success" />
+                        ) : (
+                          <Icon className="h-5 w-5" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-foreground truncate">
+                          <span className={cn(
+                            "font-medium truncate",
+                            resolved ? "text-muted-foreground line-through" : "text-foreground"
+                          )}>
                             {suggestion.name}
                           </span>
                           {suggestion.company && (
@@ -312,9 +363,14 @@ export function FollowUpSuggestions() {
                               · {suggestion.company}
                             </span>
                           )}
+                          {resolved && (
+                            <Badge variant="outline" className="text-xs font-normal text-success border-success/30">
+                              Resolved
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <Badge variant={config.badgeVariant} className="text-xs font-normal">
+                          <Badge variant={resolved ? "outline" : config.badgeVariant} className="text-xs font-normal">
                             {suggestion.reasonLabel}
                           </Badge>
                         </div>
@@ -322,16 +378,39 @@ export function FollowUpSuggestions() {
                           {suggestion.suggestionText}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => handleActionClick(e, suggestion)}
-                        >
-                          <ActionIcon className="h-4 w-4 mr-1" />
-                          {action.label}
-                        </Button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {resolved ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground"
+                            onClick={(e) => handleUndo(e, suggestion.id)}
+                          >
+                            <Undo2 className="h-4 w-4 mr-1" />
+                            Undo
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => handleMarkAsDone(e, suggestion)}
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-1" />
+                              Done
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => handleActionClick(e, suggestion)}
+                            >
+                              <ActionIcon className="h-4 w-4 mr-1" />
+                              {action.label}
+                            </Button>
+                          </>
+                        )}
                         <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </Link>
@@ -417,6 +496,26 @@ export function FollowUpSuggestions() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Mark as Done Confirmation */}
+      <AlertDialog open={!!markAsDoneTarget} onOpenChange={(open) => !open && setMarkAsDoneTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark follow-up as complete?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark the follow-up for {markAsDoneTarget?.name} as resolved. 
+              The suggestion will remain visible but grayed out.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmMarkAsDone}>
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Mark as Done
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
