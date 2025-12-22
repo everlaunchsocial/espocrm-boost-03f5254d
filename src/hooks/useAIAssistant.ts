@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export type AIAssistantState = 'idle' | 'connecting' | 'listening' | 'processing' | 'speaking';
@@ -15,12 +15,22 @@ interface UserContext {
   userName?: string;
 }
 
+interface PageContext {
+  route: string;
+  entityType?: 'lead' | 'demo' | 'contact' | null;
+  entityId?: string | null;
+  entityName?: string | null;
+  entityStatus?: string | null;
+  entityEmail?: string | null;
+}
+
 export function useAIAssistant() {
   const [state, setState] = useState<AIAssistantState>('idle');
   const [transcript, setTranscript] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const [pageContext, setPageContext] = useState<PageContext | null>(null);
 
   const chatRef = useRef<RealtimeChat | null>(null);
   const userContextRef = useRef<UserContext | null>(null);
@@ -50,6 +60,75 @@ export function useAIAssistant() {
     };
     fetchCustomerId();
   }, [role]);
+
+  // Detect page context from URL and fetch entity data
+  useEffect(() => {
+    const detectPageContext = async () => {
+      const path = location.pathname;
+      let context: PageContext = { route: path };
+
+      // Pattern matching for different routes
+      const leadDetailMatch = path.match(/\/leads\/([a-f0-9-]{36})/i);
+      const demoDetailMatch = path.match(/\/demos\/([a-f0-9-]{36})/i);
+      const contactDetailMatch = path.match(/\/contacts\/([a-f0-9-]{36})/i);
+
+      if (leadDetailMatch) {
+        const leadId = leadDetailMatch[1];
+        context.entityType = 'lead';
+        context.entityId = leadId;
+
+        // Fetch lead details
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('first_name, last_name, email, pipeline_status, status')
+          .eq('id', leadId)
+          .single();
+
+        if (lead) {
+          context.entityName = `${lead.first_name} ${lead.last_name}`.trim();
+          context.entityStatus = lead.pipeline_status || lead.status;
+          context.entityEmail = lead.email;
+        }
+      } else if (demoDetailMatch) {
+        const demoId = demoDetailMatch[1];
+        context.entityType = 'demo';
+        context.entityId = demoId;
+
+        // Fetch demo details
+        const { data: demo } = await supabase
+          .from('demos')
+          .select('business_name, status, website_url')
+          .eq('id', demoId)
+          .single();
+
+        if (demo) {
+          context.entityName = demo.business_name;
+          context.entityStatus = demo.status;
+        }
+      } else if (contactDetailMatch) {
+        const contactId = contactDetailMatch[1];
+        context.entityType = 'contact';
+        context.entityId = contactId;
+
+        // Fetch contact details
+        const { data: contact } = await supabase
+          .from('contacts')
+          .select('first_name, last_name, email, status')
+          .eq('id', contactId)
+          .single();
+
+        if (contact) {
+          context.entityName = `${contact.first_name} ${contact.last_name}`.trim();
+          context.entityStatus = contact.status;
+          context.entityEmail = contact.email;
+        }
+      }
+
+      setPageContext(context);
+    };
+
+    detectPageContext();
+  }, [location.pathname]);
 
   const handleMessage = useCallback((message: any) => {
     console.log('AI Assistant message:', message.type);
@@ -84,7 +163,7 @@ export function useAIAssistant() {
       const affiliateId = affiliate?.id;
       const currentPage = location.pathname;
 
-      console.log('Starting AI assistant session:', { userRole, affiliateId, customerId, currentPage });
+      console.log('Starting AI assistant session:', { userRole, affiliateId, customerId, currentPage, pageContext });
 
       // Get ephemeral token from edge function
       const { data, error } = await supabase.functions.invoke('ai-assistant-session', {
@@ -92,7 +171,8 @@ export function useAIAssistant() {
           userRole,
           affiliateId,
           customerId,
-          currentPage
+          currentPage,
+          pageContext
         }
       });
 
@@ -128,12 +208,13 @@ export function useAIAssistant() {
             args = {};
           }
 
-          // Call our AI assistant tool handler
+          // Call our AI assistant tool handler with page context
           const { data: result, error: toolError } = await supabase.functions.invoke('ai-assistant-tool-handler', {
             body: {
               tool_name: toolName,
               arguments: args,
-              userContext: userContextRef.current
+              userContext: userContextRef.current,
+              pageContext
             }
           });
 
@@ -172,7 +253,7 @@ export function useAIAssistant() {
       setState('idle');
       toast.error('Failed to connect to AI Assistant');
     }
-  }, [role, affiliate, customerId, location.pathname, handleMessage, handleSpeakingChange, handleTranscript]);
+  }, [role, affiliate, customerId, location.pathname, pageContext, handleMessage, handleSpeakingChange, handleTranscript]);
 
   const endSession = useCallback(() => {
     if (chatRef.current) {
@@ -207,6 +288,7 @@ export function useAIAssistant() {
     aiResponse,
     isOpen,
     actionInProgress,
+    pageContext,
     startSession,
     endSession,
     toggleOpen

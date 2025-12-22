@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2 } from 'lucide-react';
+import { useState } from 'react';
+import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAIAssistant, AIAssistantState } from '@/hooks/useAIAssistant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
@@ -15,6 +15,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     aiResponse,
     isOpen,
     actionInProgress,
+    pageContext,
     startSession,
     endSession,
     toggleOpen
@@ -58,21 +59,44 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     }
   };
 
+  const getContextLabel = () => {
+    if (!pageContext?.entityType || !pageContext?.entityName) return null;
+    
+    const typeLabels = {
+      lead: 'Lead',
+      demo: 'Demo',
+      contact: 'Contact'
+    };
+    
+    return `${typeLabels[pageContext.entityType]}: ${pageContext.entityName}`;
+  };
+
+  const contextLabel = getContextLabel();
+
   // Floating button when closed
   if (!isOpen) {
     return (
-      <Button
-        onClick={toggleOpen}
-        size="lg"
-        className={cn(
-          "fixed bottom-6 right-6 z-50 rounded-full h-14 w-14 shadow-lg",
-          "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
-          "transition-all duration-300 hover:scale-110",
-          className
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+        {/* Context badge above button */}
+        {contextLabel && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border rounded-full shadow-lg text-xs font-medium text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
+            <MapPin className="h-3 w-3 text-primary" />
+            <span className="max-w-[180px] truncate">{contextLabel}</span>
+          </div>
         )}
-      >
-        <Mic className="h-6 w-6" />
-      </Button>
+        <Button
+          onClick={toggleOpen}
+          size="lg"
+          className={cn(
+            "rounded-full h-14 w-14 shadow-lg",
+            "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
+            "transition-all duration-300 hover:scale-110",
+            className
+          )}
+        >
+          <Mic className="h-6 w-6" />
+        </Button>
+      </div>
     );
   }
 
@@ -82,7 +106,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
       className={cn(
         "fixed bottom-6 right-6 z-50 bg-card border border-border rounded-2xl shadow-2xl",
         "transition-all duration-300",
-        isMinimized ? "w-72 h-16" : "w-80 h-auto max-h-[400px]",
+        isMinimized ? "w-72 h-16" : "w-80 h-auto max-h-[450px]",
         className
       )}
     >
@@ -125,6 +149,23 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
 
       {!isMinimized && (
         <>
+          {/* Context Badge */}
+          {contextLabel && (
+            <div className="px-4 pt-3">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 rounded-lg text-xs">
+                <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
+                <span className="text-primary font-medium truncate">
+                  Viewing: {contextLabel}
+                </span>
+                {pageContext?.entityStatus && (
+                  <span className="text-muted-foreground">
+                    ({pageContext.entityStatus})
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Status & Response Area */}
           <div className="p-4 space-y-3">
             {/* Status */}
@@ -153,10 +194,20 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>Try saying:</p>
                 <ul className="list-disc list-inside space-y-0.5 text-muted-foreground/80">
-                  <li>"Book a demo for Jimmy's Pizza"</li>
-                  <li>"What are my appointments today?"</li>
-                  <li>"Send an email to my last lead"</li>
-                  <li>"Who do I need to follow up with?"</li>
+                  {contextLabel ? (
+                    <>
+                      <li>"Send an email to this {pageContext?.entityType}"</li>
+                      <li>"Create a follow-up for this {pageContext?.entityType}"</li>
+                      <li>"What's the status of this {pageContext?.entityType}?"</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>"Book a demo for Jimmy's Pizza"</li>
+                      <li>"What are my appointments today?"</li>
+                      <li>"Send an email to my last lead"</li>
+                      <li>"Who do I need to follow up with?"</li>
+                    </>
+                  )}
                 </ul>
               </div>
             )}
