@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard, Copy, Trash2, Download, MessageSquare, User, Bot, Wrench, Sparkles, Settings, Wifi, WifiOff, AlertCircle, RefreshCw, Send, ExternalLink } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, Volume2, Minimize2, Maximize2, MapPin, ChevronDown, ChevronUp, Mail, Calendar, FileText, Phone, CheckCircle, XCircle, Clock, BarChart3, ListTodo, Users, Keyboard, Copy, Trash2, Download, MessageSquare, User, Bot, Wrench, Sparkles, Settings, Wifi, WifiOff, AlertCircle, RefreshCw, Send, ExternalLink, Minus, Expand } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -11,6 +11,7 @@ import { useAIAssistant, AIAssistantState, ActionHistoryItem, ConversationMessag
 import { useAIAssistantKeyboard, keyboardShortcuts } from '@/hooks/useAIAssistantKeyboard';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -111,7 +112,9 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
 
   const { isEnabled } = useFeatureFlags();
   const { role } = useUserRole();
+  const isMobile = useIsMobile();
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
   const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(true);
   const [selectedAction, setSelectedAction] = useState<ActionHistoryItem | null>(null);
@@ -266,8 +269,11 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   // Floating button when closed
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
-        {contextLabel && (
+      <div className={cn(
+        "fixed z-50 flex flex-col items-end gap-2",
+        isMobile ? "bottom-4 right-4" : "bottom-6 right-6"
+      )}>
+        {contextLabel && !isMobile && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border rounded-full shadow-lg text-xs font-medium text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
             <MapPin className="h-3 w-3 text-primary" />
             <span className="max-w-[180px] truncate">{contextLabel}</span>
@@ -278,43 +284,83 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
             onClick={toggleOpen}
             size="lg"
             className={cn(
-              "rounded-full h-14 w-14 shadow-lg",
+              "rounded-full shadow-lg",
+              isMobile ? "h-12 w-12" : "h-14 w-14",
               "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
-              "transition-all duration-300 hover:scale-110",
+              "transition-all duration-300 hover:scale-110 active:scale-95",
               shortcutPulse && "ring-4 ring-primary/50 animate-pulse",
               className
             )}
           >
-            <Mic className="h-6 w-6" />
+            <Mic className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
           </Button>
-          {/* Keyboard shortcut hint on hover */}
-          <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <div className="bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-lg border border-border whitespace-nowrap">
-              <span className="text-muted-foreground">Press </span>
-              <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">⌘K</kbd>
+          {/* Keyboard shortcut hint on hover - hide on mobile */}
+          {!isMobile && (
+            <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <div className="bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-lg border border-border whitespace-nowrap">
+                <span className="text-muted-foreground">Press </span>
+                <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">⌘K</kbd>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     );
   }
 
+  // Mobile: tap outside to close
+  const handleBackdropClick = useCallback(() => {
+    if (isMobile) {
+      closeWidget();
+    }
+  }, [isMobile, closeWidget]);
+
   // Expanded widget when open
   return (
     <>
+      {/* Mobile backdrop overlay */}
+      {isMobile && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+          style={{ zIndex: 9998 }}
+          onClick={handleBackdropClick}
+        />
+      )}
+      
       <div
         className={cn(
-          "fixed right-6 bg-card border rounded-2xl shadow-2xl",
+          "fixed bg-card border shadow-2xl",
           "transition-all duration-300 flex flex-col",
-          isMinimized ? "w-72 h-16 bottom-6" : "w-80 bottom-5",
-          !isMinimized && "max-h-[calc(100vh-100px)]",
+          // Mobile: bottom sheet style
+          isMobile ? [
+            "left-0 right-0 bottom-0",
+            "rounded-t-[20px] rounded-b-none",
+            isMinimized ? "h-16" : "max-h-[85vh]",
+            "animate-in slide-in-from-bottom duration-300"
+          ] : [
+            // Desktop: floating widget
+            "right-6 rounded-2xl",
+            isMinimized ? "w-72 h-16 bottom-6" : 
+              isFullscreen ? "w-[500px] bottom-5" : "w-80 bottom-5",
+            !isMinimized && "max-h-[calc(100vh-100px)]"
+          ],
           shortcutPulse ? "border-primary ring-2 ring-primary/30" : "border-border",
           className
         )}
         style={{ zIndex: 9999 }}
       >
+        {/* Mobile drag handle */}
+        {isMobile && !isMinimized && (
+          <div className="flex justify-center py-2 flex-shrink-0">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+        )}
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+        <div className={cn(
+          "flex items-center justify-between border-b border-border flex-shrink-0",
+          isMobile ? "px-4 py-2" : "px-4 py-3"
+        )}>
           <div className="flex items-center gap-2">
             <TooltipProvider>
               <Tooltip>
@@ -334,45 +380,56 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
               <span className="text-[10px] px-1.5 py-0.5 bg-muted rounded text-muted-foreground">Text Mode</span>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          {/* Button order: Settings | Minimize | Fullscreen | Close */}
+          <div className="flex items-center gap-0.5">
+            {/* Settings */}
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className={cn(isMobile ? "h-10 w-10" : "h-7 w-7")}
               onClick={() => setShowVoiceSettings(true)}
               title="Voice settings"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
             </Button>
+            {/* Minimize */}
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
-              onClick={() => setShowShortcutsModal(true)}
-              title="Keyboard shortcuts"
-            >
-              <Keyboard className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
+              className={cn(isMobile ? "h-10 w-10" : "h-7 w-7")}
               onClick={() => setIsMinimized(!isMinimized)}
+              title={isMinimized ? "Expand" : "Minimize"}
             >
               {isMinimized ? (
-                <Maximize2 className="h-4 w-4" />
+                <Maximize2 className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
               ) : (
-                <Minimize2 className="h-4 w-4" />
+                <Minus className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
               )}
             </Button>
+            {/* Fullscreen (desktop only) */}
+            {!isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                title={isFullscreen ? "Normal size" : "Fullscreen"}
+              >
+                <Expand className="h-4 w-4" />
+              </Button>
+            )}
+            {/* Close */}
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
+              className={cn(
+                isMobile ? "h-10 w-10" : "h-7 w-7",
+                "hover:bg-destructive/10 hover:text-destructive"
+              )}
               onClick={closeWidget}
               title="Close widget"
             >
-              <X className="h-4 w-4" />
+              <X className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
             </Button>
           </div>
         </div>
@@ -750,11 +807,14 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
             )}
 
             {/* Controls */}
-            <div className="p-4 pt-2 border-t border-border flex-shrink-0">
+            <div className={cn(
+              "border-t border-border flex-shrink-0",
+              isMobile ? "p-4 pb-6" : "p-4 pt-2"
+            )}>
               {state === 'idle' ? (
                 <Button
                   onClick={startSession}
-                  className="w-full gap-2"
+                  className={cn("w-full gap-2", isMobile && "h-12 text-base")}
                   size="lg"
                   disabled={isOffline}
                 >
@@ -765,7 +825,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
                 <Button
                   onClick={endSession}
                   variant="destructive"
-                  className="w-full gap-2"
+                  className={cn("w-full gap-2", isMobile && "h-12 text-base")}
                   size="lg"
                 >
                   <MicOff className="h-5 w-5" />
@@ -778,9 +838,17 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
 
         {/* Minimized state */}
         {isMinimized && (
-          <div className="flex items-center justify-center h-full px-4">
+          <div className={cn(
+            "flex items-center justify-center h-full",
+            isMobile ? "px-4 pb-4" : "px-4"
+          )}>
             {state === 'idle' ? (
-              <Button onClick={startSession} size="sm" className="gap-2" disabled={isOffline}>
+              <Button 
+                onClick={startSession} 
+                size={isMobile ? "lg" : "sm"} 
+                className={cn("gap-2", isMobile && "h-11")} 
+                disabled={isOffline}
+              >
                 {isOffline ? <WifiOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 {isOffline ? "Offline" : "Start"}
               </Button>
@@ -790,7 +858,12 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
                   {getStateIcon(state)}
                   <span className="text-muted-foreground">{getStateLabel(state)}</span>
                 </div>
-                <Button onClick={endSession} variant="destructive" size="sm">
+                <Button 
+                  onClick={endSession} 
+                  variant="destructive" 
+                  size={isMobile ? "lg" : "sm"}
+                  className={isMobile ? "h-11" : ""}
+                >
                   <MicOff className="h-4 w-4" />
                 </Button>
               </div>
