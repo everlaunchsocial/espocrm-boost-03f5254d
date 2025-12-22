@@ -270,10 +270,13 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   // Floating button when closed
   if (!isOpen) {
     return (
-      <div className={cn(
-        "fixed z-50 flex flex-col items-end gap-2",
-        isMobile ? "bottom-4 right-4" : "bottom-6 right-6"
-      )}>
+      <div 
+        className={cn(
+          "fixed flex flex-col items-end gap-2",
+          isMobile ? "bottom-20 right-4" : "bottom-6 right-6"
+        )}
+        style={{ zIndex: 9999 }}
+      >
         {contextLabel && !isMobile && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border rounded-full shadow-lg text-xs font-medium text-muted-foreground animate-in fade-in slide-in-from-bottom-2">
             <MapPin className="h-3 w-3 text-primary" />
@@ -286,14 +289,14 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
             size="lg"
             className={cn(
               "rounded-full shadow-lg",
-              isMobile ? "h-12 w-12" : "h-14 w-14",
+              isMobile ? "h-14 w-14 min-h-[56px] min-w-[56px]" : "h-14 w-14",
               "bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70",
               "transition-all duration-300 hover:scale-110 active:scale-95",
               shortcutPulse && "ring-4 ring-primary/50 animate-pulse",
               className
             )}
           >
-            <Mic className={isMobile ? "h-5 w-5" : "h-6 w-6"} />
+            <Mic className={isMobile ? "h-6 w-6" : "h-6 w-6"} />
           </Button>
           {/* Keyboard shortcut hint on hover - hide on mobile */}
           {!isMobile && (
