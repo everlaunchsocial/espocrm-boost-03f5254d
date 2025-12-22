@@ -832,20 +832,46 @@ export function useAIAssistant() {
     sessionRetryCountRef.current = 0;
     actionsCountRef.current = 0;
     errorsCountRef.current = 0;
+    setConnectionStatus('online');
+    toast.success('Session ended');
+  }, [endSessionTracking]);
+
+  const closeWidget = useCallback(() => {
+    if (chatRef.current) {
+      endSessionTracking(actionsCountRef.current, errorsCountRef.current);
+      chatRef.current.disconnect();
+      chatRef.current = null;
+    }
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current);
+      sessionTimeoutRef.current = null;
+    }
+    setState('idle');
+    setActionHistory([]);
+    setConversationMessages([]);
+    setSuggestedQuestions([]);
+    suggestionsCacheRef.current = null;
+    setIsTextInputMode(false);
+    setCurrentError(null);
+    setTranscript('');
+    setAiResponse('');
+    setActionInProgress(null);
+    currentAiMessageRef.current = '';
+    reconnectAttemptsRef.current = 0;
+    sessionRetryCountRef.current = 0;
+    actionsCountRef.current = 0;
+    errorsCountRef.current = 0;
+    setConnectionStatus('online');
+    setIsOpen(false);
   }, [endSessionTracking]);
 
   const toggleOpen = useCallback(() => {
     if (isOpen) {
-      endSession();
-      setActionHistory([]);
-      setConversationMessages([]);
-      setSuggestedQuestions([]);
-      suggestionsCacheRef.current = null;
-      setIsTextInputMode(false);
-      setCurrentError(null);
+      closeWidget();
+    } else {
+      setIsOpen(true);
     }
-    setIsOpen(!isOpen);
-  }, [isOpen, endSession]);
+  }, [isOpen, closeWidget]);
 
   const clearActionHistory = useCallback(() => {
     setActionHistory([]);
@@ -911,6 +937,7 @@ export function useAIAssistant() {
     startSession,
     endSession,
     toggleOpen,
+    closeWidget,
     clearActionHistory,
     clearConversation,
     sendTextCommand,
