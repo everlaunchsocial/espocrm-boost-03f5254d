@@ -8,6 +8,7 @@ import { FollowUpSuggestions } from '@/components/dashboard/FollowUpSuggestions'
 import { RecentFollowUpActions } from '@/components/dashboard/RecentFollowUpActions';
 import { SuggestionRatingStats } from '@/components/dashboard/SuggestionRatingStats';
 import { FeedbackLeaderboard } from '@/components/admin/FeedbackLeaderboard';
+import { FeedbackFunnel } from '@/components/admin/FeedbackFunnel';
 import { Users, Building2, UserPlus, Handshake, TrendingUp, DollarSign } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -77,8 +78,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Feedback Leaderboard - Admin only */}
-      <FeedbackLeaderboard />
+      {/* Feedback Leaderboard & Funnel - Admin only */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <FeedbackLeaderboard />
+        <FeedbackFunnel />
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
