@@ -39,6 +39,7 @@ import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { LeadTagsEditor } from './LeadTagsEditor';
 import { LeadStatusPredictionBadge } from './LeadStatusPredictionBadge';
 import { LeadHealthScoreMeter } from './LeadHealthScoreMeter';
+import { LeadAtAGlance } from './LeadAtAGlance';
 import { LeadTeamNotes } from './LeadTeamNotes';
 import { LeadStatusEditor } from './LeadStatusEditor';
 import { LeadSummaryCard } from './LeadSummaryCard';
@@ -262,6 +263,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
               </div>
             </div>
           </SheetHeader>
+
+          {/* Lead At-A-Glance Snapshot - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <LeadAtAGlance leadId={lead.id} />
+            </div>
+          )}
 
           {/* AI Summary & Sentiment Tags - Phase 2 */}
           {phase2Enabled && (
