@@ -51,7 +51,7 @@ interface CRMLayoutProps {
   children?: ReactNode;
 }
 const crmNavigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Calendar', href: '/calendar', icon: CalendarDays },
   { name: 'Email', href: '/email', icon: Mail },
   { name: 'Contacts', href: '/contacts', icon: Users },
@@ -184,7 +184,7 @@ export function CRMLayout({ children }: CRMLayoutProps) {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center justify-between px-6 border-b border-sidebar-border">
-            <Link to="/" className="flex items-center gap-3">
+            <Link to="/dashboard" className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-lg">E</span>
               </div>
