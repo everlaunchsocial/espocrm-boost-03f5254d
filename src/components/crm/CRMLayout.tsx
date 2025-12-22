@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { AIAssistantWidget } from '@/components/AIAssistantWidget';
 import {
   LayoutDashboard,
   Users,
@@ -366,6 +367,9 @@ export function CRMLayout({ children }: CRMLayoutProps) {
           {children ?? <Outlet />}
         </main>
       </div>
+      
+      {/* AI Assistant Widget */}
+      <AIAssistantWidget />
     </div>
   );
 }

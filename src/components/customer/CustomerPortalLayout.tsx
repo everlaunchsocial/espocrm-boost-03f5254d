@@ -1,6 +1,7 @@
 import { ReactNode, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { SupportChatWidget } from '@/components/SupportChatWidget';
+import { AIAssistantWidget } from '@/components/AIAssistantWidget';
 import { 
   LayoutDashboard, 
   Settings, 
@@ -251,6 +252,9 @@ export function CustomerPortalLayout() {
 
       {/* Support Chat Widget */}
       <SupportChatWidget userRole="customer" />
+      
+      {/* AI Assistant Widget */}
+      <AIAssistantWidget />
     </div>
   );
 }
