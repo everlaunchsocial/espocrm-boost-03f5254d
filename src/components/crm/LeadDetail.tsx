@@ -35,6 +35,7 @@ import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { LeadTagsEditor } from './LeadTagsEditor';
 import { LeadTeamNotes } from './LeadTeamNotes';
 import { LeadStatusEditor } from './LeadStatusEditor';
+import { LeadSummaryCard } from './LeadSummaryCard';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import {
   Phone,
@@ -226,6 +227,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
               )}
             </div>
           </SheetHeader>
+
+          {/* AI Summary - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <LeadSummaryCard leadId={lead.id} leadName={`${lead.firstName} ${lead.lastName}`} />
+            </div>
+          )}
 
           {/* Status Section - hide when Phase 2 is enabled (replaced by inline editor) */}
           {!phase2Enabled && (
