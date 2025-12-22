@@ -31,6 +31,7 @@ import { DemoCreationModal } from '@/components/demos/DemoCreationModal';
 import { PipelineStatusBadge } from './PipelineStatusBadge';
 import { LeadTimelinePanel } from './LeadTimelinePanel';
 import { SuggestedContactWindows } from './SuggestedContactWindows';
+import { SuggestedFirstMessage } from './SuggestedFirstMessage';
 import { LeadPresenceIndicator } from './LeadPresenceIndicator';
 import { LeadViewsIndicator } from './LeadViewsIndicator';
 import { LeadTagsEditor } from './LeadTagsEditor';
@@ -120,6 +121,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
   const [activityType, setActivityType] = useState<'call' | 'email' | 'meeting' | 'note'>('call');
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [emailPrefillBody, setEmailPrefillBody] = useState<string>('');
   const [callAssistantOpen, setCallAssistantOpen] = useState(false);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const [followUpConfirmOpen, setFollowUpConfirmOpen] = useState(false);
@@ -481,6 +483,23 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             </div>
           )}
 
+          {/* Suggested First Message - Phase 2 */}
+          {phase2Enabled && (
+            <div className="py-4 border-b border-border">
+              <SuggestedFirstMessage
+                leadId={lead.id}
+                leadName={`${lead.firstName} ${lead.lastName}`}
+                leadCompany={lead.company}
+                leadTitle={lead.title}
+                leadIndustry={lead.industry}
+                onEditAndSend={(message) => {
+                  setEmailPrefillBody(message);
+                  setEmailComposerOpen(true);
+                }}
+              />
+            </div>
+          )}
+
           {/* Team Notes - Phase 2 */}
           {phase2Enabled && (
             <div className="py-4 border-b border-border">
@@ -570,7 +589,11 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
       <EmailComposerModal
         recipient={emailRecipient}
         open={emailComposerOpen}
-        onClose={() => setEmailComposerOpen(false)}
+        onClose={() => {
+          setEmailComposerOpen(false);
+          setEmailPrefillBody('');
+        }}
+        prefillBody={emailPrefillBody}
       />
 
       <CallAssistant
