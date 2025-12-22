@@ -83,6 +83,15 @@ export function TimelineFilters({
 
         <label className="flex items-center gap-1.5 cursor-pointer">
           <Checkbox
+            checked={isGroupSelected(EVENT_TYPE_GROUPS.email)}
+            onCheckedChange={() => toggleEventTypeGroup(EVENT_TYPE_GROUPS.email)}
+            className="h-4 w-4"
+          />
+          <span className="text-sm">Email</span>
+        </label>
+
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <Checkbox
             checked={isGroupSelected(EVENT_TYPE_GROUPS.other)}
             onCheckedChange={() => toggleEventTypeGroup(EVENT_TYPE_GROUPS.other)}
             className="h-4 w-4"

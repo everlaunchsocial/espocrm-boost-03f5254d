@@ -15,6 +15,9 @@ serve(async (req: Request): Promise<Response> => {
   try {
     const url = new URL(req.url);
     const trackingId = url.searchParams.get("id");
+    const userAgent = req.headers.get("user-agent") || null;
+    const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                      req.headers.get("cf-connecting-ip") || null;
 
     console.log("Email open tracked:", trackingId);
 
@@ -27,13 +30,13 @@ serve(async (req: Request): Promise<Response> => {
       // Get current email record
       const { data: currentEmail } = await supabase
         .from("emails")
-        .select("*")
+        .select("id, lead_id, opened_at, open_count")
         .eq("tracking_id", trackingId)
         .single();
 
       if (currentEmail) {
         // Update email record with opened status and increment count
-        const { error } = await supabase
+        const { error: updateError } = await supabase
           .from("emails")
           .update({
             status: "opened",
@@ -42,10 +45,27 @@ serve(async (req: Request): Promise<Response> => {
           })
           .eq("tracking_id", trackingId);
 
-        if (error) {
-          console.error("Error updating email:", error);
+        if (updateError) {
+          console.error("Error updating email:", updateError);
         } else {
           console.log("Email marked as opened:", currentEmail.id);
+        }
+
+        // Log email event for timeline
+        const { error: eventError } = await supabase
+          .from("email_events")
+          .insert({
+            email_id: currentEmail.id,
+            lead_id: currentEmail.lead_id,
+            event_type: "open",
+            user_agent: userAgent,
+            ip_address: ipAddress,
+          });
+
+        if (eventError) {
+          console.error("Error logging email event:", eventError);
+        } else {
+          console.log("Email open event logged for email:", currentEmail.id);
         }
       }
     }

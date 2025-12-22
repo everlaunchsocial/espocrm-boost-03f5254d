@@ -10,6 +10,8 @@ export type EventTypeFilter =
   | 'followup' 
   | 'note' 
   | 'email'
+  | 'email_open'
+  | 'email_click'
   | 'meeting'
   | 'task'
   | 'status-change';
@@ -25,7 +27,7 @@ export interface TimelineFilters {
 
 const ALL_EVENT_TYPES: EventTypeFilter[] = [
   'call', 'voice_call', 'demo_view', 'demo_watched', 
-  'followup', 'note', 'email', 'meeting', 'task', 'status-change'
+  'followup', 'note', 'email', 'email_open', 'email_click', 'meeting', 'task', 'status-change'
 ];
 
 // Group similar event types for UI display
@@ -34,7 +36,8 @@ export const EVENT_TYPE_GROUPS = {
   demos: ['demo_view', 'demo_watched'] as EventTypeFilter[],
   followups: ['followup'] as EventTypeFilter[],
   notes: ['note'] as EventTypeFilter[],
-  other: ['email', 'meeting', 'task', 'status-change'] as EventTypeFilter[],
+  email: ['email', 'email_open', 'email_click'] as EventTypeFilter[],
+  other: ['meeting', 'task', 'status-change'] as EventTypeFilter[],
 };
 
 export function useTimelineFilters() {

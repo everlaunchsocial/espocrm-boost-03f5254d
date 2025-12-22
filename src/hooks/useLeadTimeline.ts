@@ -5,7 +5,7 @@ import { useFeatureFlags } from './useFeatureFlags';
 export interface LeadTimelineEvent {
   id: string;
   lead_id: string;
-  event_type: 'note' | 'call' | 'email' | 'meeting' | 'voice_call' | 'demo_view' | 'demo_watched' | 'followup' | 'task' | 'status-change';
+  event_type: 'note' | 'call' | 'email' | 'meeting' | 'voice_call' | 'demo_view' | 'demo_watched' | 'followup' | 'task' | 'status-change' | 'email_open' | 'email_click';
   summary: string;
   preview_content: string | null;
   event_at: string;

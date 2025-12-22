@@ -11,12 +11,30 @@ const corsHeaders = {
 
 interface SendEmailRequest {
   contactId: string;
+  leadId?: string;
   senderAddress: string;
   senderName: string;
   toEmail: string;
   toName?: string;
   subject: string;
   body: string;
+}
+
+// Function to rewrite links for click tracking
+function rewriteLinksForTracking(html: string, trackingId: string, supabaseUrl: string): string {
+  // Match href attributes with http/https URLs
+  const linkRegex = /href=["'](https?:\/\/[^"']+)["']/gi;
+  
+  return html.replace(linkRegex, (match, url) => {
+    // Don't rewrite tracking pixel URL or mailto links
+    if (url.includes('/functions/v1/track-') || url.startsWith('mailto:')) {
+      return match;
+    }
+    
+    const encodedUrl = encodeURIComponent(url);
+    const trackingUrl = `${supabaseUrl}/functions/v1/track-email-click?id=${trackingId}&url=${encodedUrl}`;
+    return `href="${trackingUrl}"`;
+  });
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -26,9 +44,9 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { contactId, senderAddress, senderName, toEmail, toName, subject, body }: SendEmailRequest = await req.json();
+    const { contactId, leadId, senderAddress, senderName, toEmail, toName, subject, body }: SendEmailRequest = await req.json();
 
-    console.log("Sending email:", { contactId, senderAddress, toEmail, subject });
+    console.log("Sending email:", { contactId, leadId, senderAddress, toEmail, subject });
 
     // Create Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -38,12 +56,16 @@ serve(async (req: Request): Promise<Response> => {
     // Generate tracking ID
     const trackingId = crypto.randomUUID();
     
-    // Create tracking pixel URL
-    const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email-open?id=${trackingId}`;
+    // Create tracking pixel URL with cache-busting
+    const cacheBuster = Date.now();
+    const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email-open?id=${trackingId}&t=${cacheBuster}`;
+    
+    // Rewrite links for click tracking
+    const bodyWithClickTracking = rewriteLinksForTracking(body, trackingId, supabaseUrl);
     
     // Embed tracking pixel in email HTML
     const htmlWithTracking = `
-      ${body}
+      ${bodyWithClickTracking}
       <img src="${trackingPixelUrl}" width="1" height="1" style="display:none;" alt="" />
     `;
 
@@ -67,6 +89,7 @@ serve(async (req: Request): Promise<Response> => {
       // Store failed email record
       await supabase.from("emails").insert({
         contact_id: contactId,
+        lead_id: leadId || null,
         sender_address: senderAddress,
         sender_name: senderName,
         to_email: toEmail,
@@ -89,6 +112,7 @@ serve(async (req: Request): Promise<Response> => {
     // Store sent email record in database
     const { data: emailRecord, error: dbError } = await supabase.from("emails").insert({
       contact_id: contactId,
+      lead_id: leadId || null,
       sender_address: senderAddress,
       sender_name: senderName,
       to_email: toEmail,
