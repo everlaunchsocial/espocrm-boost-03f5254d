@@ -203,10 +203,7 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
   });
 
   const isPrivilegedUser = role === 'admin' || role === 'super_admin';
-
-  if (!isPrivilegedUser && !isEnabled('aiCrmPhase3')) {
-    return null;
-  }
+  const isWidgetEnabled = isPrivilegedUser || isEnabled('aiCrmPhase3');
 
   const getStateLabel = (state: AIAssistantState) => {
     switch (state) {
@@ -303,6 +300,9 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
       toggleOpen();
     }
   }, [isMobile, toggleOpen]);
+
+  // Feature gate (must be after hooks to avoid hooks-order errors)
+  if (!isWidgetEnabled) return null;
 
   // Floating button when closed
   if (!isOpen) {
