@@ -40,7 +40,7 @@ import { LeadTagsEditor } from './LeadTagsEditor';
 import { LeadStatusPredictionBadge } from './LeadStatusPredictionBadge';
 import { LeadHealthScoreMeter } from './LeadHealthScoreMeter';
 import { LeadAtAGlance } from './LeadAtAGlance';
-import { LeadTeamNotes } from './LeadTeamNotes';
+import { TeamCollaborationPanel } from './TeamCollaborationPanel';
 import { LeadInsightsSidebar } from './LeadInsightsSidebar';
 import { AddToSequenceModal } from './AddToSequenceModal';
 import { LeadPriorityToggle } from './LeadPriorityToggle';
@@ -600,10 +600,10 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             </div>
           )}
 
-          {/* Team Notes - Phase 2 */}
+          {/* Team Collaboration - Phase 2 */}
           {phase2Enabled && (
             <div className="py-4 border-b border-border">
-              <LeadTeamNotes leadId={lead.id} />
+              <TeamCollaborationPanel leadId={lead.id} leadName={`${lead.firstName} ${lead.lastName}`} />
             </div>
           )}
 
