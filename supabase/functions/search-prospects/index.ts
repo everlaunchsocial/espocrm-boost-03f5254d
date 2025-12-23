@@ -210,7 +210,7 @@ serve(async (req) => {
             // Capture up to 10 flagged snippets with full context
             if (sampleIssues.length < 10) {
               sampleIssues.push({
-                snippet: review.snippet?.substring(0, 300) || '',
+                snippet: review.snippet || '',
                 keywords: analysis.matchedKeywords,
                 rating: review.rating || 0,
                 author: review.user?.name || 'Anonymous',

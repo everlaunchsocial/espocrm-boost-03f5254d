@@ -77,7 +77,15 @@ export interface Lead {
   phone?: string;
   company?: string;
   title?: string;
-  source: 'web' | 'referral' | 'campaign' | 'social' | 'google-leads' | 'other';
+  source:
+    | 'web'
+    | 'referral'
+    | 'campaign'
+    | 'social'
+    | 'google-leads'
+    | 'prospect_search'
+    | 'replicated_site'
+    | 'other';
   status: 'new' | 'contacted' | 'qualified' | 'unqualified' | 'converted';
   pipelineStatus: LeadPipelineStatus;
   // Address fields
