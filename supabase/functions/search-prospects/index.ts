@@ -113,7 +113,7 @@ serve(async (req) => {
     const { 
       businessType, 
       location, 
-      analyzeLimit = 5, // Default to 5 for testing, bump to 50 for production
+      analyzeLimit = 50, // Default to 50 businesses per search
       issuesOnly = true, // Only return businesses with communication issues
       minFlagged = 1 // Minimum flagged reviews to qualify
     } = await req.json();

@@ -65,14 +65,15 @@ export function GoogleReviewsPanel({
     : null;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['google-reviews', leadId, googlePlaceId, searchQuery, sortBy],
+    queryKey: ['google-reviews', leadId, searchQuery, sortBy],
     queryFn: async () => {
       const apiSortBy = sortBy === 'flagged_first' ? 'most_relevant' : sortBy;
       
+      // Always use search query for reliability - SerpAPI will find the correct data_id
+      // This avoids issues with google_place_id being overwritten by enrichment
       const { data, error } = await supabase.functions.invoke('fetch-google-reviews', {
         body: { 
-          placeId: googlePlaceId,
-          query: !googlePlaceId ? searchQuery : undefined,
+          query: searchQuery,
           sortBy: apiSortBy,
           analyzeKeywords: true,
         }
@@ -93,18 +94,18 @@ export function GoogleReviewsPanel({
         communicationAnalysis: CommunicationAnalysis;
       };
     },
-    enabled: !!(googlePlaceId || searchQuery),
+    enabled: !!searchQuery,
     staleTime: 1000 * 60 * 10,
   });
 
   const loadMore = async () => {
-    if (!nextPageToken || isLoadingMore) return;
+    if (!nextPageToken || isLoadingMore || !data?.placeId) return;
     
     setIsLoadingMore(true);
     try {
       const { data: moreData, error } = await supabase.functions.invoke('fetch-google-reviews', {
         body: { 
-          placeId: googlePlaceId || data?.placeId,
+          placeId: data.placeId, // Use the placeId found during initial search
           nextPageToken,
           sortBy: sortBy === 'flagged_first' ? 'most_relevant' : sortBy,
           analyzeKeywords: true,
@@ -153,7 +154,7 @@ export function GoogleReviewsPanel({
     return reviews;
   };
 
-  if (!searchQuery && !googlePlaceId) {
+  if (!searchQuery) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
