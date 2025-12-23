@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -109,6 +109,46 @@ interface BatchProgress {
   totalApiCalls: number;
 }
 
+const PROSPECT_SEARCH_INPUTS_KEY = 'prospect_search_inputs_v1';
+const PROSPECT_SEARCH_RESULTS_KEY = 'prospect_search_results_v1';
+
+type PersistedProspectSearchInputs = {
+  businessType: string;
+  location: string;
+  analyzeLimit: number;
+  issuesOnly: boolean;
+  searchMode: 'single' | 'multi';
+  multiLocations: string;
+  selectedStatePreset: string | null;
+};
+
+type PersistedProspectSearchResults = {
+  results: ProspectResult[];
+  metadata: SearchMetadata | null;
+  searchQuery: string;
+  expandedProspects: string[];
+  savedAt: number;
+};
+
+function safeSessionRead<T>(key: string): T | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch (e) {
+    console.error('Failed to read session storage:', e);
+    return null;
+  }
+}
+
+function safeSessionWrite(key: string, value: unknown) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error('Failed to write session storage:', e);
+  }
+}
+
 export default function ProspectSearch() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -120,19 +160,77 @@ export default function ProspectSearch() {
   const [metadata, setMetadata] = useState<SearchMetadata | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [importingId, setImportingId] = useState<string | null>(null);
-  
+
   // Search options
   const [analyzeLimit, setAnalyzeLimit] = useState(50);
   const [issuesOnly, setIssuesOnly] = useState(true);
-  
+
   // Multi-location state
   const [searchMode, setSearchMode] = useState<'single' | 'multi'>('single');
   const [multiLocations, setMultiLocations] = useState('');
   const [selectedStatePreset, setSelectedStatePreset] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
-  
+
   // Expanded dropdown state for each prospect
   const [expandedProspects, setExpandedProspects] = useState<Set<string>>(new Set());
+
+  // Restore persisted search (survives tab switching / accidental reloads)
+  useEffect(() => {
+    const savedInputs = safeSessionRead<PersistedProspectSearchInputs>(PROSPECT_SEARCH_INPUTS_KEY);
+    if (savedInputs) {
+      setBusinessType(savedInputs.businessType ?? '');
+      setLocation(savedInputs.location ?? '');
+      setAnalyzeLimit(savedInputs.analyzeLimit ?? 50);
+      setIssuesOnly(savedInputs.issuesOnly ?? true);
+      setSearchMode(savedInputs.searchMode ?? 'single');
+      setMultiLocations(savedInputs.multiLocations ?? '');
+      setSelectedStatePreset(savedInputs.selectedStatePreset ?? null);
+    }
+
+    const savedResults = safeSessionRead<PersistedProspectSearchResults>(PROSPECT_SEARCH_RESULTS_KEY);
+    if (savedResults?.results) {
+      setResults(savedResults.results);
+      setMetadata(savedResults.metadata ?? null);
+      setSearchQuery(savedResults.searchQuery ?? '');
+      setExpandedProspects(new Set(savedResults.expandedProspects ?? []));
+
+      if (savedResults.results.length > 0) {
+        toast({
+          title: 'Search restored',
+          description: 'Your prospect results were restored after returning to the tab.',
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist inputs continuously
+  useEffect(() => {
+    const payload: PersistedProspectSearchInputs = {
+      businessType,
+      location,
+      analyzeLimit,
+      issuesOnly,
+      searchMode,
+      multiLocations,
+      selectedStatePreset,
+    };
+    safeSessionWrite(PROSPECT_SEARCH_INPUTS_KEY, payload);
+  }, [businessType, location, analyzeLimit, issuesOnly, searchMode, multiLocations, selectedStatePreset]);
+
+  // Persist last successful results (don’t overwrite with null while searching)
+  useEffect(() => {
+    if (isSearching || !results) return;
+
+    const payload: PersistedProspectSearchResults = {
+      results,
+      metadata,
+      searchQuery,
+      expandedProspects: Array.from(expandedProspects),
+      savedAt: Date.now(),
+    };
+    safeSessionWrite(PROSPECT_SEARCH_RESULTS_KEY, payload);
+  }, [isSearching, results, metadata, searchQuery, expandedProspects]);
 
   const toggleExpanded = (dataId: string) => {
     setExpandedProspects(prev => {
