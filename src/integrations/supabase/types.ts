@@ -3654,6 +3654,107 @@ export type Database = {
           },
         ]
       }
+      integration_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          request_data: Json | null
+          response_data: Json | null
+          status: string
+          user_integration_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          request_data?: Json | null
+          response_data?: Json | null
+          status?: string
+          user_integration_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          request_data?: Json | null
+          response_data?: Json | null
+          status?: string
+          user_integration_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_logs_user_integration_id_fkey"
+            columns: ["user_integration_id"]
+            isOneToOne: false
+            referencedRelation: "user_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrations: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          documentation_url: string | null
+          features: Json | null
+          id: string
+          is_active: boolean
+          is_beta: boolean
+          logo_url: string | null
+          name: string
+          pricing_info: Json | null
+          requires_api_key: boolean
+          requires_oauth: boolean
+          setup_instructions: string | null
+          slug: string
+          use_cases: Json | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          documentation_url?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          is_beta?: boolean
+          logo_url?: string | null
+          name: string
+          pricing_info?: Json | null
+          requires_api_key?: boolean
+          requires_oauth?: boolean
+          setup_instructions?: string | null
+          slug: string
+          use_cases?: Json | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          documentation_url?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          is_beta?: boolean
+          logo_url?: string | null
+          name?: string
+          pricing_info?: Json | null
+          requires_api_key?: boolean
+          requires_oauth?: boolean
+          setup_instructions?: string | null
+          slug?: string
+          use_cases?: Json | null
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           created_at: string
@@ -6240,6 +6341,53 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_integrations: {
+        Row: {
+          config: Json | null
+          created_at: string
+          credentials: Json | null
+          id: string
+          integration_id: string
+          last_error: string | null
+          last_sync_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          credentials?: Json | null
+          id?: string
+          integration_id: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          credentials?: Json | null
+          id?: string
+          integration_id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_integrations_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "integrations"
             referencedColumns: ["id"]
           },
         ]
