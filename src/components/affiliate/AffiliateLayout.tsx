@@ -30,7 +30,8 @@ import {
   Sparkles,
   Video,
 } from 'lucide-react';
-import { useAffiliateAbandonments } from '@/hooks/useAffiliateAbandonments';
+// TEMP: disabled abandonments badge to prevent potential render loop
+// import { useAffiliateAbandonments } from '@/hooks/useAffiliateAbandonments';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -76,7 +77,8 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { role, isLoading, userId } = useUserRole();
   const { affiliate: currentAffiliate, isLoading: affiliateLoading, isImpersonating } = useCurrentAffiliate();
-  const { unviewedCount: abandonmentCount } = useAffiliateAbandonments();
+  // TEMP: disabled abandonments hook to keep app stable during debugging
+  const abandonmentCount = 0;
 
   // State for affiliate data
   const [affiliateData, setAffiliateData] = useState<{ 
