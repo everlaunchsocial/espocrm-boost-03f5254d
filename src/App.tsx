@@ -33,6 +33,7 @@ import AdminPanel from "./pages/AdminPanel";
 import BillingDashboard from "./pages/BillingDashboard";
 import PrivacyCenter from "./pages/PrivacyCenter";
 import ComplianceDashboard from "./pages/ComplianceDashboard";
+import WhiteLabelDashboard from "./pages/WhiteLabelDashboard";
 import VoiceDemo from "./pages/VoiceDemo";
 import Demos from "./pages/Demos";
 import DemoDetail from "./pages/DemoDetail";
@@ -303,6 +304,7 @@ const App = () => (
             <Route path="/billing" element={<BillingDashboard />} />
             <Route path="/admin-panel" element={<AdminPanel />} />
             <Route path="/admin/compliance" element={<ComplianceDashboard />} />
+            <Route path="/admin/white-label" element={<WhiteLabelDashboard />} />
             <Route path="/voice-demo" element={<VoiceDemo />} />
             <Route path="/demos" element={<Demos />} />
             <Route path="/demos/:id" element={<DemoDetail />} />
