@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { 
   Search, 
   MapPin, 
@@ -21,11 +23,42 @@ import {
   Target,
   ChevronDown,
   ChevronUp,
-  DollarSign
+  DollarSign,
+  List,
+  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
+
+// State presets with major cities
+const STATE_PRESETS: Record<string, string[]> = {
+  'Illinois': [
+    'Chicago', 'Aurora', 'Naperville', 'Joliet', 'Rockford', 
+    'Springfield', 'Elgin', 'Peoria', 'Champaign', 'Waukegan',
+    'Cicero', 'Bloomington'
+  ],
+  'California': [
+    'Los Angeles', 'San Diego', 'San Jose', 'San Francisco', 'Fresno',
+    'Sacramento', 'Long Beach', 'Oakland', 'Bakersfield', 'Anaheim',
+    'Santa Ana', 'Riverside'
+  ],
+  'Texas': [
+    'Houston', 'San Antonio', 'Dallas', 'Austin', 'Fort Worth',
+    'El Paso', 'Arlington', 'Corpus Christi', 'Plano', 'Lubbock',
+    'Irving', 'Garland'
+  ],
+  'Florida': [
+    'Jacksonville', 'Miami', 'Tampa', 'Orlando', 'St. Petersburg',
+    'Hialeah', 'Port St. Lucie', 'Tallahassee', 'Cape Coral', 'Fort Lauderdale',
+    'Pembroke Pines', 'Hollywood'
+  ],
+  'New York': [
+    'New York City', 'Buffalo', 'Rochester', 'Yonkers', 'Syracuse',
+    'Albany', 'New Rochelle', 'Mount Vernon', 'Schenectady', 'Utica',
+    'White Plains', 'Troy'
+  ],
+};
 
 interface SampleIssue {
   snippet: string;
@@ -67,6 +100,15 @@ interface SearchMetadata {
   estimatedCost: string;
 }
 
+interface BatchProgress {
+  currentCity: string;
+  currentIndex: number;
+  totalCities: number;
+  totalProspectsFound: number;
+  totalBusinessesAnalyzed: number;
+  totalApiCalls: number;
+}
+
 export default function ProspectSearch() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -80,8 +122,14 @@ export default function ProspectSearch() {
   const [importingId, setImportingId] = useState<string | null>(null);
   
   // Search options
-  const [analyzeLimit, setAnalyzeLimit] = useState(50); // Default to 50 businesses
+  const [analyzeLimit, setAnalyzeLimit] = useState(50);
   const [issuesOnly, setIssuesOnly] = useState(true);
+  
+  // Multi-location state
+  const [searchMode, setSearchMode] = useState<'single' | 'multi'>('single');
+  const [multiLocations, setMultiLocations] = useState('');
+  const [selectedStatePreset, setSelectedStatePreset] = useState<string | null>(null);
+  const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null);
   
   // Expanded dropdown state for each prospect
   const [expandedProspects, setExpandedProspects] = useState<Set<string>>(new Set());
@@ -98,7 +146,35 @@ export default function ProspectSearch() {
     });
   };
 
-  const handleSearch = async () => {
+  // Get locations list from multi-location input or state preset
+  const getLocationsList = (): string[] => {
+    if (selectedStatePreset && STATE_PRESETS[selectedStatePreset]) {
+      return STATE_PRESETS[selectedStatePreset].map(city => `${city}, ${selectedStatePreset}`);
+    }
+    return multiLocations
+      .split('\n')
+      .map(loc => loc.trim())
+      .filter(loc => loc.length > 0);
+  };
+
+  // Calculate estimated cost for multi-location search
+  const getMultiLocationEstimate = () => {
+    const locations = getLocationsList();
+    const businessesPerCity = 20; // SerpAPI typically returns ~20 per search
+    const totalBusinesses = locations.length * businessesPerCity;
+    const apiCalls = locations.length + totalBusinesses; // 1 search + reviews per business
+    const cost = apiCalls * 0.01;
+    const expectedLeads = Math.round(totalBusinesses * 0.05); // 5% hit rate
+    
+    return {
+      cities: locations.length,
+      estimatedBusinesses: totalBusinesses,
+      estimatedCost: cost.toFixed(2),
+      expectedLeads,
+    };
+  };
+
+  const handleSingleSearch = async () => {
     if (!businessType.trim() || !location.trim()) {
       toast({
         title: "Missing information",
@@ -112,6 +188,7 @@ export default function ProspectSearch() {
     setResults(null);
     setMetadata(null);
     setExpandedProspects(new Set());
+    setBatchProgress(null);
 
     try {
       const { data, error } = await supabase.functions.invoke('search-prospects', {
@@ -150,11 +227,130 @@ export default function ProspectSearch() {
     }
   };
 
+  const handleMultiLocationSearch = async () => {
+    const locations = getLocationsList();
+    
+    if (!businessType.trim()) {
+      toast({
+        title: "Missing business type",
+        description: "Please enter a business type to search for.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (locations.length === 0) {
+      toast({
+        title: "No locations",
+        description: "Please enter at least one location or select a state preset.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSearching(true);
+    setResults(null);
+    setMetadata(null);
+    setExpandedProspects(new Set());
+
+    const allProspects: ProspectResult[] = [];
+    const seenDataIds = new Set<string>();
+    let totalBusinessesAnalyzed = 0;
+    let totalBusinessesWithIssues = 0;
+    let totalApiCalls = 0;
+
+    try {
+      for (let i = 0; i < locations.length; i++) {
+        const loc = locations[i];
+        
+        setBatchProgress({
+          currentCity: loc,
+          currentIndex: i + 1,
+          totalCities: locations.length,
+          totalProspectsFound: allProspects.length,
+          totalBusinessesAnalyzed,
+          totalApiCalls,
+        });
+
+        try {
+          const { data, error } = await supabase.functions.invoke('search-prospects', {
+            body: { 
+              businessType: businessType.trim(), 
+              location: loc,
+              analyzeLimit: 20, // Per-city limit to keep costs reasonable
+              issuesOnly,
+              minFlagged: 1,
+            }
+          });
+
+          if (error) {
+            console.error(`Error searching ${loc}:`, error);
+            continue;
+          }
+
+          // Track stats
+          if (data.metadata) {
+            totalBusinessesAnalyzed += data.metadata.businessesAnalyzed || 0;
+            totalBusinessesWithIssues += data.metadata.businessesWithIssues || 0;
+            totalApiCalls += data.metadata.apiCallsUsed || 0;
+          }
+
+          // De-duplicate and add results
+          if (data.prospects) {
+            for (const prospect of data.prospects) {
+              if (!seenDataIds.has(prospect.dataId)) {
+                seenDataIds.add(prospect.dataId);
+                allProspects.push(prospect);
+              }
+            }
+          }
+        } catch (cityError) {
+          console.error(`Failed to search ${loc}:`, cityError);
+        }
+      }
+
+      // Sort all results by priority score
+      allProspects.sort((a, b) => b.priorityScore - a.priorityScore);
+
+      setResults(allProspects);
+      setMetadata({
+        totalBusinessesFound: totalBusinessesAnalyzed,
+        businessesAnalyzed: totalBusinessesAnalyzed,
+        businessesWithIssues: totalBusinessesWithIssues,
+        prospectsReturned: allProspects.length,
+        apiCallsUsed: totalApiCalls,
+        estimatedCost: `$${(totalApiCalls * 0.01).toFixed(2)}`,
+      });
+
+      toast({
+        title: "Multi-location search complete",
+        description: `Found ${allProspects.length} prospects across ${locations.length} cities.`,
+      });
+    } catch (err) {
+      console.error('Multi-search error:', err);
+      toast({
+        title: "Search failed",
+        description: "Failed to complete multi-location search.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+      setBatchProgress(null);
+    }
+  };
+
+  const handleSearch = () => {
+    if (searchMode === 'single') {
+      handleSingleSearch();
+    } else {
+      handleMultiLocationSearch();
+    }
+  };
+
   const handleImport = async (prospect: ProspectResult) => {
     setImportingId(prospect.dataId);
     
     try {
-      // Create a new lead from the prospect
       const { data: lead, error } = await supabase
         .from('leads')
         .insert({
@@ -167,7 +363,7 @@ export default function ProspectSearch() {
           website: prospect.website || null,
           source: 'prospect_search',
           pipeline_status: 'new_lead',
-          google_place_id: prospect.dataId, // Store SerpAPI data_id for reviews
+          google_place_id: prospect.dataId,
           google_rating: prospect.rating,
           google_review_count: prospect.reviewCount,
         })
@@ -181,13 +377,11 @@ export default function ProspectSearch() {
         description: `${prospect.name} has been added to your leads.`,
       });
 
-      // Route based on user role
       if (isAdmin) {
         navigate(`/leads?open=${lead.id}`);
       } else if (isAffiliate) {
         navigate(`/affiliate/leads?open=${lead.id}`);
       } else {
-        // Fallback - show toast with link
         toast({
           title: "Lead created!",
           description: `${prospect.name} has been added. View in your leads area.`,
@@ -217,6 +411,8 @@ export default function ProspectSearch() {
     return 'Low Priority';
   };
 
+  const multiEstimate = searchMode === 'multi' ? getMultiLocationEstimate() : null;
+
   return (
     <div className="container mx-auto py-6 max-w-4xl">
       <div className="mb-6">
@@ -238,62 +434,160 @@ export default function ProspectSearch() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Search Mode Toggle */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant={searchMode === 'single' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSearchMode('single')}
+              className="flex items-center gap-2"
+            >
+              <MapPin className="h-4 w-4" />
+              Single Location
+            </Button>
+            <Button
+              variant={searchMode === 'multi' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSearchMode('multi')}
+              className="flex items-center gap-2"
+            >
+              <List className="h-4 w-4" />
+              Multi-Location
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Business Type - Always shown */}
             <div className="space-y-2">
               <Label htmlFor="businessType">Business Type</Label>
               <Input
                 id="businessType"
-                placeholder="e.g., Plumber, HVAC, Dentist"
+                placeholder="e.g., Property Management, Doctor's office, HVAC"
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyDown={(e) => e.key === 'Enter' && searchMode === 'single' && handleSearch()}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="location"
-                  placeholder="e.g., Boston, MA or 02101"
-                  className="pl-10"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                />
+
+            {/* Single Location Mode */}
+            {searchMode === 'single' && (
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="location"
+                    placeholder="e.g., Boston, MA or 02101"
+                    className="pl-10"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Multi-Location Mode */}
+            {searchMode === 'multi' && (
+              <div className="space-y-4">
+                {/* State Presets */}
+                <div className="space-y-2">
+                  <Label>State Preset (optional)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.keys(STATE_PRESETS).map(state => (
+                      <Button
+                        key={state}
+                        variant={selectedStatePreset === state ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => {
+                          if (selectedStatePreset === state) {
+                            setSelectedStatePreset(null);
+                          } else {
+                            setSelectedStatePreset(state);
+                            setMultiLocations(''); // Clear manual input when preset selected
+                          }
+                        }}
+                      >
+                        <Building2 className="h-3 w-3 mr-1" />
+                        {state} ({STATE_PRESETS[state].length} cities)
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Manual Location Input */}
+                {!selectedStatePreset && (
+                  <div className="space-y-2">
+                    <Label htmlFor="multiLocations">Locations (one per line)</Label>
+                    <Textarea
+                      id="multiLocations"
+                      placeholder="Chicago, IL&#10;Aurora, IL&#10;Naperville, IL"
+                      value={multiLocations}
+                      onChange={(e) => setMultiLocations(e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+                )}
+
+                {/* Cost Estimate */}
+                {multiEstimate && multiEstimate.cities > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                    <div className="text-sm font-medium">Search Estimate</div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">Cities</div>
+                        <div className="font-medium">{multiEstimate.cities}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Est. Businesses</div>
+                        <div className="font-medium">~{multiEstimate.estimatedBusinesses}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Est. Cost</div>
+                        <div className="font-medium text-orange-600">${multiEstimate.estimatedCost}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Expected Leads (5%)</div>
+                        <div className="font-medium text-green-600">~{multiEstimate.expectedLeads}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           
-          {/* Search Options */}
-          <div className="flex flex-wrap items-center gap-6 mt-4 pt-4 border-t">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="analyzeLimit" className="text-sm whitespace-nowrap">Analyze:</Label>
-              <select
-                id="analyzeLimit"
-                value={analyzeLimit}
-                onChange={(e) => setAnalyzeLimit(Number(e.target.value))}
-                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-              >
-                <option value={10}>10 businesses (~$0.11)</option>
-                <option value={25}>25 businesses (~$0.26)</option>
-                <option value={50}>50 businesses (~$0.51)</option>
-                <option value={75}>75 businesses (~$0.76)</option>
-                <option value={100}>100 businesses (~$1.01)</option>
-              </select>
+          {/* Search Options - Only for single mode */}
+          {searchMode === 'single' && (
+            <div className="flex flex-wrap items-center gap-6 mt-4 pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="analyzeLimit" className="text-sm whitespace-nowrap">Analyze:</Label>
+                <select
+                  id="analyzeLimit"
+                  value={analyzeLimit}
+                  onChange={(e) => setAnalyzeLimit(Number(e.target.value))}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                >
+                  <option value={10}>10 businesses (~$0.11)</option>
+                  <option value={25}>25 businesses (~$0.26)</option>
+                  <option value={50}>50 businesses (~$0.51)</option>
+                  <option value={75}>75 businesses (~$0.76)</option>
+                  <option value={100}>100 businesses (~$1.01)</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="issuesOnly"
+                  checked={issuesOnly}
+                  onCheckedChange={setIssuesOnly}
+                />
+                <Label htmlFor="issuesOnly" className="text-sm cursor-pointer">
+                  Only show businesses with issues
+                </Label>
+              </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <Switch
-                id="issuesOnly"
-                checked={issuesOnly}
-                onCheckedChange={setIssuesOnly}
-              />
-              <Label htmlFor="issuesOnly" className="text-sm cursor-pointer">
-                Only show businesses with issues
-              </Label>
-            </div>
-          </div>
+          )}
           
           <Button 
             className="mt-4 w-full md:w-auto" 
@@ -303,20 +597,49 @@ export default function ProspectSearch() {
             {isSearching ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Searching & Analyzing...
+                {searchMode === 'multi' ? 'Searching Locations...' : 'Searching & Analyzing...'}
               </>
             ) : (
               <>
                 <Search className="h-4 w-4 mr-2" />
-                Search Prospects
+                {searchMode === 'multi' ? `Search ${multiEstimate?.cities || 0} Locations` : 'Search Prospects'}
               </>
             )}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Loading State */}
-      {isSearching && (
+      {/* Batch Progress */}
+      {batchProgress && (
+        <Card className="mb-6">
+          <CardContent className="py-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">
+                  Searching: {batchProgress.currentCity}
+                </span>
+                <span className="text-muted-foreground">
+                  City {batchProgress.currentIndex} of {batchProgress.totalCities}
+                </span>
+              </div>
+              <Progress 
+                value={(batchProgress.currentIndex / batchProgress.totalCities) * 100} 
+                className="h-2"
+              />
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span>Businesses analyzed: {batchProgress.totalBusinessesAnalyzed}</span>
+                <span>•</span>
+                <span>Prospects found: {batchProgress.totalProspectsFound}</span>
+                <span>•</span>
+                <span>API calls: {batchProgress.totalApiCalls}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State - Single Search */}
+      {isSearching && !batchProgress && (
         <div className="space-y-4">
           <div className="text-center py-4">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
