@@ -21,6 +21,8 @@ import CreateEstimate from "./pages/CreateEstimate";
 import Invoices from "./pages/Invoices";
 import CreateInvoice from "./pages/CreateInvoice";
 import Tasks from "./pages/Tasks";
+import Campaigns from "./pages/Campaigns";
+import Competitors from "./pages/Competitors";
 import MediaLibrary from "./pages/MediaLibrary";
 import VoiceDemo from "./pages/VoiceDemo";
 import Demos from "./pages/Demos";
@@ -280,6 +282,8 @@ const App = () => (
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/invoices/create" element={<CreateInvoice />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/competitors" element={<Competitors />} />
             <Route path="/media-library" element={<MediaLibrary />} />
             <Route path="/voice-demo" element={<VoiceDemo />} />
             <Route path="/demos" element={<Demos />} />
