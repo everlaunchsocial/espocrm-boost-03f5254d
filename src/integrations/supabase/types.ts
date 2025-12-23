@@ -2271,6 +2271,53 @@ export type Database = {
           },
         ]
       }
+      custom_pages: {
+        Row: {
+          created_at: string
+          id: string
+          is_public: boolean
+          organization_id: string
+          page_content: string
+          page_slug: string
+          page_title: string
+          published: boolean
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          organization_id: string
+          page_content?: string
+          page_slug: string
+          page_title: string
+          published?: boolean
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          organization_id?: string
+          page_content?: string
+          page_slug?: string
+          page_title?: string
+          published?: boolean
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_pages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_knowledge_sources: {
         Row: {
           content_text: string | null
@@ -3698,6 +3745,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      feature_toggles: {
+        Row: {
+          created_at: string
+          custom_label: string | null
+          display_order: number | null
+          enabled: boolean
+          feature_key: string
+          id: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_label?: string | null
+          display_order?: number | null
+          enabled?: boolean
+          feature_key: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_label?: string | null
+          display_order?: number | null
+          enabled?: boolean
+          feature_key?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_toggles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       follow_up_feedback: {
         Row: {
@@ -6604,6 +6692,50 @@ export type Database = {
         }
         Relationships: []
       }
+      theme_presets: {
+        Row: {
+          colors: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          fonts: Json
+          id: string
+          is_public: boolean
+          name: string
+          preview_image_url: string | null
+        }
+        Insert: {
+          colors?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          fonts?: Json
+          id?: string
+          is_public?: boolean
+          name: string
+          preview_image_url?: string | null
+        }
+        Update: {
+          colors?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          fonts?: Json
+          id?: string
+          is_public?: boolean
+          name?: string
+          preview_image_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theme_presets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_categories: {
         Row: {
           created_at: string
@@ -7555,6 +7687,125 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: true
             referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      white_label_configs: {
+        Row: {
+          accent_color: string
+          background_color: string | null
+          background_dark_color: string | null
+          brand_name: string
+          created_at: string
+          custom_css: string | null
+          custom_domain: string | null
+          custom_login_message: string | null
+          custom_login_tagline: string | null
+          custom_privacy_url: string | null
+          custom_terms_url: string | null
+          domain_verified: boolean
+          email_from_address: string | null
+          email_from_name: string | null
+          email_reply_to: string | null
+          error_color: string | null
+          favicon_url: string | null
+          font_family: string
+          heading_font: string | null
+          hide_everlaunch_branding: boolean
+          id: string
+          login_background_type: string | null
+          login_background_value: string | null
+          logo_dark_url: string | null
+          logo_url: string | null
+          organization_id: string | null
+          primary_color: string
+          secondary_color: string
+          social_links: Json | null
+          success_color: string | null
+          support_email: string | null
+          support_phone: string | null
+          updated_at: string
+          warning_color: string | null
+        }
+        Insert: {
+          accent_color?: string
+          background_color?: string | null
+          background_dark_color?: string | null
+          brand_name: string
+          created_at?: string
+          custom_css?: string | null
+          custom_domain?: string | null
+          custom_login_message?: string | null
+          custom_login_tagline?: string | null
+          custom_privacy_url?: string | null
+          custom_terms_url?: string | null
+          domain_verified?: boolean
+          email_from_address?: string | null
+          email_from_name?: string | null
+          email_reply_to?: string | null
+          error_color?: string | null
+          favicon_url?: string | null
+          font_family?: string
+          heading_font?: string | null
+          hide_everlaunch_branding?: boolean
+          id?: string
+          login_background_type?: string | null
+          login_background_value?: string | null
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          organization_id?: string | null
+          primary_color?: string
+          secondary_color?: string
+          social_links?: Json | null
+          success_color?: string | null
+          support_email?: string | null
+          support_phone?: string | null
+          updated_at?: string
+          warning_color?: string | null
+        }
+        Update: {
+          accent_color?: string
+          background_color?: string | null
+          background_dark_color?: string | null
+          brand_name?: string
+          created_at?: string
+          custom_css?: string | null
+          custom_domain?: string | null
+          custom_login_message?: string | null
+          custom_login_tagline?: string | null
+          custom_privacy_url?: string | null
+          custom_terms_url?: string | null
+          domain_verified?: boolean
+          email_from_address?: string | null
+          email_from_name?: string | null
+          email_reply_to?: string | null
+          error_color?: string | null
+          favicon_url?: string | null
+          font_family?: string
+          heading_font?: string | null
+          hide_everlaunch_branding?: boolean
+          id?: string
+          login_background_type?: string | null
+          login_background_value?: string | null
+          logo_dark_url?: string | null
+          logo_url?: string | null
+          organization_id?: string | null
+          primary_color?: string
+          secondary_color?: string
+          social_links?: Json | null
+          success_color?: string | null
+          support_email?: string | null
+          support_phone?: string | null
+          updated_at?: string
+          warning_color?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "white_label_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
