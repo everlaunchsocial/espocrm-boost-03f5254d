@@ -28,6 +28,7 @@ import MediaLibrary from "./pages/MediaLibrary";
 import Documents from "./pages/Documents";
 import Reports from "./pages/Reports";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
+import Integrations from "./pages/Integrations";
 import VoiceDemo from "./pages/VoiceDemo";
 import Demos from "./pages/Demos";
 import DemoDetail from "./pages/DemoDetail";
@@ -293,6 +294,7 @@ const App = () => (
             <Route path="/documents" element={<Documents />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/executive-dashboard" element={<ExecutiveDashboard />} />
+            <Route path="/integrations" element={<Integrations />} />
             <Route path="/voice-demo" element={<VoiceDemo />} />
             <Route path="/demos" element={<Demos />} />
             <Route path="/demos/:id" element={<DemoDetail />} />
