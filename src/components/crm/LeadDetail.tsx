@@ -54,6 +54,7 @@ import { DemoEngagementHeatmap } from './DemoEngagementHeatmap';
 import { DoneForYouToggle } from './DoneForYouToggle';
 import { LeadIntentBadges } from './LeadIntentBadges';
 import { LeadIntentEditor } from './LeadIntentEditor';
+import { LeadResponsePatterns } from '@/components/leads/LeadResponsePatterns';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import { FollowUpHistoryTab } from './FollowUpHistoryTab';
 import { GoogleEnrichmentButton } from './GoogleEnrichmentButton';
@@ -124,6 +125,7 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
   const convertLeadToContact = useConvertLeadToContact();
   const { isEnabled } = useFeatureFlags();
   const phase2Enabled = isEnabled('aiCrmPhase2');
+  const phase4Enabled = isEnabled('aiCrmPhase4');
   const { autoTag } = useAutoTagLead();
 
   // Auto-tag lead when opened (Phase 2)
@@ -610,6 +612,21 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
               <DemoEngagementHeatmap 
                 leadId={lead.id} 
                 onSendFollowUp={() => setEmailComposerOpen(true)} 
+              />
+            </div>
+          )}
+
+          {/* Response Patterns - Phase 4 ML */}
+          {phase4Enabled && (
+            <div className="py-4 border-b border-border">
+              <LeadResponsePatterns
+                patterns={{
+                  learned_best_days: lead.learnedBestDays || null,
+                  learned_best_times: lead.learnedBestTimes || null,
+                  learned_optimal_gap_hours: lead.learnedOptimalGapHours || null,
+                  learned_channel_preference: lead.learnedChannelPreference || null,
+                  learning_confidence: lead.learningConfidence || null,
+                }}
               />
             </div>
           )}
