@@ -610,13 +610,29 @@ export function FollowUpSuggestions() {
               ))}
             </div>
           ) : filteredSuggestions && filteredSuggestions.length > 0 ? (
-            <ul className="space-y-3">
+          <ul className="space-y-3">
               {filteredSuggestions.map((suggestion) => {
                 const config = reasonConfig[suggestion.reason];
                 const action = actionConfig[suggestion.reason];
                 const Icon = config.icon;
                 const ActionIcon = action.icon;
                 const resolved = isResolved(suggestion.id);
+                
+                // Auto-send status
+                const scheduledItem = getScheduledItem(suggestion.id);
+                const isScheduledForSend = scheduledItem && !scheduledItem.sentAt && !scheduledItem.cancelledAt;
+                const wasSent = scheduledItem?.sentAt;
+                const wasCancelled = scheduledItem?.cancelledAt;
+                const countdown = countdowns[suggestion.id];
+
+                // Determine card state for styling
+                const getCardStateClasses = () => {
+                  if (wasSent) return "opacity-60 bg-success/10 border-l-2 border-l-success";
+                  if (wasCancelled) return "opacity-60 bg-muted/30 border-l-2 border-l-destructive";
+                  if (isScheduledForSend) return "bg-warning/5 border-l-2 border-l-warning";
+                  if (resolved) return "opacity-60 bg-muted/30";
+                  return "hover:bg-muted/50";
+                };
 
                 return (
                   <li key={suggestion.id}>
@@ -624,13 +640,17 @@ export function FollowUpSuggestions() {
                       to={`/leads?selected=${suggestion.leadId}`}
                       className={cn(
                         "flex items-start gap-3 p-3 -mx-3 rounded-lg transition-colors group",
-                        resolved 
-                          ? "opacity-60 bg-muted/30" 
-                          : "hover:bg-muted/50"
+                        getCardStateClasses()
                       )}
                     >
-                      <div className={cn("mt-0.5", resolved ? "text-muted-foreground" : config.color)}>
-                        {resolved ? (
+                      <div className={cn("mt-0.5", resolved || wasSent ? "text-muted-foreground" : config.color)}>
+                        {wasSent ? (
+                          <CheckCircle2 className="h-5 w-5 text-success" />
+                        ) : wasCancelled ? (
+                          <XCircle className="h-5 w-5 text-destructive" />
+                        ) : isScheduledForSend ? (
+                          <Timer className="h-5 w-5 text-warning animate-pulse" />
+                        ) : resolved ? (
                           <CheckCircle2 className="h-5 w-5 text-success" />
                         ) : (
                           <Icon className="h-5 w-5" />
@@ -640,7 +660,7 @@ export function FollowUpSuggestions() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={cn(
                             "font-medium truncate",
-                            resolved ? "text-muted-foreground line-through" : "text-foreground"
+                            (resolved || wasSent || wasCancelled) ? "text-muted-foreground line-through" : "text-foreground"
                           )}>
                             {suggestion.name}
                           </span>
@@ -649,18 +669,46 @@ export function FollowUpSuggestions() {
                               · {suggestion.company}
                             </span>
                           )}
-                          {resolved && (
+                          {/* Status badges */}
+                          {wasSent && (
+                            <Badge variant="outline" className="text-xs font-normal text-success border-success/30">
+                              ✅ Auto-sent at {new Date(scheduledItem.sentAt!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Badge>
+                          )}
+                          {wasCancelled && (
+                            <Badge variant="outline" className="text-xs font-normal text-destructive border-destructive/30">
+                              🚫 Cancelled
+                            </Badge>
+                          )}
+                          {isScheduledForSend && countdown && (
+                            <Badge variant="outline" className="text-xs font-normal text-warning border-warning/30 flex items-center gap-1">
+                              ⏰ Sending in {countdown}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-4 w-4 p-0 ml-1 hover:bg-destructive/20"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleCancelScheduled(suggestion.id);
+                                }}
+                              >
+                                <XCircle className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </Badge>
+                          )}
+                          {resolved && !wasSent && !wasCancelled && (
                             <Badge variant="outline" className="text-xs font-normal text-success border-success/30">
                               Resolved
                             </Badge>
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <Badge variant={resolved ? "outline" : config.badgeVariant} className="text-xs font-normal">
+                          <Badge variant={(resolved || wasSent || wasCancelled) ? "outline" : config.badgeVariant} className="text-xs font-normal">
                             {suggestion.reasonLabel}
                           </Badge>
                           {/* Rating status indicator */}
-                          {!resolved && hasFeedback(suggestion.id) && (
+                          {!resolved && !wasSent && !wasCancelled && hasFeedback(suggestion.id) && (
                             <span className="text-xs text-muted-foreground flex items-center gap-1 ml-1">
                               {getFeedback(suggestion.id) === 'helpful' ? (
                                 <ThumbsUp className="h-3 w-3 text-success" />
@@ -671,12 +719,51 @@ export function FollowUpSuggestions() {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className={cn(
+                          "text-sm mt-1",
+                          (wasSent || wasCancelled) ? "text-muted-foreground/70" : "text-muted-foreground"
+                        )}>
                           {suggestion.suggestionText}
                         </p>
                         
-                        {/* Inline feedback - always visible when not resolved */}
-                        {!resolved && (
+                        {/* Auto-approve checkbox when Auto-Send Mode is ON */}
+                        {showAutoSend && autoSendModeEnabled && !resolved && !wasSent && !wasCancelled && (
+                          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
+                            <Checkbox
+                              id={`auto-approve-${suggestion.id}`}
+                              checked={isScheduledForSend || isAutoApproved(suggestion.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  toggleAutoApprove(suggestion.id);
+                                  handleScheduleAutoSend(suggestion);
+                                } else {
+                                  toggleAutoApprove(suggestion.id);
+                                  if (isScheduledForSend) {
+                                    handleCancelScheduled(suggestion.id);
+                                  }
+                                }
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              disabled={pauseAllAutoSends}
+                            />
+                            <label
+                              htmlFor={`auto-approve-${suggestion.id}`}
+                              className={cn(
+                                "text-xs cursor-pointer",
+                                pauseAllAutoSends ? "text-muted-foreground" : "text-foreground"
+                              )}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Auto-approve
+                            </label>
+                            {pauseAllAutoSends && (
+                              <span className="text-xs text-warning">(Paused)</span>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Inline feedback - always visible when not resolved and not sent/cancelled */}
+                        {!resolved && !wasSent && !wasCancelled && (
                           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/50">
                             {hasFeedback(suggestion.id) ? (
                               <span className="text-xs text-success flex items-center gap-1.5">
@@ -719,7 +806,13 @@ export function FollowUpSuggestions() {
                         )}
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        {resolved ? (
+                        {(wasSent || wasCancelled) ? (
+                          // No actions for sent/cancelled items
+                          <span className="text-xs text-muted-foreground">
+                            {wasSent && "Completed"}
+                            {wasCancelled && "Dismissed"}
+                          </span>
+                        ) : resolved ? (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -728,6 +821,20 @@ export function FollowUpSuggestions() {
                           >
                             <Undo2 className="h-4 w-4 mr-1" />
                             Undo
+                          </Button>
+                        ) : isScheduledForSend ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCancelScheduled(suggestion.id);
+                            }}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Cancel
                           </Button>
                         ) : (
                           <>
