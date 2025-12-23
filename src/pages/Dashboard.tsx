@@ -7,6 +7,7 @@ import { VoiceExecutiveSummary } from '@/components/dashboard/VoiceExecutiveSumm
 import { FollowUpSuggestions } from '@/components/dashboard/FollowUpSuggestions';
 import { RecentFollowUpActions } from '@/components/dashboard/RecentFollowUpActions';
 import { SuggestionRatingStats } from '@/components/dashboard/SuggestionRatingStats';
+import { PriorityQueue } from '@/components/dashboard/PriorityQueue';
 import { FeedbackLeaderboard } from '@/components/admin/FeedbackLeaderboard';
 import { FeedbackFunnel } from '@/components/admin/FeedbackFunnel';
 import { Users, Building2, UserPlus, Handshake, TrendingUp, DollarSign } from 'lucide-react';
@@ -62,6 +63,9 @@ export default function Dashboard() {
 
       {/* Voice Executive Summary - Top of Dashboard */}
       <VoiceExecutiveSummary />
+
+      {/* Priority Queue - AI Lead Scoring */}
+      <PriorityQueue />
 
       {/* Follow-Up Suggestions - Below Voice Summary */}
       <div ref={followUpSuggestionsRef}>

@@ -1,5 +1,8 @@
 project_id = "mrcfpbkoulldnkqzzprb"
 
+[functions.calculate-lead-scores]
+verify_jwt = false
+
 [functions.request-demo]
 verify_jwt = false
 
