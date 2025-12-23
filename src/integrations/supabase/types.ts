@@ -2095,6 +2095,113 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_audit_log: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          lead_id: string | null
+          legal_basis: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          lead_id?: string | null
+          legal_basis?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          lead_id?: string | null
+          legal_basis?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_audit_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_audit_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      consent_records: {
+        Row: {
+          consent_given: boolean
+          consent_method: string
+          consent_text: string
+          consent_type: string
+          created_at: string
+          email: string
+          expires_at: string | null
+          granted_at: string | null
+          id: string
+          ip_address: string | null
+          lead_id: string | null
+          revoked_at: string | null
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          consent_given?: boolean
+          consent_method?: string
+          consent_text: string
+          consent_type: string
+          created_at?: string
+          email: string
+          expires_at?: string | null
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          lead_id?: string | null
+          revoked_at?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          consent_given?: boolean
+          consent_method?: string
+          consent_text?: string
+          consent_type?: string
+          created_at?: string
+          email?: string
+          expires_at?: string | null
+          granted_at?: string | null
+          id?: string
+          ip_address?: string | null
+          lead_id?: string | null
+          revoked_at?: string | null
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_records_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           account_id: string | null
@@ -2517,6 +2624,111 @@ export type Database = {
           layout?: Json
           name?: string
           owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      data_requests: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          email: string
+          export_file_url: string | null
+          id: string
+          lead_id: string | null
+          rejection_reason: string | null
+          request_details: Json | null
+          request_type: string
+          requested_by: string
+          status: string
+          verification_sent_at: string | null
+          verification_token: string | null
+          verified: boolean
+          verified_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          email: string
+          export_file_url?: string | null
+          id?: string
+          lead_id?: string | null
+          rejection_reason?: string | null
+          request_details?: Json | null
+          request_type: string
+          requested_by: string
+          status?: string
+          verification_sent_at?: string | null
+          verification_token?: string | null
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          email?: string
+          export_file_url?: string | null
+          id?: string
+          lead_id?: string | null
+          rejection_reason?: string | null
+          request_details?: Json | null
+          request_type?: string
+          requested_by?: string
+          status?: string
+          verification_sent_at?: string | null
+          verification_token?: string | null
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_requests_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "data_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_retention_policies: {
+        Row: {
+          anonymize_instead: boolean
+          applies_to_status: string[] | null
+          auto_delete: boolean
+          created_at: string
+          data_type: string
+          id: string
+          retention_days: number
+          updated_at: string
+        }
+        Insert: {
+          anonymize_instead?: boolean
+          applies_to_status?: string[] | null
+          auto_delete?: boolean
+          created_at?: string
+          data_type: string
+          id?: string
+          retention_days?: number
+          updated_at?: string
+        }
+        Update: {
+          anonymize_instead?: boolean
+          applies_to_status?: string[] | null
+          auto_delete?: boolean
+          created_at?: string
+          data_type?: string
+          id?: string
+          retention_days?: number
           updated_at?: string
         }
         Relationships: []
@@ -5061,6 +5273,65 @@ export type Database = {
             columns: ["affiliate_id"]
             isOneToOne: false
             referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      privacy_settings: {
+        Row: {
+          auto_delete_inactive_leads: boolean
+          ccpa_enabled: boolean
+          cookie_banner_enabled: boolean
+          cookie_banner_text: string | null
+          created_at: string
+          data_retention_days: number
+          dpo_email: string | null
+          dpo_name: string | null
+          gdpr_enabled: boolean
+          id: string
+          organization_id: string | null
+          privacy_policy_url: string | null
+          require_explicit_consent: boolean
+          updated_at: string
+        }
+        Insert: {
+          auto_delete_inactive_leads?: boolean
+          ccpa_enabled?: boolean
+          cookie_banner_enabled?: boolean
+          cookie_banner_text?: string | null
+          created_at?: string
+          data_retention_days?: number
+          dpo_email?: string | null
+          dpo_name?: string | null
+          gdpr_enabled?: boolean
+          id?: string
+          organization_id?: string | null
+          privacy_policy_url?: string | null
+          require_explicit_consent?: boolean
+          updated_at?: string
+        }
+        Update: {
+          auto_delete_inactive_leads?: boolean
+          ccpa_enabled?: boolean
+          cookie_banner_enabled?: boolean
+          cookie_banner_text?: string | null
+          created_at?: string
+          data_retention_days?: number
+          dpo_email?: string | null
+          dpo_name?: string | null
+          gdpr_enabled?: boolean
+          id?: string
+          organization_id?: string | null
+          privacy_policy_url?: string | null
+          require_explicit_consent?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "privacy_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
