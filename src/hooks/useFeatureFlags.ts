@@ -33,10 +33,12 @@ export const useFeatureFlags = create<FeatureFlagsStore>()(
         set((state) => ({
           flags: { ...state.flags, [key]: value }
         })),
-      isEnabled: (key) => get().flags[key],
+      // In production, always return false to prevent experimental features from causing crashes
+      isEnabled: (key) => isProduction ? false : get().flags[key],
     }),
     {
       name: 'feature-flags',
+      version: 2, // Bump version to reset stale localStorage values
     }
   )
 );
