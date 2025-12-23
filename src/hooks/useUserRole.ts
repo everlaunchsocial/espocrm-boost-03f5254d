@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export type GlobalRole = 'super_admin' | 'admin' | 'affiliate' | 'customer';
@@ -103,7 +103,7 @@ export function useUserRole(): UseUserRoleResult {
     };
   }, [fetchUserRole, queuedRef]);
 
-  return {
+  return useMemo(() => ({
     role,
     isLoading,
     userId,
@@ -111,5 +111,5 @@ export function useUserRole(): UseUserRoleResult {
     isAffiliate: role === 'affiliate',
     isCustomer: role === 'customer',
     refreshRole: fetchUserRole,
-  };
+  }), [role, isLoading, userId, fetchUserRole]);
 }
