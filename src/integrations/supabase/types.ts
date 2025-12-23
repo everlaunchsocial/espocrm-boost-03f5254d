@@ -1014,6 +1014,44 @@ export type Database = {
         }
         Relationships: []
       }
+      battle_cards: {
+        Row: {
+          auto_generated: boolean
+          card_content: Json
+          competitor_id: string
+          created_at: string
+          id: string
+          last_updated: string
+          version: number
+        }
+        Insert: {
+          auto_generated?: boolean
+          card_content?: Json
+          competitor_id: string
+          created_at?: string
+          id?: string
+          last_updated?: string
+          version?: number
+        }
+        Update: {
+          auto_generated?: boolean
+          card_content?: Json
+          competitor_id?: string
+          created_at?: string
+          id?: string
+          last_updated?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_cards_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: true
+            referencedRelation: "competitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_subscriptions: {
         Row: {
           affiliate_id: string | null
@@ -1706,6 +1744,93 @@ export type Database = {
           level2_rate?: number
           level3_rate?: number
           name?: string
+        }
+        Relationships: []
+      }
+      competitive_mentions: {
+        Row: {
+          competitor_id: string
+          context: string | null
+          created_at: string
+          id: string
+          lead_id: string
+          mentioned_at: string
+          mentioned_by: string | null
+          mentioned_in: string
+          sentiment: string | null
+        }
+        Insert: {
+          competitor_id: string
+          context?: string | null
+          created_at?: string
+          id?: string
+          lead_id: string
+          mentioned_at?: string
+          mentioned_by?: string | null
+          mentioned_in: string
+          sentiment?: string | null
+        }
+        Update: {
+          competitor_id?: string
+          context?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string
+          mentioned_at?: string
+          mentioned_by?: string | null
+          mentioned_in?: string
+          sentiment?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitive_mentions_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "competitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competitive_mentions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitors: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          last_updated: string
+          name: string
+          pricing_info: Json | null
+          strengths: string[] | null
+          weaknesses: string[] | null
+          website: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          last_updated?: string
+          name: string
+          pricing_info?: Json | null
+          strengths?: string[] | null
+          weaknesses?: string[] | null
+          website?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          last_updated?: string
+          name?: string
+          pricing_info?: Json | null
+          strengths?: string[] | null
+          weaknesses?: string[] | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -5536,6 +5661,60 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: true
             referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      win_loss_analysis: {
+        Row: {
+          analyzed_at: string
+          analyzed_by: string | null
+          competitor_id: string | null
+          created_at: string
+          deal_value: number | null
+          detailed_notes: string | null
+          id: string
+          lead_id: string
+          outcome: string
+          primary_reason: string
+        }
+        Insert: {
+          analyzed_at?: string
+          analyzed_by?: string | null
+          competitor_id?: string | null
+          created_at?: string
+          deal_value?: number | null
+          detailed_notes?: string | null
+          id?: string
+          lead_id: string
+          outcome: string
+          primary_reason: string
+        }
+        Update: {
+          analyzed_at?: string
+          analyzed_by?: string | null
+          competitor_id?: string | null
+          created_at?: string
+          deal_value?: number | null
+          detailed_notes?: string | null
+          id?: string
+          lead_id?: string
+          outcome?: string
+          primary_reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "win_loss_analysis_competitor_id_fkey"
+            columns: ["competitor_id"]
+            isOneToOne: false
+            referencedRelation: "competitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "win_loss_analysis_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
