@@ -55,6 +55,7 @@ import { DoneForYouToggle } from './DoneForYouToggle';
 import { LeadIntentBadges } from './LeadIntentBadges';
 import { LeadIntentEditor } from './LeadIntentEditor';
 import { LeadResponsePatterns } from '@/components/leads/LeadResponsePatterns';
+import { CallScriptPanel } from './CallScriptPanel';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import { FollowUpHistoryTab } from './FollowUpHistoryTab';
 import { GoogleEnrichmentButton } from './GoogleEnrichmentButton';
@@ -627,6 +628,16 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   learned_channel_preference: lead.learnedChannelPreference || null,
                   learning_confidence: lead.learningConfidence || null,
                 }}
+              />
+            </div>
+          )}
+
+          {/* Call Script Panel - Phase 4 */}
+          {phase4Enabled && (
+            <div className="py-4 border-b border-border">
+              <CallScriptPanel
+                leadId={lead.id}
+                leadName={`${lead.firstName} ${lead.lastName}`}
               />
             </div>
           )}
