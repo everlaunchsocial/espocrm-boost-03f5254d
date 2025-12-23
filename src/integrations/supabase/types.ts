@@ -1938,6 +1938,76 @@ export type Database = {
         }
         Relationships: []
       }
+      commissions: {
+        Row: {
+          approved_by: string | null
+          commission_amount: number
+          commission_rate: number
+          commission_type: string
+          created_at: string
+          deal_amount: number
+          deal_id: string | null
+          id: string
+          notes: string | null
+          payment_date: string | null
+          rep_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          commission_amount?: number
+          commission_rate?: number
+          commission_type?: string
+          created_at?: string
+          deal_amount?: number
+          deal_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          rep_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          commission_amount?: number
+          commission_rate?: number
+          commission_type?: string
+          created_at?: string
+          deal_amount?: number
+          deal_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          rep_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "commissions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_rep_id_fkey"
+            columns: ["rep_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       competitive_mentions: {
         Row: {
           competitor_id: string
@@ -4841,6 +4911,60 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string
+          recorded_by: string | null
+          reference_number: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          recorded_by?: string | null
+          reference_number?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          recorded_by?: string | null
+          reference_number?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       payouts: {
         Row: {
           affiliate_id: string
@@ -5390,6 +5514,56 @@ export type Database = {
         }
         Relationships: []
       }
+      revenue_targets: {
+        Row: {
+          achievement_percentage: number
+          created_at: string
+          current_amount: number
+          id: string
+          period_end: string
+          period_start: string
+          period_type: string
+          target_amount: number
+          target_owner_id: string | null
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          achievement_percentage?: number
+          created_at?: string
+          current_amount?: number
+          id?: string
+          period_end: string
+          period_start: string
+          period_type?: string
+          target_amount?: number
+          target_owner_id?: string | null
+          target_type?: string
+          updated_at?: string
+        }
+        Update: {
+          achievement_percentage?: number
+          created_at?: string
+          current_amount?: number
+          id?: string
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          target_amount?: number
+          target_owner_id?: string | null
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_targets_target_owner_id_fkey"
+            columns: ["target_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       roles: {
         Row: {
           created_at: string
@@ -5718,6 +5892,62 @@ export type Database = {
             columns: ["referrer_affiliate_id"]
             isOneToOne: false
             referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          auto_renew: boolean
+          billing_cycle: string
+          created_at: string
+          customer_id: string | null
+          end_date: string | null
+          id: string
+          next_billing_date: string | null
+          payment_method_id: string | null
+          plan_amount: number
+          plan_name: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          auto_renew?: boolean
+          billing_cycle?: string
+          created_at?: string
+          customer_id?: string | null
+          end_date?: string | null
+          id?: string
+          next_billing_date?: string | null
+          payment_method_id?: string | null
+          plan_amount?: number
+          plan_name: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          auto_renew?: boolean
+          billing_cycle?: string
+          created_at?: string
+          customer_id?: string | null
+          end_date?: string | null
+          id?: string
+          next_billing_date?: string | null
+          payment_method_id?: string | null
+          plan_amount?: number
+          plan_name?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
