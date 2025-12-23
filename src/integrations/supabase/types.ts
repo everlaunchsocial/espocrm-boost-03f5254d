@@ -2335,6 +2335,86 @@ export type Database = {
           },
         ]
       }
+      dashboard_widgets: {
+        Row: {
+          configuration: Json
+          created_at: string
+          dashboard_id: string
+          height: number
+          id: string
+          position_x: number
+          position_y: number
+          widget_type: string
+          width: number
+        }
+        Insert: {
+          configuration?: Json
+          created_at?: string
+          dashboard_id: string
+          height?: number
+          id?: string
+          position_x?: number
+          position_y?: number
+          widget_type: string
+          width?: number
+        }
+        Update: {
+          configuration?: Json
+          created_at?: string
+          dashboard_id?: string
+          height?: number
+          id?: string
+          position_x?: number
+          position_y?: number
+          widget_type?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_widgets_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboards: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_default: boolean
+          is_public: boolean
+          layout: Json
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          is_public?: boolean
+          layout?: Json
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          is_public?: boolean
+          layout?: Json
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           account_id: string | null
@@ -4928,6 +5008,101 @@ export type Database = {
           suggested_changes?: Json
           updated_at?: string
           vertical_id?: string
+        }
+        Relationships: []
+      }
+      report_runs: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          file_url: string | null
+          id: string
+          report_id: string
+          row_count: number | null
+          run_by: string | null
+          run_type: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          file_url?: string | null
+          id?: string
+          report_id: string
+          row_count?: number | null
+          run_by?: string | null
+          run_type?: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          file_url?: string | null
+          id?: string
+          report_id?: string
+          row_count?: number | null
+          run_by?: string | null
+          run_type?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_runs_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          configuration: Json
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_global: boolean
+          is_scheduled: boolean
+          last_run_at: string | null
+          name: string
+          report_type: string
+          schedule_frequency: string | null
+          schedule_recipients: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          configuration?: Json
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          is_scheduled?: boolean
+          last_run_at?: string | null
+          name: string
+          report_type?: string
+          schedule_frequency?: string | null
+          schedule_recipients?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          configuration?: Json
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          is_scheduled?: boolean
+          last_run_at?: string | null
+          name?: string
+          report_type?: string
+          schedule_frequency?: string | null
+          schedule_recipients?: string[] | null
+          updated_at?: string
         }
         Relationships: []
       }
