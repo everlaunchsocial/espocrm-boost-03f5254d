@@ -245,3 +245,6 @@ verify_jwt = false
 
 [functions.process-campaigns]
 verify_jwt = false
+
+[functions.generate-call-script]
+verify_jwt = true
