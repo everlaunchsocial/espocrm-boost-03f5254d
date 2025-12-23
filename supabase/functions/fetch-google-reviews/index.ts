@@ -5,6 +5,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Communication problem keywords to flag
+const COMMUNICATION_KEYWORDS = [
+  "didn't return",
+  "never called back",
+  "no response",
+  "couldn't reach",
+  "won't answer",
+  "no callback",
+  "voicemail",
+  "waiting for",
+  "never heard back",
+  "poor communication",
+  "impossible to reach",
+  "ghosted",
+  "ignored",
+  "didn't call",
+  "never responded",
+  "hard to reach",
+  "can't get ahold",
+  "unreachable",
+  "missed call",
+  "no return call",
+  "didn't answer",
+  "never answered",
+  "MIA",
+  "missing in action",
+  "no show",
+  "stood up",
+  "didn't show",
+  "never showed",
+  "unresponsive",
+  "radio silence",
+];
+
 interface ReviewResult {
   title: string;
   date: string;
@@ -34,6 +68,42 @@ interface SerpApiReviewsResponse {
   };
 }
 
+interface FlaggedReview {
+  title: string;
+  date: string;
+  rating: number;
+  snippet: string;
+  likes: number;
+  user: {
+    name: string;
+    thumbnail: string;
+    reviews: number;
+    photos: number;
+  };
+  communicationFlags: {
+    isFlagged: boolean;
+    matchedKeywords: string[];
+  };
+}
+
+function analyzeReviewForCommunicationIssues(snippet: string): { isFlagged: boolean; matchedKeywords: string[] } {
+  if (!snippet) return { isFlagged: false, matchedKeywords: [] };
+  
+  const lowerSnippet = snippet.toLowerCase();
+  const matchedKeywords: string[] = [];
+  
+  for (const keyword of COMMUNICATION_KEYWORDS) {
+    if (lowerSnippet.includes(keyword.toLowerCase())) {
+      matchedKeywords.push(keyword);
+    }
+  }
+  
+  return {
+    isFlagged: matchedKeywords.length > 0,
+    matchedKeywords: [...new Set(matchedKeywords)], // Remove duplicates
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -41,7 +111,7 @@ serve(async (req) => {
   }
 
   try {
-    const { placeId, query, nextPageToken, sortBy = 'most_relevant' } = await req.json();
+    const { placeId, query, nextPageToken, sortBy = 'most_relevant', analyzeKeywords = true } = await req.json();
     
     const SERPAPI_API_KEY = Deno.env.get('SERPAPI_API_KEY');
     if (!SERPAPI_API_KEY) {
@@ -53,6 +123,7 @@ serve(async (req) => {
     }
 
     let searchUrl: string;
+    let foundPlaceId: string | null = null;
     
     if (nextPageToken) {
       // Pagination request
@@ -61,6 +132,7 @@ serve(async (req) => {
     } else if (placeId) {
       // Direct place ID lookup
       searchUrl = `https://serpapi.com/search.json?engine=google_maps_reviews&data_id=${encodeURIComponent(placeId)}&api_key=${SERPAPI_API_KEY}&sort_by=${sortBy}`;
+      foundPlaceId = placeId;
       console.log('Fetching reviews for placeId:', placeId);
     } else if (query) {
       // First, find the place
@@ -94,10 +166,10 @@ serve(async (req) => {
         );
       }
       
-      const foundPlaceId = firstResult.data_id;
+      foundPlaceId = firstResult.data_id;
       console.log('Found place ID:', foundPlaceId, 'for business:', firstResult.title);
       
-      searchUrl = `https://serpapi.com/search.json?engine=google_maps_reviews&data_id=${encodeURIComponent(foundPlaceId)}&api_key=${SERPAPI_API_KEY}&sort_by=${sortBy}`;
+      searchUrl = `https://serpapi.com/search.json?engine=google_maps_reviews&data_id=${encodeURIComponent(foundPlaceId || '')}&api_key=${SERPAPI_API_KEY}&sort_by=${sortBy}`;
     } else {
       return new Response(
         JSON.stringify({ error: 'Either placeId or query is required' }),
@@ -121,27 +193,50 @@ serve(async (req) => {
     const reviewsData: SerpApiReviewsResponse = await reviewsResponse.json();
     console.log('Fetched', reviewsData.reviews?.length || 0, 'reviews');
 
-    // Format the response
-    const formattedReviews = (reviewsData.reviews || []).map(review => ({
-      title: review.title || '',
-      date: review.date || '',
-      rating: review.rating || 0,
-      snippet: review.snippet || '',
-      likes: review.likes || 0,
-      user: {
-        name: review.user?.name || 'Anonymous',
-        thumbnail: review.user?.thumbnail || '',
-        reviews: review.user?.reviews || 0,
-        photos: review.user?.photos || 0,
+    // Format and analyze reviews
+    let flaggedCount = 0;
+    const formattedReviews: FlaggedReview[] = (reviewsData.reviews || []).map(review => {
+      const communicationFlags = analyzeKeywords 
+        ? analyzeReviewForCommunicationIssues(review.snippet || '')
+        : { isFlagged: false, matchedKeywords: [] };
+      
+      if (communicationFlags.isFlagged) {
+        flaggedCount++;
+        console.log('Flagged review:', review.snippet?.substring(0, 50), 'Keywords:', communicationFlags.matchedKeywords);
       }
-    }));
+      
+      return {
+        title: review.title || '',
+        date: review.date || '',
+        rating: review.rating || 0,
+        snippet: review.snippet || '',
+        likes: review.likes || 0,
+        user: {
+          name: review.user?.name || 'Anonymous',
+          thumbnail: review.user?.thumbnail || '',
+          reviews: review.user?.reviews || 0,
+          photos: review.user?.photos || 0,
+        },
+        communicationFlags,
+      };
+    });
+
+    console.log(`Analysis complete: ${flaggedCount} of ${formattedReviews.length} reviews flagged for communication issues`);
 
     return new Response(
       JSON.stringify({
         reviews: formattedReviews,
         placeInfo: reviewsData.place_info || null,
+        placeId: foundPlaceId || placeId || null,
         nextPageToken: reviewsData.serpapi_pagination?.next_page_token || null,
         hasMore: !!reviewsData.serpapi_pagination?.next_page_token,
+        communicationAnalysis: {
+          totalReviews: formattedReviews.length,
+          flaggedCount,
+          flaggedPercentage: formattedReviews.length > 0 
+            ? Math.round((flaggedCount / formattedReviews.length) * 100) 
+            : 0,
+        },
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -3,6 +3,9 @@ project_id = "mrcfpbkoulldnkqzzprb"
 [functions.fetch-google-reviews]
 verify_jwt = false
 
+[functions.search-prospects]
+verify_jwt = false
+
 [functions.calculate-lead-scores]
 verify_jwt = false
 
