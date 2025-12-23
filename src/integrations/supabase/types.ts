@@ -3135,6 +3135,50 @@ export type Database = {
           },
         ]
       }
+      lead_predictions: {
+        Row: {
+          created_at: string
+          id: string
+          last_updated: string
+          lead_id: string
+          predicted_close_date: string | null
+          predicted_close_probability: number
+          predicted_deal_value: number | null
+          predicted_time_to_close_days: number | null
+          prediction_factors: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_updated?: string
+          lead_id: string
+          predicted_close_date?: string | null
+          predicted_close_probability?: number
+          predicted_deal_value?: number | null
+          predicted_time_to_close_days?: number | null
+          prediction_factors?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_updated?: string
+          lead_id?: string
+          predicted_close_date?: string | null
+          predicted_close_probability?: number
+          predicted_deal_value?: number | null
+          predicted_time_to_close_days?: number | null
+          prediction_factors?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_predictions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_presence: {
         Row: {
           created_at: string
@@ -3728,6 +3772,68 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "payouts_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pipeline_forecasts: {
+        Row: {
+          accuracy_score: number | null
+          actual_closes: number | null
+          actual_revenue: number | null
+          affiliate_id: string | null
+          confidence_interval_high: number
+          confidence_interval_low: number
+          created_at: string
+          factors: Json | null
+          forecast_date: string
+          forecast_period: string
+          generated_at: string
+          id: string
+          predicted_close_rate: number
+          predicted_closes: number
+          predicted_revenue: number
+        }
+        Insert: {
+          accuracy_score?: number | null
+          actual_closes?: number | null
+          actual_revenue?: number | null
+          affiliate_id?: string | null
+          confidence_interval_high?: number
+          confidence_interval_low?: number
+          created_at?: string
+          factors?: Json | null
+          forecast_date: string
+          forecast_period: string
+          generated_at?: string
+          id?: string
+          predicted_close_rate?: number
+          predicted_closes?: number
+          predicted_revenue?: number
+        }
+        Update: {
+          accuracy_score?: number | null
+          actual_closes?: number | null
+          actual_revenue?: number | null
+          affiliate_id?: string | null
+          confidence_interval_high?: number
+          confidence_interval_low?: number
+          created_at?: string
+          factors?: Json | null
+          forecast_date?: string
+          forecast_period?: string
+          generated_at?: string
+          id?: string
+          predicted_close_rate?: number
+          predicted_closes?: number
+          predicted_revenue?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_forecasts_affiliate_id_fkey"
             columns: ["affiliate_id"]
             isOneToOne: false
             referencedRelation: "affiliates"

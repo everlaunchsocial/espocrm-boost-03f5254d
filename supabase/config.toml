@@ -248,3 +248,6 @@ verify_jwt = false
 
 [functions.generate-call-script]
 verify_jwt = true
+
+[functions.generate-forecasts]
+verify_jwt = false
