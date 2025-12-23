@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Search, 
   MapPin, 
@@ -16,12 +17,22 @@ import {
   Globe, 
   AlertTriangle, 
   UserPlus, 
-  ArrowRight,
   Loader2,
-  Target
+  Target,
+  ChevronDown,
+  ChevronUp,
+  DollarSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+
+interface SampleIssue {
+  snippet: string;
+  keywords: string[];
+  rating: number;
+  author?: string;
+  date?: string;
+}
 
 interface ProspectResult {
   name: string;
@@ -41,13 +52,18 @@ interface ProspectResult {
     flaggedCount: number;
     totalAnalyzed: number;
     flaggedPercentage: number;
-    sampleIssues: Array<{
-      snippet: string;
-      keywords: string[];
-      rating: number;
-    }>;
+    sampleIssues: SampleIssue[];
   };
   priorityScore: number;
+}
+
+interface SearchMetadata {
+  totalBusinessesFound: number;
+  businessesAnalyzed: number;
+  businessesWithIssues: number;
+  prospectsReturned: number;
+  apiCallsUsed: number;
+  estimatedCost: string;
 }
 
 export default function ProspectSearch() {
@@ -57,8 +73,28 @@ export default function ProspectSearch() {
   const [location, setLocation] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [results, setResults] = useState<ProspectResult[] | null>(null);
-  const [searchInfo, setSearchInfo] = useState<{ searchQuery: string; totalFound: number; analyzed: number } | null>(null);
+  const [metadata, setMetadata] = useState<SearchMetadata | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [importingId, setImportingId] = useState<string | null>(null);
+  
+  // Search options
+  const [analyzeLimit, setAnalyzeLimit] = useState(5); // Start with 5 for testing
+  const [issuesOnly, setIssuesOnly] = useState(true);
+  
+  // Expanded dropdown state for each prospect
+  const [expandedProspects, setExpandedProspects] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (dataId: string) => {
+    setExpandedProspects(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(dataId)) {
+        newSet.delete(dataId);
+      } else {
+        newSet.add(dataId);
+      }
+      return newSet;
+    });
+  };
 
   const handleSearch = async () => {
     if (!businessType.trim() || !location.trim()) {
@@ -72,30 +108,32 @@ export default function ProspectSearch() {
 
     setIsSearching(true);
     setResults(null);
-    setSearchInfo(null);
+    setMetadata(null);
+    setExpandedProspects(new Set());
 
     try {
       const { data, error } = await supabase.functions.invoke('search-prospects', {
         body: { 
           businessType: businessType.trim(), 
           location: location.trim(),
-          limit: 10,
+          analyzeLimit,
+          issuesOnly,
+          minFlagged: 1,
         }
       });
 
       if (error) throw error;
 
       setResults(data.prospects || []);
-      setSearchInfo({
-        searchQuery: data.searchQuery,
-        totalFound: data.totalFound,
-        analyzed: data.analyzed,
-      });
+      setMetadata(data.metadata || null);
+      setSearchQuery(data.searchQuery || '');
 
       if (data.prospects?.length === 0) {
         toast({
-          title: "No results",
-          description: "No businesses found for this search. Try a different location or business type.",
+          title: issuesOnly ? "No communication issues found" : "No results",
+          description: issuesOnly 
+            ? `Analyzed ${data.metadata?.businessesAnalyzed || 0} businesses - none had communication-related complaints. Try increasing the analysis limit or a different location.`
+            : "No businesses found for this search. Try a different location or business type.",
         });
       }
     } catch (err) {
@@ -141,8 +179,8 @@ export default function ProspectSearch() {
         description: `${prospect.name} has been added to your leads.`,
       });
 
-      // Navigate to the lead
-      navigate(`/crm/leads/${lead.id}`);
+      // Navigate to leads page with the lead ID to auto-open
+      navigate(`/leads?open=${lead.id}`);
     } catch (err) {
       console.error('Import error:', err);
       toast({
@@ -214,6 +252,37 @@ export default function ProspectSearch() {
               </div>
             </div>
           </div>
+          
+          {/* Search Options */}
+          <div className="flex flex-wrap items-center gap-6 mt-4 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="analyzeLimit" className="text-sm whitespace-nowrap">Analyze:</Label>
+              <select
+                id="analyzeLimit"
+                value={analyzeLimit}
+                onChange={(e) => setAnalyzeLimit(Number(e.target.value))}
+                className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+              >
+                <option value={5}>5 businesses (test)</option>
+                <option value={10}>10 businesses</option>
+                <option value={20}>20 businesses</option>
+                <option value={30}>30 businesses</option>
+                <option value={50}>50 businesses (max)</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Switch
+                id="issuesOnly"
+                checked={issuesOnly}
+                onCheckedChange={setIssuesOnly}
+              />
+              <Label htmlFor="issuesOnly" className="text-sm cursor-pointer">
+                Only show businesses with issues
+              </Label>
+            </div>
+          </div>
+          
           <Button 
             className="mt-4 w-full md:w-auto" 
             onClick={handleSearch}
@@ -243,7 +312,7 @@ export default function ProspectSearch() {
               Searching for businesses and analyzing their reviews...
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              This may take up to 30 seconds
+              Analyzing {analyzeLimit} businesses • This may take {Math.ceil(analyzeLimit * 1.5)} seconds
             </p>
           </div>
           {[1, 2, 3].map(i => (
@@ -266,14 +335,28 @@ export default function ProspectSearch() {
       {/* Results */}
       {results && !isSearching && (
         <div className="space-y-4">
-          {searchInfo && (
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                Found {searchInfo.totalFound} businesses, analyzed {searchInfo.analyzed} for communication issues
-              </span>
-              <Badge variant="outline">
-                Sorted by priority
-              </Badge>
+          {/* Results Header with Metadata */}
+          {metadata && (
+            <div className="bg-muted/50 rounded-lg p-4">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                <span className="font-medium">
+                  Analyzed {metadata.businessesAnalyzed} businesses
+                </span>
+                <span className="text-muted-foreground">•</span>
+                <span className={cn(
+                  metadata.businessesWithIssues > 0 ? "text-orange-600 font-medium" : "text-muted-foreground"
+                )}>
+                  {metadata.businessesWithIssues} with communication issues
+                </span>
+                <span className="text-muted-foreground">•</span>
+                <span>
+                  Showing {metadata.prospectsReturned}
+                </span>
+                <div className="ml-auto flex items-center gap-1 text-muted-foreground">
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>{metadata.estimatedCost} API cost</span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -281,12 +364,20 @@ export default function ProspectSearch() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Search className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                <p className="mt-4 text-muted-foreground">
-                  No businesses found for this search.
+                <p className="mt-4 font-medium">
+                  {issuesOnly ? "No communication issues found" : "No businesses found"}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Try a different business type or location.
+                <p className="text-sm text-muted-foreground mt-1">
+                  {issuesOnly 
+                    ? `Analyzed ${metadata?.businessesAnalyzed || 0} businesses - none had communication-related complaints.`
+                    : "Try a different business type or location."
+                  }
                 </p>
+                {issuesOnly && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Try increasing the "Analyze" limit or searching in a different location.
+                  </p>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -371,7 +462,7 @@ export default function ProspectSearch() {
                         )}
                       </div>
 
-                      {/* Communication issues */}
+                      {/* Communication issues - Problem Preview */}
                       {prospect.communicationIssues.flaggedCount > 0 && (
                         <div className="mt-3 p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
                           <div className="flex items-center gap-2 mb-2">
@@ -381,31 +472,88 @@ export default function ProspectSearch() {
                             </span>
                           </div>
                           
-                          <Progress 
-                            value={prospect.communicationIssues.flaggedPercentage} 
-                            className="h-2 mb-3"
-                          />
-
-                          {/* Sample issues */}
+                          {/* Problem Preview - First Issue */}
                           {prospect.communicationIssues.sampleIssues.length > 0 && (
                             <div className="space-y-2">
-                              {prospect.communicationIssues.sampleIssues.slice(0, 2).map((issue, i) => (
-                                <div key={i} className="text-xs">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-muted-foreground">{issue.rating}</span>
-                                    <span className="text-muted-foreground">•</span>
-                                    {issue.keywords.slice(0, 2).map((kw, ki) => (
-                                      <Badge key={ki} variant="outline" className="text-[10px] px-1 py-0 border-orange-500/30">
-                                        {kw}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                  <p className="text-muted-foreground italic line-clamp-2">
-                                    "{issue.snippet}"
-                                  </p>
+                              {/* First review always visible */}
+                              <div className="text-xs">
+                                <div className="flex items-center gap-1 mb-1 flex-wrap">
+                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-muted-foreground">{prospect.communicationIssues.sampleIssues[0].rating}</span>
+                                  {prospect.communicationIssues.sampleIssues[0].author && (
+                                    <>
+                                      <span className="text-muted-foreground">•</span>
+                                      <span className="text-muted-foreground">{prospect.communicationIssues.sampleIssues[0].author}</span>
+                                    </>
+                                  )}
+                                  {prospect.communicationIssues.sampleIssues[0].keywords.slice(0, 3).map((kw, ki) => (
+                                    <Badge key={ki} variant="outline" className="text-[10px] px-1 py-0 border-orange-500/30 text-orange-600">
+                                      {kw}
+                                    </Badge>
+                                  ))}
                                 </div>
-                              ))}
+                                <p className="text-muted-foreground italic line-clamp-2">
+                                  "{prospect.communicationIssues.sampleIssues[0].snippet}"
+                                </p>
+                              </div>
+
+                              {/* Expandable section for more reviews */}
+                              {prospect.communicationIssues.sampleIssues.length > 1 && (
+                                <Collapsible 
+                                  open={expandedProspects.has(prospect.dataId)}
+                                  onOpenChange={() => toggleExpanded(prospect.dataId)}
+                                >
+                                  <CollapsibleTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="w-full text-xs h-7 text-orange-600 hover:text-orange-700 hover:bg-orange-500/10"
+                                    >
+                                      {expandedProspects.has(prospect.dataId) ? (
+                                        <>
+                                          <ChevronUp className="h-3 w-3 mr-1" />
+                                          Hide {prospect.communicationIssues.sampleIssues.length - 1} more flagged reviews
+                                        </>
+                                      ) : (
+                                        <>
+                                          <ChevronDown className="h-3 w-3 mr-1" />
+                                          View all {prospect.communicationIssues.sampleIssues.length} flagged reviews
+                                        </>
+                                      )}
+                                    </Button>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent className="space-y-2 mt-2">
+                                    {prospect.communicationIssues.sampleIssues.slice(1).map((issue, i) => (
+                                      <div key={i} className="text-xs border-t border-orange-500/10 pt-2">
+                                        <div className="flex items-center gap-1 mb-1 flex-wrap">
+                                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                          <span className="text-muted-foreground">{issue.rating}</span>
+                                          {issue.author && (
+                                            <>
+                                              <span className="text-muted-foreground">•</span>
+                                              <span className="text-muted-foreground">{issue.author}</span>
+                                            </>
+                                          )}
+                                          {issue.date && (
+                                            <>
+                                              <span className="text-muted-foreground">•</span>
+                                              <span className="text-muted-foreground">{issue.date}</span>
+                                            </>
+                                          )}
+                                          {issue.keywords.slice(0, 3).map((kw, ki) => (
+                                            <Badge key={ki} variant="outline" className="text-[10px] px-1 py-0 border-orange-500/30 text-orange-600">
+                                              {kw}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                        <p className="text-muted-foreground italic">
+                                          "{issue.snippet}"
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              )}
                             </div>
                           )}
                         </div>

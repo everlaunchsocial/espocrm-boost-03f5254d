@@ -55,6 +55,14 @@ interface BusinessResult {
   };
 }
 
+interface SampleIssue {
+  snippet: string;
+  keywords: string[];
+  rating: number;
+  author?: string;
+  date?: string;
+}
+
 interface ProspectResult {
   name: string;
   dataId: string;
@@ -73,13 +81,9 @@ interface ProspectResult {
     flaggedCount: number;
     totalAnalyzed: number;
     flaggedPercentage: number;
-    sampleIssues: Array<{
-      snippet: string;
-      keywords: string[];
-      rating: number;
-    }>;
+    sampleIssues: SampleIssue[];
   };
-  priorityScore: number; // Higher = more likely to need our help
+  priorityScore: number;
 }
 
 function analyzeReviewForCommunicationIssues(snippet: string): { isFlagged: boolean; matchedKeywords: string[] } {
@@ -106,7 +110,13 @@ serve(async (req) => {
   }
 
   try {
-    const { businessType, location, limit = 10 } = await req.json();
+    const { 
+      businessType, 
+      location, 
+      analyzeLimit = 5, // Default to 5 for testing, bump to 50 for production
+      issuesOnly = true, // Only return businesses with communication issues
+      minFlagged = 1 // Minimum flagged reviews to qualify
+    } = await req.json();
     
     if (!businessType || !location) {
       return new Response(
@@ -126,7 +136,7 @@ serve(async (req) => {
 
     // Step 1: Search for businesses
     const searchQuery = `${businessType} near ${location}`;
-    console.log('Searching for prospects:', searchQuery);
+    console.log('Searching for prospects:', searchQuery, 'analyzeLimit:', analyzeLimit, 'issuesOnly:', issuesOnly);
     
     const searchUrl = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(searchQuery)}&api_key=${SERPAPI_API_KEY}`;
     
@@ -142,7 +152,8 @@ serve(async (req) => {
     
     const searchData = await searchResponse.json();
     const businesses: BusinessResult[] = searchData.local_results || [];
-    console.log(`Found ${businesses.length} businesses`);
+    const totalBusinessesFound = businesses.length;
+    console.log(`Found ${totalBusinessesFound} businesses`);
     
     if (businesses.length === 0) {
       return new Response(
@@ -150,14 +161,23 @@ serve(async (req) => {
           prospects: [], 
           message: 'No businesses found for this search',
           searchQuery,
+          metadata: {
+            totalBusinessesFound: 0,
+            businessesAnalyzed: 0,
+            businessesWithIssues: 0,
+            prospectsReturned: 0,
+            apiCallsUsed: 1,
+            estimatedCost: '$0.01'
+          }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Step 2: Analyze reviews for each business (limit to avoid rate limits)
-    const businessesToAnalyze = businesses.slice(0, Math.min(limit, 15));
-    const prospects: ProspectResult[] = [];
+    // Step 2: Analyze reviews for each business (up to analyzeLimit)
+    const businessesToAnalyze = businesses.slice(0, Math.min(analyzeLimit, businesses.length));
+    const allProspects: ProspectResult[] = [];
+    let apiCallsUsed = 1; // 1 for initial business search
     
     for (const business of businessesToAnalyze) {
       if (!business.data_id) continue;
@@ -169,6 +189,8 @@ serve(async (req) => {
         const reviewsUrl = `https://serpapi.com/search.json?engine=google_maps_reviews&data_id=${encodeURIComponent(business.data_id)}&api_key=${SERPAPI_API_KEY}&sort_by=lowest_rating`;
         
         const reviewsResponse = await fetch(reviewsUrl);
+        apiCallsUsed++;
+        
         if (!reviewsResponse.ok) {
           console.log(`Failed to fetch reviews for ${business.title}, skipping`);
           continue;
@@ -179,30 +201,32 @@ serve(async (req) => {
         
         // Analyze reviews
         let flaggedCount = 0;
-        const sampleIssues: Array<{ snippet: string; keywords: string[]; rating: number }> = [];
+        const sampleIssues: SampleIssue[] = [];
         
         for (const review of reviews) {
           const analysis = analyzeReviewForCommunicationIssues(review.snippet || '');
           if (analysis.isFlagged) {
             flaggedCount++;
-            if (sampleIssues.length < 3) {
+            // Capture up to 10 flagged snippets with full context
+            if (sampleIssues.length < 10) {
               sampleIssues.push({
-                snippet: review.snippet?.substring(0, 200) || '',
+                snippet: review.snippet?.substring(0, 300) || '',
                 keywords: analysis.matchedKeywords,
                 rating: review.rating || 0,
+                author: review.user?.name || 'Anonymous',
+                date: review.date || '',
               });
             }
           }
         }
         
         // Calculate priority score (higher = more likely to need our service)
-        // Factors: more flagged reviews, lower rating, higher review volume
         const flaggedPercentage = reviews.length > 0 ? (flaggedCount / reviews.length) * 100 : 0;
         const ratingPenalty = business.rating ? (5 - business.rating) * 10 : 0;
         const volumeBonus = Math.min((business.reviews || 0) / 10, 10);
         const priorityScore = Math.round(flaggedCount * 20 + flaggedPercentage + ratingPenalty + volumeBonus);
         
-        prospects.push({
+        const prospect: ProspectResult = {
           name: business.title,
           dataId: business.data_id,
           placeId: business.place_id,
@@ -223,7 +247,9 @@ serve(async (req) => {
             sampleIssues,
           },
           priorityScore,
-        });
+        };
+        
+        allProspects.push(prospect);
         
         console.log(`${business.title}: ${flaggedCount}/${reviews.length} flagged, priority: ${priorityScore}`);
         
@@ -236,17 +262,32 @@ serve(async (req) => {
       }
     }
     
-    // Sort by priority score (highest first)
-    prospects.sort((a, b) => b.priorityScore - a.priorityScore);
+    // Filter to only businesses with communication issues if issuesOnly is true
+    let filteredProspects = allProspects;
+    if (issuesOnly) {
+      filteredProspects = allProspects.filter(p => p.communicationIssues.flaggedCount >= minFlagged);
+    }
     
-    console.log(`Analysis complete: ${prospects.length} prospects analyzed`);
+    // Sort by priority score (highest first)
+    filteredProspects.sort((a, b) => b.priorityScore - a.priorityScore);
+    
+    const businessesWithIssues = allProspects.filter(p => p.communicationIssues.flaggedCount >= minFlagged).length;
+    const estimatedCost = `$${(apiCallsUsed * 0.01).toFixed(2)}`;
+    
+    console.log(`Analysis complete: ${allProspects.length} analyzed, ${businessesWithIssues} with issues, returning ${filteredProspects.length}`);
     
     return new Response(
       JSON.stringify({
-        prospects,
+        prospects: filteredProspects,
         searchQuery,
-        totalFound: businesses.length,
-        analyzed: prospects.length,
+        metadata: {
+          totalBusinessesFound,
+          businessesAnalyzed: allProspects.length,
+          businessesWithIssues,
+          prospectsReturned: filteredProspects.length,
+          apiCallsUsed,
+          estimatedCost,
+        }
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
