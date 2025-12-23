@@ -3213,6 +3213,12 @@ export type Database = {
           industry: string | null
           instagram_handle: string | null
           last_name: string
+          last_pattern_analysis: string | null
+          learned_best_days: string[] | null
+          learned_best_times: string[] | null
+          learned_channel_preference: string | null
+          learned_optimal_gap_hours: number | null
+          learning_confidence: number | null
           notes: string | null
           phone: string | null
           pipeline_status: string
@@ -3256,6 +3262,12 @@ export type Database = {
           industry?: string | null
           instagram_handle?: string | null
           last_name: string
+          last_pattern_analysis?: string | null
+          learned_best_days?: string[] | null
+          learned_best_times?: string[] | null
+          learned_channel_preference?: string | null
+          learned_optimal_gap_hours?: number | null
+          learning_confidence?: number | null
           notes?: string | null
           phone?: string | null
           pipeline_status?: string
@@ -3299,6 +3311,12 @@ export type Database = {
           industry?: string | null
           instagram_handle?: string | null
           last_name?: string
+          last_pattern_analysis?: string | null
+          learned_best_days?: string[] | null
+          learned_best_times?: string[] | null
+          learned_channel_preference?: string | null
+          learned_optimal_gap_hours?: number | null
+          learning_confidence?: number | null
           notes?: string | null
           phone?: string | null
           pipeline_status?: string

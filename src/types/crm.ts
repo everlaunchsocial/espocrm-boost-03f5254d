@@ -111,6 +111,13 @@ export interface Lead {
   notes?: string;
   // Import tracking
   importBatchId?: string;
+  // ML-learned patterns
+  learnedBestDays?: string[] | null;
+  learnedBestTimes?: string[] | null;
+  learnedOptimalGapHours?: number | null;
+  learnedChannelPreference?: string | null;
+  learningConfidence?: number | null;
+  lastPatternAnalysis?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
