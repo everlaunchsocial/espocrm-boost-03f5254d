@@ -2971,6 +2971,50 @@ export type Database = {
           },
         ]
       }
+      lead_scores: {
+        Row: {
+          created_at: string
+          engagement_score: number
+          fit_score: number
+          id: string
+          last_calculated: string
+          lead_id: string
+          overall_score: number
+          score_factors: Json
+          urgency_score: number
+        }
+        Insert: {
+          created_at?: string
+          engagement_score?: number
+          fit_score?: number
+          id?: string
+          last_calculated?: string
+          lead_id: string
+          overall_score?: number
+          score_factors?: Json
+          urgency_score?: number
+        }
+        Update: {
+          created_at?: string
+          engagement_score?: number
+          fit_score?: number
+          id?: string
+          last_calculated?: string
+          lead_id?: string
+          overall_score?: number
+          score_factors?: Json
+          urgency_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_scores_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_sequences: {
         Row: {
           added_by: string | null
