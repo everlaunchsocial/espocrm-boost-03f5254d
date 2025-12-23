@@ -95,6 +95,12 @@ export interface Lead {
   // Metrics
   googleRating?: number;
   googleReviewCount?: number;
+  // Google enrichment
+  googleEnrichedAt?: Date;
+  googlePlaceId?: string;
+  googleBusinessStatus?: string;
+  googleFormattedAddress?: string;
+  googleFormattedPhone?: string;
   // Flags
   hasWebsite?: boolean;
   doneForYou?: boolean; // True = HQ handles follow-ups

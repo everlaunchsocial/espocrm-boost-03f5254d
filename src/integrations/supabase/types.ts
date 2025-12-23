@@ -3195,8 +3195,18 @@ export type Database = {
           email: string | null
           facebook_url: string | null
           first_name: string
+          google_business_status: string | null
+          google_enriched_at: string | null
+          google_formatted_address: string | null
+          google_formatted_phone: string | null
+          google_opening_hours: Json | null
+          google_photos_count: number | null
+          google_place_id: string | null
+          google_price_level: number | null
           google_rating: number | null
           google_review_count: number | null
+          google_types: string[] | null
+          google_user_ratings_total: number | null
           has_website: boolean | null
           id: string
           import_batch_id: string | null
@@ -3228,8 +3238,18 @@ export type Database = {
           email?: string | null
           facebook_url?: string | null
           first_name: string
+          google_business_status?: string | null
+          google_enriched_at?: string | null
+          google_formatted_address?: string | null
+          google_formatted_phone?: string | null
+          google_opening_hours?: Json | null
+          google_photos_count?: number | null
+          google_place_id?: string | null
+          google_price_level?: number | null
           google_rating?: number | null
           google_review_count?: number | null
+          google_types?: string[] | null
+          google_user_ratings_total?: number | null
           has_website?: boolean | null
           id?: string
           import_batch_id?: string | null
@@ -3261,8 +3281,18 @@ export type Database = {
           email?: string | null
           facebook_url?: string | null
           first_name?: string
+          google_business_status?: string | null
+          google_enriched_at?: string | null
+          google_formatted_address?: string | null
+          google_formatted_phone?: string | null
+          google_opening_hours?: Json | null
+          google_photos_count?: number | null
+          google_place_id?: string | null
+          google_price_level?: number | null
           google_rating?: number | null
           google_review_count?: number | null
+          google_types?: string[] | null
+          google_user_ratings_total?: number | null
           has_website?: boolean | null
           id?: string
           import_batch_id?: string | null
