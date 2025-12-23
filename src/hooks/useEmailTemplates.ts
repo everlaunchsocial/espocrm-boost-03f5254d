@@ -141,7 +141,6 @@ export function useTemplatesWithStats() {
 
       return templatesWithStats;
     },
-    enabled: aiCrmPhase4,
   });
 }
 

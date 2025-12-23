@@ -285,6 +285,7 @@ const App = () => (
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/competitors" element={<Competitors />} />
+            <Route path="/email-templates" element={<EmailTemplates />} />
             <Route path="/media-library" element={<MediaLibrary />} />
             <Route path="/voice-demo" element={<VoiceDemo />} />
             <Route path="/demos" element={<Demos />} />
