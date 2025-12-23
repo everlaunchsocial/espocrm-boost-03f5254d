@@ -13,13 +13,13 @@ const DEFAULT_VOICE_ID = 'a0e99841-438c-4a64-b679-ae501e7d6091';
 
 export function VoiceExecutiveSummary() {
   const { isEnabled } = useFeatureFlags();
+  const phase1Enabled = isEnabled('aiCrmPhase1');
+
   const { data: summary, isLoading, error } = useVoiceSummary();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Feature flag check
-  if (!isEnabled('aiCrmPhase1')) return null;
 
   const stopAudio = useCallback(() => {
     if (audioRef.current) {
@@ -81,6 +81,9 @@ export function VoiceExecutiveSummary() {
       setIsGenerating(false);
     }
   }, [summary, isPlaying, stopAudio]);
+
+  // Feature flag check (must be after hooks to avoid hooks-order errors)
+  if (!phase1Enabled) return null;
 
   if (error) {
     return (
