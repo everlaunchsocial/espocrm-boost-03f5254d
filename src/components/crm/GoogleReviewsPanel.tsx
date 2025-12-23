@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Star, ThumbsUp, User, ChevronDown, RefreshCw, MessageSquare } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Star, ThumbsUp, User, ChevronDown, RefreshCw, MessageSquare, AlertTriangle, Phone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface GoogleReview {
@@ -18,6 +19,10 @@ interface GoogleReview {
     reviews: number;
     photos: number;
   };
+  communicationFlags?: {
+    isFlagged: boolean;
+    matchedKeywords: string[];
+  };
 }
 
 interface PlaceInfo {
@@ -25,6 +30,12 @@ interface PlaceInfo {
   address: string;
   rating: number;
   reviews: number;
+}
+
+interface CommunicationAnalysis {
+  totalReviews: number;
+  flaggedCount: number;
+  flaggedPercentage: number;
 }
 
 interface GoogleReviewsPanelProps {
@@ -42,10 +53,11 @@ export function GoogleReviewsPanel({
   state, 
   googlePlaceId 
 }: GoogleReviewsPanelProps) {
-  const [sortBy, setSortBy] = useState<'most_relevant' | 'newest' | 'highest_rating' | 'lowest_rating'>('most_relevant');
+  const [sortBy, setSortBy] = useState<'most_relevant' | 'newest' | 'highest_rating' | 'lowest_rating' | 'flagged_first'>('most_relevant');
   const [allReviews, setAllReviews] = useState<GoogleReview[]>([]);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [communicationAnalysis, setCommunicationAnalysis] = useState<CommunicationAnalysis | null>(null);
 
   // Build search query from business info
   const searchQuery = businessName 
@@ -55,11 +67,14 @@ export function GoogleReviewsPanel({
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['google-reviews', leadId, googlePlaceId, searchQuery, sortBy],
     queryFn: async () => {
+      const apiSortBy = sortBy === 'flagged_first' ? 'most_relevant' : sortBy;
+      
       const { data, error } = await supabase.functions.invoke('fetch-google-reviews', {
         body: { 
           placeId: googlePlaceId,
           query: !googlePlaceId ? searchQuery : undefined,
-          sortBy,
+          sortBy: apiSortBy,
+          analyzeKeywords: true,
         }
       });
 
@@ -67,16 +82,19 @@ export function GoogleReviewsPanel({
       
       setAllReviews(data.reviews || []);
       setNextPageToken(data.nextPageToken || null);
+      setCommunicationAnalysis(data.communicationAnalysis || null);
       
       return data as { 
         reviews: GoogleReview[]; 
         placeInfo: PlaceInfo | null;
+        placeId: string | null;
         nextPageToken: string | null;
         hasMore: boolean;
+        communicationAnalysis: CommunicationAnalysis;
       };
     },
     enabled: !!(googlePlaceId || searchQuery),
-    staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+    staleTime: 1000 * 60 * 10,
   });
 
   const loadMore = async () => {
@@ -86,9 +104,10 @@ export function GoogleReviewsPanel({
     try {
       const { data: moreData, error } = await supabase.functions.invoke('fetch-google-reviews', {
         body: { 
-          placeId: googlePlaceId || data?.placeInfo?.title,
+          placeId: googlePlaceId || data?.placeId,
           nextPageToken,
-          sortBy,
+          sortBy: sortBy === 'flagged_first' ? 'most_relevant' : sortBy,
+          analyzeKeywords: true,
         }
       });
 
@@ -96,6 +115,19 @@ export function GoogleReviewsPanel({
 
       setAllReviews(prev => [...prev, ...(moreData.reviews || [])]);
       setNextPageToken(moreData.nextPageToken || null);
+      
+      // Update communication analysis
+      if (moreData.communicationAnalysis && communicationAnalysis) {
+        const combined = {
+          totalReviews: communicationAnalysis.totalReviews + moreData.communicationAnalysis.totalReviews,
+          flaggedCount: communicationAnalysis.flaggedCount + moreData.communicationAnalysis.flaggedCount,
+          flaggedPercentage: 0,
+        };
+        combined.flaggedPercentage = combined.totalReviews > 0 
+          ? Math.round((combined.flaggedCount / combined.totalReviews) * 100) 
+          : 0;
+        setCommunicationAnalysis(combined);
+      }
     } catch (err) {
       console.error('Error loading more reviews:', err);
     } finally {
@@ -107,6 +139,18 @@ export function GoogleReviewsPanel({
     setSortBy(newSort);
     setAllReviews([]);
     setNextPageToken(null);
+  };
+
+  // Get sorted reviews based on current sort option
+  const getSortedReviews = (reviews: GoogleReview[]) => {
+    if (sortBy === 'flagged_first') {
+      return [...reviews].sort((a, b) => {
+        const aFlagged = a.communicationFlags?.isFlagged ? 1 : 0;
+        const bFlagged = b.communicationFlags?.isFlagged ? 1 : 0;
+        return bFlagged - aFlagged;
+      });
+    }
+    return reviews;
   };
 
   if (!searchQuery && !googlePlaceId) {
@@ -165,11 +209,30 @@ export function GoogleReviewsPanel({
     );
   }
 
-  const displayReviews = allReviews.length > 0 ? allReviews : data?.reviews || [];
+  const displayReviews = getSortedReviews(allReviews.length > 0 ? allReviews : data?.reviews || []);
   const hasMore = nextPageToken !== null;
+  const analysis = communicationAnalysis || data?.communicationAnalysis;
 
   return (
     <div className="space-y-4">
+      {/* Communication Issues Alert Banner */}
+      {analysis && analysis.flaggedCount > 0 && (
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-orange-700 dark:text-orange-400">
+                {analysis.flaggedCount} review{analysis.flaggedCount !== 1 ? 's' : ''} mention communication issues
+              </p>
+              <p className="text-sm text-orange-600/80 dark:text-orange-400/80 mt-0.5">
+                {analysis.flaggedPercentage}% of reviews mention missed calls, no callbacks, or being hard to reach.
+                <span className="font-medium ml-1">This is a strong sales opportunity.</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header with place info and sort */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
@@ -193,6 +256,7 @@ export function GoogleReviewsPanel({
             onChange={(e) => handleSortChange(e.target.value as typeof sortBy)}
             className="text-sm border rounded-md px-2 py-1 bg-background"
           >
+            <option value="flagged_first">⚠️ Issues First</option>
             <option value="most_relevant">Most Relevant</option>
             <option value="newest">Newest</option>
             <option value="highest_rating">Highest Rating</option>
@@ -207,7 +271,30 @@ export function GoogleReviewsPanel({
       {/* Reviews list */}
       <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
         {displayReviews.map((review, index) => (
-          <div key={index} className="p-4 border rounded-lg bg-card hover:bg-muted/30 transition-colors">
+          <div 
+            key={index} 
+            className={cn(
+              "p-4 border rounded-lg bg-card hover:bg-muted/30 transition-colors",
+              review.communicationFlags?.isFlagged && "border-orange-500/50 bg-orange-500/5"
+            )}
+          >
+            {/* Flagged indicator */}
+            {review.communicationFlags?.isFlagged && (
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-orange-500/20">
+                <Phone className="h-4 w-4 text-orange-500" />
+                <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                  Communication Issue Detected
+                </span>
+                <div className="flex gap-1 flex-wrap">
+                  {review.communicationFlags.matchedKeywords.slice(0, 3).map((keyword, i) => (
+                    <Badge key={i} variant="outline" className="text-xs border-orange-500/30 text-orange-600 dark:text-orange-400">
+                      {keyword}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             {/* User info */}
             <div className="flex items-start gap-3">
               {review.user.thumbnail ? (
