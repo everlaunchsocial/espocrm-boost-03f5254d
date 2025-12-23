@@ -230,3 +230,6 @@ verify_jwt = true
 
 [functions.ai-assistant-preview-voice]
 verify_jwt = true
+
+[functions.enrich-lead-google]
+verify_jwt = true
