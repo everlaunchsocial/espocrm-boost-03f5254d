@@ -54,6 +54,7 @@ import {
   exportToCSV,
   type Report,
   type ReportConfiguration,
+} from '@/hooks/useReports';
 import type { Json } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -148,7 +149,7 @@ export default function Reports() {
           groupBy: groupBy || undefined,
           sortBy,
           sortOrder,
-        } as unknown as Json,
+        },
       });
       toast.success('Report created');
       setShowCreateDialog(false);
@@ -164,7 +165,7 @@ export default function Reports() {
         name: template.name,
         description: template.description,
         report_type: template.report_type,
-        configuration: template.configuration as unknown as Json,
+        configuration: template.configuration,
       });
       toast.success('Report created from template');
       setShowTemplateDialog(false);

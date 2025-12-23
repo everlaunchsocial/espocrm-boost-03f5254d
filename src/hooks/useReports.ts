@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface Report {
   id: string;
@@ -186,17 +187,17 @@ export function useCreateReport() {
 
       const { data, error } = await supabase
         .from('reports')
-        .insert({
-          name: report.name,
+        .insert([{
+          name: report.name!,
           description: report.description,
           report_type: report.report_type || 'custom',
-          configuration: report.configuration || {},
+          configuration: report.configuration as Json || {},
           created_by: user.id,
           is_global: report.is_global || false,
           is_scheduled: report.is_scheduled || false,
           schedule_frequency: report.schedule_frequency,
           schedule_recipients: report.schedule_recipients,
-        })
+        }])
         .select()
         .single();
       
@@ -214,9 +215,18 @@ export function useUpdateReport() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Report> & { id: string }) => {
+      const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.configuration !== undefined) updateData.configuration = updates.configuration as Json;
+      if (updates.is_global !== undefined) updateData.is_global = updates.is_global;
+      if (updates.is_scheduled !== undefined) updateData.is_scheduled = updates.is_scheduled;
+      if (updates.schedule_frequency !== undefined) updateData.schedule_frequency = updates.schedule_frequency;
+      if (updates.schedule_recipients !== undefined) updateData.schedule_recipients = updates.schedule_recipients;
+      
       const { error } = await supabase
         .from('reports')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', id);
       
       if (error) throw error;
@@ -297,7 +307,7 @@ export function useRunReport() {
       if (reportError) throw reportError;
 
       // Execute the report based on configuration
-      const config = report.configuration as ReportConfiguration;
+      const config = report.configuration as unknown as ReportConfiguration;
       let query;
       let rowCount = 0;
 
@@ -429,14 +439,14 @@ export function useCreateDashboard() {
 
       const { data, error } = await supabase
         .from('dashboards')
-        .insert({
-          name: dashboard.name,
+        .insert([{
+          name: dashboard.name!,
           description: dashboard.description,
-          layout: dashboard.layout || {},
+          layout: (dashboard.layout || {}) as Json,
           owner_id: user.id,
           is_default: dashboard.is_default || false,
           is_public: dashboard.is_public || false,
-        })
+        }])
         .select()
         .single();
       
@@ -525,12 +535,13 @@ export function useReportData(config: ReportConfiguration | null) {
   });
 }
 
-function groupBy(arr: Record<string, unknown>[], key: string) {
-  return arr.reduce((acc, item) => {
+function groupBy(arr: Record<string, unknown>[], key: string): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const item of arr) {
     const group = String(item[key] || 'Unknown');
-    acc[group] = (acc[group] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+    result[group] = (result[group] || 0) + 1;
+  }
+  return result;
 }
 
 // Export utilities
