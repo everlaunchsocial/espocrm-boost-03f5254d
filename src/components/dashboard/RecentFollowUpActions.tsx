@@ -41,13 +41,12 @@ function getActionConfig(subject: string) {
 
 export function RecentFollowUpActions() {
   const { isEnabled } = useFeatureFlags();
+  const phase1Enabled = isEnabled('aiCrmPhase1');
   const [isOpen, setIsOpen] = useState(true);
-
-  // Feature flag check
-  if (!isEnabled('aiCrmPhase1')) return null;
 
   const { data: recentActions, isLoading } = useQuery({
     queryKey: ['recent-followup-actions'],
+    enabled: phase1Enabled,
     queryFn: async () => {
       // Fetch user-initiated follow-up actions from activities
       // Filter by is_system_generated: false and matching action patterns
@@ -71,8 +70,11 @@ export function RecentFollowUpActions() {
         createdAt: activity.created_at,
       }));
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: phase1Enabled ? 30000 : false,
   });
+
+  // Feature flag check (must be after hooks to avoid hooks-order errors)
+  if (!phase1Enabled) return null;
 
   if (isLoading) {
     return (

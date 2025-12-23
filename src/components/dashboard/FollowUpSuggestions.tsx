@@ -83,14 +83,21 @@ const actionConfig: Record<SuggestionReason, { label: string; icon: typeof Refre
 
 export function FollowUpSuggestions() {
   const { isEnabled } = useFeatureFlags();
+  const phase1Enabled = isEnabled('aiCrmPhase1');
+
   const { data: suggestions, isLoading, error, refetch, isFetching } = useFollowUpSuggestions();
   const { logAccepted, confirmAction } = useFollowupLearning();
+  const { isResolved, markAsResolved, markAllAsResolved, unmarkResolved } = useFollowUpResolutions();
+  const { hasFeedback, getFeedback, submitFeedback } = useFollowUpFeedback();
+
   const navigate = useNavigate();
   const [selectedSuggestion, setSelectedSuggestion] = useState<FollowUpSuggestion | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'helpful' | 'not_helpful' | 'not_rated'>('all');
-  
+  const [markAsDoneTarget, setMarkAsDoneTarget] = useState<FollowUpSuggestion | null>(null);
+  const [showResolveAllDialog, setShowResolveAllDialog] = useState(false);
+
   // Regenerate throttle state
   const [regenerateCooldown, setRegenerateCooldown] = useState(0);
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
@@ -113,14 +120,9 @@ export function FollowUpSuggestions() {
     };
   }, []);
 
-  // Feature flag check
-  if (!isEnabled('aiCrmPhase1')) return null;
+  // Feature flag check (must be after hooks to avoid hooks-order errors)
+  if (!phase1Enabled) return null;
 
-  const { isResolved, markAsResolved, markAllAsResolved, unmarkResolved } = useFollowUpResolutions();
-  const { hasFeedback, getFeedback, submitFeedback } = useFollowUpFeedback();
-  const [markAsDoneTarget, setMarkAsDoneTarget] = useState<FollowUpSuggestion | null>(null);
-  const [showResolveAllDialog, setShowResolveAllDialog] = useState(false);
-  
   // Check if Phase 3 is enabled for Resolve All, Regenerate, Rating, and Filter
   const showResolveAll = isEnabled('aiCrmPhase2');
   const showRegenerate = isEnabled('aiCrmPhase2');
