@@ -56,6 +56,7 @@ import { LeadIntentBadges } from './LeadIntentBadges';
 import { LeadIntentEditor } from './LeadIntentEditor';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import { FollowUpHistoryTab } from './FollowUpHistoryTab';
+import { GoogleEnrichmentButton } from './GoogleEnrichmentButton';
 import {
   Phone,
   PhoneCall,
@@ -429,7 +430,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
 
           {/* Business Information */}
           <div className="py-4 border-b border-border space-y-3">
-            <p className="text-sm font-medium text-muted-foreground">Business Information</p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-muted-foreground">Business Information</p>
+              <GoogleEnrichmentButton 
+                leadId={lead.id} 
+                hasBeenEnriched={!!lead.googleEnrichedAt}
+              />
+            </div>
             <div className="grid gap-3">
               {lead.company && (
                 <div className="flex items-center gap-3">
@@ -469,6 +476,14 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
                   >
                     {lead.website}
                   </a>
+                </div>
+              )}
+              {lead.googleRating && (
+                <div className="flex items-center gap-3">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span className="text-sm">
+                    {lead.googleRating} ({lead.googleReviewCount || 0} reviews)
+                  </span>
                 </div>
               )}
               <div className="flex items-center gap-3">

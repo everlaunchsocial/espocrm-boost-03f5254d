@@ -66,9 +66,19 @@ const toLead = (row: any): Lead => ({
   // Metrics
   googleRating: row.google_rating ? Number(row.google_rating) : undefined,
   googleReviewCount: row.google_review_count,
+  // Google enrichment
+  googleEnrichedAt: row.google_enriched_at ? new Date(row.google_enriched_at) : undefined,
+  googlePlaceId: row.google_place_id,
+  googleBusinessStatus: row.google_business_status,
+  googleFormattedAddress: row.google_formatted_address,
+  googleFormattedPhone: row.google_formatted_phone,
   // Flags
   hasWebsite: row.has_website,
   doneForYou: row.done_for_you,
+  priority: row.priority,
+  quietMode: row.quiet_mode,
+  // Assignment
+  assignedToUserId: row.assigned_to_user_id,
   notes: row.notes,
   // Import tracking
   importBatchId: row.import_batch_id,
