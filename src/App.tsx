@@ -31,6 +31,8 @@ import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import Integrations from "./pages/Integrations";
 import AdminPanel from "./pages/AdminPanel";
 import BillingDashboard from "./pages/BillingDashboard";
+import PrivacyCenter from "./pages/PrivacyCenter";
+import ComplianceDashboard from "./pages/ComplianceDashboard";
 import VoiceDemo from "./pages/VoiceDemo";
 import Demos from "./pages/Demos";
 import DemoDetail from "./pages/DemoDetail";
@@ -149,6 +151,7 @@ const App = () => (
           <Route path="/partner" element={<AffiliateSignup />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/not-found" element={<NotFound />} />
+          <Route path="/privacy" element={<PrivacyCenter />} />
           <Route path="/logout" element={<Logout />} />
           
           {/* Product & Customer purchase pages - public */}
@@ -299,6 +302,7 @@ const App = () => (
             <Route path="/integrations" element={<Integrations />} />
             <Route path="/billing" element={<BillingDashboard />} />
             <Route path="/admin-panel" element={<AdminPanel />} />
+            <Route path="/admin/compliance" element={<ComplianceDashboard />} />
             <Route path="/voice-demo" element={<VoiceDemo />} />
             <Route path="/demos" element={<Demos />} />
             <Route path="/demos/:id" element={<DemoDetail />} />
