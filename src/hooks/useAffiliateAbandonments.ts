@@ -86,10 +86,11 @@ export function useAffiliateAbandonments() {
   }, [affiliateId]);
 
   useEffect(() => {
-    if (!affiliateLoading) {
+    if (!affiliateLoading && affiliateId) {
       fetchAbandonments();
     }
-  }, [affiliateId, affiliateLoading, fetchAbandonments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [affiliateId, affiliateLoading]);
 
   const markAllAsViewed = useCallback(async () => {
     if (!affiliateId) return;

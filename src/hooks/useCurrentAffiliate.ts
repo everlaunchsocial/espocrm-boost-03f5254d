@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CurrentAffiliate {
@@ -31,8 +31,11 @@ export function useCurrentAffiliate() {
   const [affiliate, setAffiliate] = useState<CurrentAffiliate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isImpersonating, setIsImpersonating] = useState(false);
+  const fetchingRef = useRef(false);
 
   const fetchAffiliate = async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -96,6 +99,7 @@ export function useCurrentAffiliate() {
       console.error('Exception fetching affiliate:', err);
       setAffiliate(null);
     } finally {
+      fetchingRef.current = false;
       setIsLoading(false);
     }
   };
