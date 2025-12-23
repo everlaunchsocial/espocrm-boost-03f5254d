@@ -59,6 +59,7 @@ import { CallScriptPanel } from './CallScriptPanel';
 import { PIPELINE_STATUS_CONFIG, PipelineStatus } from '@/lib/pipelineStatus';
 import { FollowUpHistoryTab } from './FollowUpHistoryTab';
 import { GoogleEnrichmentButton } from './GoogleEnrichmentButton';
+import { GoogleReviewsPanel } from './GoogleReviewsPanel';
 import {
   Phone,
   PhoneCall,
@@ -644,12 +645,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
 
           {/* Tabs */}
           <Tabs defaultValue="notes" className="mt-4">
-            <TabsList className={cn("w-full", phase2Enabled && "grid grid-cols-4")}>
+            <TabsList className={cn("w-full", phase2Enabled ? "grid grid-cols-5" : "grid grid-cols-4")}>
               <TabsTrigger value="notes" className="flex-1">Notes ({leadNotes.length})</TabsTrigger>
               <TabsTrigger value="activity" className="flex-1">
                 {phase2Enabled ? 'Timeline' : `Activity (${leadActivities.length})`}
               </TabsTrigger>
               <TabsTrigger value="tasks" className="flex-1">Tasks ({leadTasks.length})</TabsTrigger>
+              <TabsTrigger value="reviews" className="flex-1">Reviews</TabsTrigger>
               {phase2Enabled && (
                 <TabsTrigger value="followups" className="flex-1">Follow-Ups</TabsTrigger>
               )}
@@ -696,6 +698,16 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-8">No tasks.</p>
               )}
+            </TabsContent>
+
+            <TabsContent value="reviews" className="mt-4">
+              <GoogleReviewsPanel 
+                leadId={lead.id}
+                businessName={lead.company}
+                city={lead.city}
+                state={lead.state}
+                googlePlaceId={lead.googlePlaceId}
+              />
             </TabsContent>
 
             {phase2Enabled && (
