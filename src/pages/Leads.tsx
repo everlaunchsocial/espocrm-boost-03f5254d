@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLeads, useAddLead, useUpdateLead, useDeleteLead, useConvertLeadToContact } from '@/hooks/useCRMData';
 import { usePersistedFormState } from '@/hooks/usePersistedFormState';
 import { useLeadTagsMap } from '@/hooks/useLeadTagsMap';
@@ -79,11 +80,36 @@ export default function Leads() {
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
   const convertLeadToContact = useConvertLeadToContact();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  
+  // Auto-open lead from URL param (e.g., from ProspectSearch import)
+  useEffect(() => {
+    const openLeadId = searchParams.get('open');
+    if (openLeadId && leads.length > 0) {
+      const leadToOpen = leads.find(l => l.id === openLeadId);
+      if (leadToOpen) {
+        setSelectedLead(leadToOpen);
+        setDetailOpen(true);
+        // Clear the URL param after opening
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, leads, setSearchParams]);
+  
+  // Sync selectedLead with leads list when leads change (e.g., after enrichment)
+  useEffect(() => {
+    if (selectedLead && leads.length > 0) {
+      const updatedLead = leads.find(l => l.id === selectedLead.id);
+      if (updatedLead && JSON.stringify(updatedLead) !== JSON.stringify(selectedLead)) {
+        setSelectedLead(updatedLead);
+      }
+    }
+  }, [leads, selectedLead]);
   
   // Tag filter state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
