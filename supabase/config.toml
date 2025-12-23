@@ -251,3 +251,6 @@ verify_jwt = true
 
 [functions.generate-forecasts]
 verify_jwt = false
+
+[functions.analyze-sentiment]
+verify_jwt = true

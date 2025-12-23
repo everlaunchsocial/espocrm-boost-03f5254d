@@ -2660,6 +2660,44 @@ export type Database = {
           },
         ]
       }
+      emotional_journey: {
+        Row: {
+          current_emotional_state: string
+          id: string
+          journey_data: Json
+          last_updated: string
+          lead_id: string
+          risk_level: string
+          trend: string
+        }
+        Insert: {
+          current_emotional_state?: string
+          id?: string
+          journey_data?: Json
+          last_updated?: string
+          lead_id: string
+          risk_level?: string
+          trend?: string
+        }
+        Update: {
+          current_emotional_state?: string
+          id?: string
+          journey_data?: Json
+          last_updated?: string
+          lead_id?: string
+          risk_level?: string
+          trend?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emotional_journey_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimate_items: {
         Row: {
           created_at: string
@@ -4519,6 +4557,56 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      sentiment_analysis: {
+        Row: {
+          analyzed_at: string
+          content_analyzed: string
+          emotions_detected: Json
+          id: string
+          interaction_type: string
+          key_phrases: string[] | null
+          lead_id: string
+          recommended_action: string | null
+          sentiment_label: string
+          sentiment_score: number
+          urgency_level: string
+        }
+        Insert: {
+          analyzed_at?: string
+          content_analyzed: string
+          emotions_detected?: Json
+          id?: string
+          interaction_type: string
+          key_phrases?: string[] | null
+          lead_id: string
+          recommended_action?: string | null
+          sentiment_label: string
+          sentiment_score: number
+          urgency_level?: string
+        }
+        Update: {
+          analyzed_at?: string
+          content_analyzed?: string
+          emotions_detected?: Json
+          id?: string
+          interaction_type?: string
+          key_phrases?: string[] | null
+          lead_id?: string
+          recommended_action?: string | null
+          sentiment_label?: string
+          sentiment_score?: number
+          urgency_level?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentiment_analysis_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sequences: {
         Row: {
