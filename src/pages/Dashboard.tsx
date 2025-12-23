@@ -9,6 +9,7 @@ import { RecentFollowUpActions } from '@/components/dashboard/RecentFollowUpActi
 import { SuggestionRatingStats } from '@/components/dashboard/SuggestionRatingStats';
 import { PriorityQueue } from '@/components/dashboard/PriorityQueue';
 import { ForecastDashboard } from '@/components/dashboard/ForecastDashboard';
+import { EmotionalIntelligenceWidget } from '@/components/dashboard/EmotionalIntelligenceWidget';
 import { FeedbackLeaderboard } from '@/components/admin/FeedbackLeaderboard';
 import { FeedbackFunnel } from '@/components/admin/FeedbackFunnel';
 import { Users, Building2, UserPlus, Handshake, TrendingUp, DollarSign } from 'lucide-react';
@@ -183,6 +184,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Emotional Intelligence Widget */}
+      <EmotionalIntelligenceWidget />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl border border-border p-6">
