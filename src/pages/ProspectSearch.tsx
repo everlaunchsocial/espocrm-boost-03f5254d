@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface SampleIssue {
   snippet: string;
@@ -69,6 +70,7 @@ interface SearchMetadata {
 export default function ProspectSearch() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAdmin, isAffiliate } = useUserRole();
   const [businessType, setBusinessType] = useState('');
   const [location, setLocation] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -78,7 +80,7 @@ export default function ProspectSearch() {
   const [importingId, setImportingId] = useState<string | null>(null);
   
   // Search options
-  const [analyzeLimit, setAnalyzeLimit] = useState(5); // Start with 5 for testing
+  const [analyzeLimit, setAnalyzeLimit] = useState(50); // Default to 50 businesses
   const [issuesOnly, setIssuesOnly] = useState(true);
   
   // Expanded dropdown state for each prospect
@@ -165,7 +167,7 @@ export default function ProspectSearch() {
           website: prospect.website || null,
           source: 'prospect_search',
           pipeline_status: 'new_lead',
-          google_place_id: prospect.placeId || prospect.dataId,
+          google_place_id: prospect.dataId, // Store SerpAPI data_id for reviews
           google_rating: prospect.rating,
           google_review_count: prospect.reviewCount,
         })
@@ -179,8 +181,18 @@ export default function ProspectSearch() {
         description: `${prospect.name} has been added to your leads.`,
       });
 
-      // Navigate to leads page with the lead ID to auto-open
-      navigate(`/leads?open=${lead.id}`);
+      // Route based on user role
+      if (isAdmin) {
+        navigate(`/leads?open=${lead.id}`);
+      } else if (isAffiliate) {
+        navigate(`/affiliate/leads?open=${lead.id}`);
+      } else {
+        // Fallback - show toast with link
+        toast({
+          title: "Lead created!",
+          description: `${prospect.name} has been added. View in your leads area.`,
+        });
+      }
     } catch (err) {
       console.error('Import error:', err);
       toast({
@@ -263,11 +275,11 @@ export default function ProspectSearch() {
                 onChange={(e) => setAnalyzeLimit(Number(e.target.value))}
                 className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
               >
-                <option value={5}>5 businesses (test)</option>
-                <option value={10}>10 businesses</option>
-                <option value={20}>20 businesses</option>
-                <option value={30}>30 businesses</option>
-                <option value={50}>50 businesses (max)</option>
+                <option value={10}>10 businesses (~$0.11)</option>
+                <option value={25}>25 businesses (~$0.26)</option>
+                <option value={50}>50 businesses (~$0.51)</option>
+                <option value={75}>75 businesses (~$0.76)</option>
+                <option value={100}>100 businesses (~$1.01)</option>
               </select>
             </div>
             
