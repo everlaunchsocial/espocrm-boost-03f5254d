@@ -226,8 +226,13 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
     referral: 'Referral',
     campaign: 'Campaign',
     social: 'Social Media',
+    'google-leads': 'Google Leads',
+    prospect_search: 'Prospect Search',
+    replicated_site: 'Replicated Site',
     other: 'Other',
   };
+
+  const defaultTab = lead.source === 'prospect_search' ? 'reviews' : 'notes';
 
   return (
     <>
@@ -643,8 +648,8 @@ export function LeadDetail({ lead, open, onClose, onEdit }: LeadDetailProps) {
             </div>
           )}
 
-          {/* Tabs */}
-          <Tabs defaultValue="notes" className="mt-4">
+           {/* Tabs */}
+           <Tabs defaultValue={defaultTab} className="mt-4">
             <TabsList className={cn("w-full", phase2Enabled ? "grid grid-cols-5" : "grid grid-cols-4")}>
               <TabsTrigger value="notes" className="flex-1">Notes ({leadNotes.length})</TabsTrigger>
               <TabsTrigger value="activity" className="flex-1">

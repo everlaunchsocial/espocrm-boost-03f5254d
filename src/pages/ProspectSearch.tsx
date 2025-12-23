@@ -827,9 +827,9 @@ export default function ProspectSearch() {
                                     </Badge>
                                   ))}
                                 </div>
-                                <p className="text-muted-foreground italic line-clamp-2">
-                                  "{prospect.communicationIssues.sampleIssues[0].snippet}"
-                                </p>
+                                  <p className="text-muted-foreground italic break-words">
+                                    "{prospect.communicationIssues.sampleIssues[0].snippet}"
+                                  </p>
                               </div>
 
                               {/* Expandable section for more reviews */}
