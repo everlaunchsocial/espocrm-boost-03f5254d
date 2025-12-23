@@ -53,6 +53,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Auth from "./pages/Auth";
 import Product from "./pages/Product";
 import CustomerBuy from "./pages/CustomerBuy";
+import ProspectSearch from "./pages/ProspectSearch";
 
 // New customer pre-signup pages
 import CustomerLandingPage from "./pages/customer/CustomerLandingPage";
@@ -287,6 +288,7 @@ const App = () => (
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/leads/import" element={<LeadImport />} />
+            <Route path="/prospect-search" element={<ProspectSearch />} />
             <Route path="/deals" element={<Deals />} />
             <Route path="/estimates" element={<Estimates />} />
             <Route path="/estimates/create" element={<CreateEstimate />} />
