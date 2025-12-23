@@ -296,6 +296,14 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
     toggleOpen();
   }, [toggleOpen]);
 
+  // Mobile: tap outside to close (UI only)
+  const handleBackdropClick = useCallback(() => {
+    if (isMobile) {
+      setIsMinimized(false);
+      toggleOpen();
+    }
+  }, [isMobile, toggleOpen]);
+
   // Floating button when closed
   if (!isOpen) {
     return (
@@ -343,14 +351,6 @@ export function AIAssistantWidget({ className }: AIAssistantWidgetProps) {
       </div>
     );
   }
-
-  // Mobile: tap outside to close (UI only)
-  const handleBackdropClick = useCallback(() => {
-    if (isMobile) {
-      setIsMinimized(false);
-      toggleOpen();
-    }
-  }, [isMobile, toggleOpen]);
 
   // Expanded widget when open
   return (
