@@ -1476,6 +1476,110 @@ export type Database = {
           },
         ]
       }
+      call_moments: {
+        Row: {
+          ai_commentary: string | null
+          created_at: string
+          id: string
+          importance_level: string
+          moment_type: string
+          recording_id: string
+          timestamp_seconds: number
+          transcript_excerpt: string
+        }
+        Insert: {
+          ai_commentary?: string | null
+          created_at?: string
+          id?: string
+          importance_level?: string
+          moment_type: string
+          recording_id: string
+          timestamp_seconds?: number
+          transcript_excerpt: string
+        }
+        Update: {
+          ai_commentary?: string | null
+          created_at?: string
+          id?: string
+          importance_level?: string
+          moment_type?: string
+          recording_id?: string
+          timestamp_seconds?: number
+          transcript_excerpt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_moments_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "call_recordings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      call_recordings: {
+        Row: {
+          ai_analysis: Json | null
+          call_direction: string
+          call_quality_score: number | null
+          caller_id: string | null
+          created_at: string
+          duration_seconds: number
+          ended_at: string | null
+          id: string
+          lead_id: string | null
+          recording_url: string | null
+          started_at: string
+          transcription_completed_at: string | null
+          transcription_text: string | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          call_direction?: string
+          call_quality_score?: number | null
+          caller_id?: string | null
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          lead_id?: string | null
+          recording_url?: string | null
+          started_at?: string
+          transcription_completed_at?: string | null
+          transcription_text?: string | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          call_direction?: string
+          call_quality_score?: number | null
+          caller_id?: string | null
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          id?: string
+          lead_id?: string | null
+          recording_url?: string | null
+          started_at?: string
+          transcription_completed_at?: string | null
+          transcription_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_recordings_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_recordings_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_enrollments: {
         Row: {
           campaign_id: string
@@ -1713,6 +1817,57 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: true
             referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaching_insights: {
+        Row: {
+          affiliate_id: string | null
+          created_at: string
+          id: string
+          insight_category: string
+          insight_text: string
+          recommendation: string | null
+          recording_id: string
+          specific_example: string | null
+          strength_or_weakness: string
+        }
+        Insert: {
+          affiliate_id?: string | null
+          created_at?: string
+          id?: string
+          insight_category: string
+          insight_text: string
+          recommendation?: string | null
+          recording_id: string
+          specific_example?: string | null
+          strength_or_weakness?: string
+        }
+        Update: {
+          affiliate_id?: string | null
+          created_at?: string
+          id?: string
+          insight_category?: string
+          insight_text?: string
+          recommendation?: string | null
+          recording_id?: string
+          specific_example?: string | null
+          strength_or_weakness?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_insights_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coaching_insights_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "call_recordings"
             referencedColumns: ["id"]
           },
         ]

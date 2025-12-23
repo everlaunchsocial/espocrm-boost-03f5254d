@@ -254,3 +254,6 @@ verify_jwt = false
 
 [functions.analyze-sentiment]
 verify_jwt = true
+
+[functions.analyze-call-recording]
+verify_jwt = true
