@@ -242,3 +242,6 @@ verify_jwt = false
 
 [functions.analyze-follow-up-patterns]
 verify_jwt = false
+
+[functions.process-campaigns]
+verify_jwt = false

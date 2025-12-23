@@ -1438,6 +1438,199 @@ export type Database = {
           },
         ]
       }
+      campaign_enrollments: {
+        Row: {
+          campaign_id: string
+          completed_at: string | null
+          current_step: number
+          enrolled_at: string
+          id: string
+          lead_id: string
+          status: string
+          stopped_at: string | null
+          stopped_reason: string | null
+        }
+        Insert: {
+          campaign_id: string
+          completed_at?: string | null
+          current_step?: number
+          enrolled_at?: string
+          id?: string
+          lead_id: string
+          status?: string
+          stopped_at?: string | null
+          stopped_reason?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          completed_at?: string | null
+          current_step?: number
+          enrolled_at?: string
+          id?: string
+          lead_id?: string
+          status?: string
+          stopped_at?: string | null
+          stopped_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_enrollments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_enrollments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_executions: {
+        Row: {
+          created_at: string
+          enrollment_id: string
+          error_message: string | null
+          executed_at: string | null
+          id: string
+          scheduled_for: string
+          status: string
+          step_id: string
+        }
+        Insert: {
+          created_at?: string
+          enrollment_id: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          scheduled_for: string
+          status?: string
+          step_id: string
+        }
+        Update: {
+          created_at?: string
+          enrollment_id?: string
+          error_message?: string | null
+          executed_at?: string | null
+          id?: string
+          scheduled_for?: string
+          status?: string
+          step_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_executions_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_executions_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_steps: {
+        Row: {
+          campaign_id: string
+          channel: string
+          conditions: Json | null
+          created_at: string
+          delay_days: number
+          delay_hours: number
+          id: string
+          message_template: string
+          step_number: number
+          subject_template: string | null
+        }
+        Insert: {
+          campaign_id: string
+          channel: string
+          conditions?: Json | null
+          created_at?: string
+          delay_days?: number
+          delay_hours?: number
+          id?: string
+          message_template: string
+          step_number: number
+          subject_template?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          channel?: string
+          conditions?: Json | null
+          created_at?: string
+          delay_days?: number
+          delay_hours?: number
+          id?: string
+          message_template?: string
+          step_number?: number
+          subject_template?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_steps_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          affiliate_id: string | null
+          campaign_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          status: string
+          target_criteria: Json
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id?: string | null
+          campaign_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          target_criteria?: Json
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string | null
+          campaign_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          target_criteria?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_settings: {
         Row: {
           customer_id: string
