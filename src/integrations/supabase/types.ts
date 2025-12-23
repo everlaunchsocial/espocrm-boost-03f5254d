@@ -4593,6 +4593,78 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          email_enabled: boolean
+          enabled: boolean
+          id: string
+          notification_type: string
+          push_enabled: boolean
+          sms_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          email_enabled?: boolean
+          enabled?: boolean
+          id?: string
+          notification_type: string
+          push_enabled?: boolean
+          sms_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          email_enabled?: boolean
+          enabled?: boolean
+          id?: string
+          notification_type?: string
+          push_enabled?: boolean
+          sms_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      offline_queue: {
+        Row: {
+          action_type: string
+          created_at: string
+          created_at_client: string
+          error_message: string | null
+          id: string
+          payload: Json
+          retry_count: number
+          status: string
+          synced_at: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          created_at_client: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          retry_count?: number
+          status?: string
+          synced_at?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          created_at_client?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          retry_count?: number
+          status?: string
+          synced_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       payouts: {
         Row: {
           affiliate_id: string
@@ -4781,6 +4853,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          device_name: string | null
+          device_type: string
+          endpoint: string
+          id: string
+          is_active: boolean
+          keys: Json
+          last_used_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string | null
+          device_type?: string
+          endpoint: string
+          id?: string
+          is_active?: boolean
+          keys?: Json
+          last_used_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_name?: string | null
+          device_type?: string
+          endpoint?: string
+          id?: string
+          is_active?: boolean
+          keys?: Json
+          last_used_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       quality_alerts: {
         Row: {
