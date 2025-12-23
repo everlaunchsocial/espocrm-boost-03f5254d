@@ -260,3 +260,6 @@ verify_jwt = true
 
 [functions.generate-smart-tasks]
 verify_jwt = true
+
+[functions.generate-document]
+verify_jwt = true

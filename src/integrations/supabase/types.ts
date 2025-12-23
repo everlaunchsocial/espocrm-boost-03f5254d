@@ -2546,6 +2546,171 @@ export type Database = {
           },
         ]
       }
+      document_signatures: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          ip_address: string | null
+          signature_data: string | null
+          signed_at: string
+          signer_email: string
+          signer_name: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          signed_at?: string
+          signer_email: string
+          signer_name: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          ip_address?: string | null
+          signature_data?: string | null
+          signed_at?: string
+          signer_email?: string
+          signer_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_signatures_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          content_template: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_global: boolean
+          merge_fields: Json
+          name: string
+          requires_signature: boolean
+          template_type: string
+          updated_at: string
+        }
+        Insert: {
+          content_template: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          merge_fields?: Json
+          name: string
+          requires_signature?: boolean
+          template_type?: string
+          updated_at?: string
+        }
+        Update: {
+          content_template?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          merge_fields?: Json
+          name?: string
+          requires_signature?: boolean
+          template_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          expires_at: string | null
+          file_size_bytes: number | null
+          file_type: string
+          file_url: string
+          id: string
+          name: string
+          related_to_id: string | null
+          related_to_name: string | null
+          related_to_type: string | null
+          sent_at: string | null
+          sent_to_email: string | null
+          signature_request_id: string | null
+          signed_at: string | null
+          status: string
+          updated_at: string
+          uploaded_by: string | null
+          viewed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_type?: string
+          expires_at?: string | null
+          file_size_bytes?: number | null
+          file_type?: string
+          file_url: string
+          id?: string
+          name: string
+          related_to_id?: string | null
+          related_to_name?: string | null
+          related_to_type?: string | null
+          sent_at?: string | null
+          sent_to_email?: string | null
+          signature_request_id?: string | null
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          viewed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          expires_at?: string | null
+          file_size_bytes?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          name?: string
+          related_to_id?: string | null
+          related_to_name?: string | null
+          related_to_type?: string | null
+          sent_at?: string | null
+          sent_to_email?: string | null
+          signature_request_id?: string | null
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+          uploaded_by?: string | null
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_events: {
         Row: {
           created_at: string

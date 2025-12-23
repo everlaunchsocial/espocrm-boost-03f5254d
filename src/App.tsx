@@ -25,6 +25,7 @@ import Campaigns from "./pages/Campaigns";
 import Competitors from "./pages/Competitors";
 import EmailTemplates from "./pages/EmailTemplates";
 import MediaLibrary from "./pages/MediaLibrary";
+import Documents from "./pages/Documents";
 import VoiceDemo from "./pages/VoiceDemo";
 import Demos from "./pages/Demos";
 import DemoDetail from "./pages/DemoDetail";
@@ -287,6 +288,7 @@ const App = () => (
             <Route path="/competitors" element={<Competitors />} />
             <Route path="/email-templates" element={<EmailTemplates />} />
             <Route path="/media-library" element={<MediaLibrary />} />
+            <Route path="/documents" element={<Documents />} />
             <Route path="/voice-demo" element={<VoiceDemo />} />
             <Route path="/demos" element={<Demos />} />
             <Route path="/demos/:id" element={<DemoDetail />} />
