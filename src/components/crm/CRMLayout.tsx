@@ -33,6 +33,7 @@ import {
   Video,
   Lightbulb,
   ClipboardCheck,
+  Target,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,7 @@ const crmNavigation = [
   { name: 'Contacts', href: '/contacts', icon: Users },
   { name: 'Accounts', href: '/accounts', icon: Building2 },
   { name: 'Leads', href: '/leads', icon: UserPlus },
+  { name: 'Prospect Search', href: '/prospect-search', icon: Target },
   { name: 'AI Demos', href: '/demos', icon: Presentation },
   { name: 'Deals', href: '/deals', icon: Handshake },
   { name: 'Estimates', href: '/estimates', icon: FileText },
