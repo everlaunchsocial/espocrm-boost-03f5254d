@@ -614,6 +614,42 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       backlog_assignees: {
         Row: {
           assigned_at: string
@@ -4766,6 +4802,45 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          plan_tier: string
+          seat_limit: number
+          seats_used: number
+          slug: string
+          storage_limit_gb: number
+          storage_used_gb: number
+          subscription_expires_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          plan_tier?: string
+          seat_limit?: number
+          seats_used?: number
+          slug: string
+          storage_limit_gb?: number
+          storage_used_gb?: number
+          subscription_expires_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          plan_tier?: string
+          seat_limit?: number
+          seats_used?: number
+          slug?: string
+          storage_limit_gb?: number
+          storage_used_gb?: number
+          subscription_expires_at?: string | null
+        }
+        Relationships: []
+      }
       payouts: {
         Row: {
           affiliate_id: string
@@ -5315,6 +5390,36 @@ export type Database = {
         }
         Relationships: []
       }
+      roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_system_role: boolean
+          name: string
+          permissions: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system_role?: boolean
+          name: string
+          permissions?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system_role?: boolean
+          name?: string
+          permissions?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scheduled_follow_ups: {
         Row: {
           action_type: string
@@ -5814,6 +5919,60 @@ export type Database = {
           },
         ]
       }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          joined_at: string | null
+          last_active_at: string | null
+          organization_id: string | null
+          role_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          last_active_at?: string | null
+          organization_id?: string | null
+          role_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          last_active_at?: string | null
+          organization_id?: string | null
+          role_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_runs: {
         Row: {
           completed_at: string | null
@@ -6305,6 +6464,47 @@ export type Database = {
           threshold_value?: number | null
         }
         Relationships: []
+      }
+      usage_limits: {
+        Row: {
+          created_at: string
+          current_usage: number
+          id: string
+          last_reset_at: string | null
+          limit_type: string
+          limit_value: number
+          organization_id: string | null
+          reset_period: string
+        }
+        Insert: {
+          created_at?: string
+          current_usage?: number
+          id?: string
+          last_reset_at?: string | null
+          limit_type: string
+          limit_value?: number
+          organization_id?: string | null
+          reset_period?: string
+        }
+        Update: {
+          created_at?: string
+          current_usage?: number
+          id?: string
+          last_reset_at?: string | null
+          limit_type?: string
+          limit_value?: number
+          organization_id?: string | null
+          reset_period?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_limits_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usage_logs: {
         Row: {
@@ -7100,6 +7300,7 @@ export type Database = {
           occurrence_count: number
         }[]
       }
+      has_permission: { Args: { p_permission: string }; Returns: boolean }
       increment_demo_voice_count: {
         Args: { demo_id: string }
         Returns: undefined
@@ -7107,6 +7308,15 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_super_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      log_audit_event: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_resource_id?: string
+          p_resource_type: string
+        }
+        Returns: string
+      }
       log_minutes_usage_for_customer:
         | {
             Args: {
