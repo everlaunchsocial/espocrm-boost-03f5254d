@@ -5,8 +5,12 @@ interface LeadTeamNote {
   id: string;
   lead_id: string;
   note_text: string;
+  note_type: string;
+  visibility: string;
+  is_pinned: boolean;
   created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
 export function useLeadTeamNotes(leadId: string | undefined) {
@@ -20,6 +24,7 @@ export function useLeadTeamNotes(leadId: string | undefined) {
         .from('lead_team_notes')
         .select('*')
         .eq('lead_id', leadId)
+        .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
       
       if (error) throw error;

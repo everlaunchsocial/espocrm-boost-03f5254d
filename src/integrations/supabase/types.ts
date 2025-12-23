@@ -3777,6 +3777,44 @@ export type Database = {
           },
         ]
       }
+      lead_mentions: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          mentioned_by: string
+          mentioned_user_id: string
+          note_id: string
+          read_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          mentioned_by: string
+          mentioned_user_id: string
+          note_id: string
+          read_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          mentioned_by?: string
+          mentioned_user_id?: string
+          note_id?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_mentions_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "lead_team_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_predictions: {
         Row: {
           created_at: string
@@ -3980,27 +4018,87 @@ export type Database = {
           },
         ]
       }
+      lead_team_messages: {
+        Row: {
+          created_at: string
+          edited_at: string | null
+          id: string
+          is_edited: boolean
+          lead_id: string
+          message_content: string
+          reply_to_message_id: string | null
+          sent_by: string
+        }
+        Insert: {
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean
+          lead_id: string
+          message_content: string
+          reply_to_message_id?: string | null
+          sent_by: string
+        }
+        Update: {
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          is_edited?: boolean
+          lead_id?: string
+          message_content?: string
+          reply_to_message_id?: string | null
+          sent_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_team_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_team_messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "lead_team_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_team_notes: {
         Row: {
           created_at: string
           created_by: string
           id: string
+          is_pinned: boolean
           lead_id: string
           note_text: string
+          note_type: string
+          updated_at: string
+          visibility: string
         }
         Insert: {
           created_at?: string
           created_by: string
           id?: string
+          is_pinned?: boolean
           lead_id: string
           note_text: string
+          note_type?: string
+          updated_at?: string
+          visibility?: string
         }
         Update: {
           created_at?: string
           created_by?: string
           id?: string
+          is_pinned?: boolean
           lead_id?: string
           note_text?: string
+          note_type?: string
+          updated_at?: string
+          visibility?: string
         }
         Relationships: [
           {
@@ -4099,6 +4197,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "lead_views_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_watchers: {
+        Row: {
+          created_at: string
+          id: string
+          lead_id: string
+          notification_preference: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_id: string
+          notification_preference?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_id?: string
+          notification_preference?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_watchers_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
