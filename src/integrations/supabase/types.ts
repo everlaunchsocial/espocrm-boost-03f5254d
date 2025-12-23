@@ -2439,6 +2439,165 @@ export type Database = {
           },
         ]
       }
+      email_sends: {
+        Row: {
+          body_html: string
+          bounced: boolean
+          clicked_at: string | null
+          id: string
+          lead_id: string | null
+          opened_at: string | null
+          replied_at: string | null
+          sent_at: string
+          subject_line: string
+          template_id: string | null
+          unsubscribed: boolean
+          variant_id: string | null
+        }
+        Insert: {
+          body_html: string
+          bounced?: boolean
+          clicked_at?: string | null
+          id?: string
+          lead_id?: string | null
+          opened_at?: string | null
+          replied_at?: string | null
+          sent_at?: string
+          subject_line: string
+          template_id?: string | null
+          unsubscribed?: boolean
+          variant_id?: string | null
+        }
+        Update: {
+          body_html?: string
+          bounced?: boolean
+          clicked_at?: string | null
+          id?: string
+          lead_id?: string | null
+          opened_at?: string | null
+          replied_at?: string | null
+          sent_at?: string
+          subject_line?: string
+          template_id?: string | null
+          unsubscribed?: boolean
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sends_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "email_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          body_html: string
+          body_plain: string
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          is_global: boolean
+          name: string
+          performance_score: number | null
+          subject_line: string
+          updated_at: string
+          variables: string[] | null
+        }
+        Insert: {
+          body_html: string
+          body_plain: string
+          category: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_global?: boolean
+          name: string
+          performance_score?: number | null
+          subject_line: string
+          updated_at?: string
+          variables?: string[] | null
+        }
+        Update: {
+          body_html?: string
+          body_plain?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_global?: boolean
+          name?: string
+          performance_score?: number | null
+          subject_line?: string
+          updated_at?: string
+          variables?: string[] | null
+        }
+        Relationships: []
+      }
+      email_variants: {
+        Row: {
+          body_html: string
+          body_plain: string
+          created_at: string
+          id: string
+          is_active: boolean
+          subject_line: string
+          template_id: string
+          variant_name: string
+          weight: number
+        }
+        Insert: {
+          body_html: string
+          body_plain: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          subject_line: string
+          template_id: string
+          variant_name?: string
+          weight?: number
+        }
+        Update: {
+          body_html?: string
+          body_plain?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          subject_line?: string
+          template_id?: string
+          variant_name?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_variants_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emails: {
         Row: {
           body: string

@@ -23,6 +23,7 @@ import CreateInvoice from "./pages/CreateInvoice";
 import Tasks from "./pages/Tasks";
 import Campaigns from "./pages/Campaigns";
 import Competitors from "./pages/Competitors";
+import EmailTemplates from "./pages/EmailTemplates";
 import MediaLibrary from "./pages/MediaLibrary";
 import VoiceDemo from "./pages/VoiceDemo";
 import Demos from "./pages/Demos";
