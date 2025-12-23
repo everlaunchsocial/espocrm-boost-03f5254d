@@ -13,14 +13,17 @@ interface SuggestionRatingStatsProps {
 
 export function SuggestionRatingStats({ onViewUnrated }: SuggestionRatingStatsProps) {
   const { isEnabled } = useFeatureFlags();
+  const phase2Enabled = isEnabled('aiCrmPhase2');
   const { data: suggestions = [] } = useFollowUpSuggestions();
   const { hasFeedback, feedbackEntries } = useFollowUpFeedback();
 
-  // Only show when aiCrmPhase2 is enabled
-  if (!isEnabled('aiCrmPhase2')) return null;
-
   // Calculate stats for suggestions shown (last 7 days are already filtered in useFollowUpSuggestions)
+  // useMemo must be called unconditionally to avoid hooks-order errors
   const stats = useMemo(() => {
+    if (!phase2Enabled) {
+      return { total: 0, rated: 0, unrated: 0, percentRated: 0, helpfulCount: 0, notHelpfulCount: 0 };
+    }
+    
     const total = suggestions.length;
     const rated = suggestions.filter(s => hasFeedback(s.id)).length;
     const unrated = total - rated;
@@ -43,7 +46,10 @@ export function SuggestionRatingStats({ onViewUnrated }: SuggestionRatingStatsPr
       helpfulCount,
       notHelpfulCount,
     };
-  }, [suggestions, hasFeedback, feedbackEntries]);
+  }, [phase2Enabled, suggestions, hasFeedback, feedbackEntries]);
+
+  // Feature flag check (must be after hooks to avoid hooks-order errors)
+  if (!phase2Enabled) return null;
 
   // Don't show if no suggestions
   if (stats.total === 0) return null;
