@@ -5025,50 +5025,115 @@ export type Database = {
         }
         Relationships: []
       }
+      task_templates: {
+        Row: {
+          created_at: string
+          default_duration_minutes: number | null
+          default_priority: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          task_type: string
+          trigger_conditions: Json | null
+        }
+        Insert: {
+          created_at?: string
+          default_duration_minutes?: number | null
+          default_priority?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          task_type?: string
+          trigger_conditions?: Json | null
+        }
+        Update: {
+          created_at?: string
+          default_duration_minutes?: number | null
+          default_priority?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          task_type?: string
+          trigger_conditions?: Json | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
+          ai_reasoning: string | null
           assigned_to: string | null
+          completed_at: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           due_date: string | null
+          estimated_duration_minutes: number | null
           id: string
+          is_auto_generated: boolean | null
           name: string
           priority: string
           related_to_id: string | null
           related_to_name: string | null
           related_to_type: string | null
+          reminder_time: string | null
           status: string
+          task_type: string | null
           updated_at: string
         }
         Insert: {
+          ai_reasoning?: string | null
           assigned_to?: string | null
+          completed_at?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
+          estimated_duration_minutes?: number | null
           id?: string
+          is_auto_generated?: boolean | null
           name: string
           priority?: string
           related_to_id?: string | null
           related_to_name?: string | null
           related_to_type?: string | null
+          reminder_time?: string | null
           status?: string
+          task_type?: string | null
           updated_at?: string
         }
         Update: {
+          ai_reasoning?: string | null
           assigned_to?: string | null
+          completed_at?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
+          estimated_duration_minutes?: number | null
           id?: string
+          is_auto_generated?: boolean | null
           name?: string
           priority?: string
           related_to_id?: string | null
           related_to_name?: string | null
           related_to_type?: string | null
+          reminder_time?: string | null
           status?: string
+          task_type?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       test_runs: {
         Row: {
