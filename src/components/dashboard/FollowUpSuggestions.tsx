@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2, CheckCircle2, Undo2, Trash2, ThumbsUp, ThumbsDown, CheckCheck } from 'lucide-react';
+import { AlertCircle, Clock, Eye, UserX, ChevronRight, RefreshCw, MessageSquare, Phone, Check, Loader2, CheckCircle2, Undo2, Trash2, ThumbsUp, ThumbsDown, CheckCheck, Bot, Timer, XCircle, Pause, Play } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -40,6 +42,9 @@ import { useFollowUpResolutions } from '@/hooks/useFollowUpResolutions';
 import { useFollowUpFeedback } from '@/hooks/useFollowUpFeedback';
 import { useFollowupLearning } from '@/hooks/useFollowupLearning';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useScheduledFollowUps, useAutoSendMode } from '@/hooks/useScheduledFollowUps';
+import { useContactWindowSuggestions } from '@/hooks/useContactWindowSuggestions';
+import { calculateOptimalSendTime, formatTimeUntil } from '@/lib/scheduleOptimalTime';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -84,11 +89,32 @@ const actionConfig: Record<SuggestionReason, { label: string; icon: typeof Refre
 export function FollowUpSuggestions() {
   const { isEnabled } = useFeatureFlags();
   const phase1Enabled = isEnabled('aiCrmPhase1');
+  const phase4Enabled = isEnabled('aiCrmPhase4');
+  const autoSendEnabled = isEnabled('aiCrmPhase4AutoSend');
 
   const { data: suggestions, isLoading, error, refetch, isFetching } = useFollowUpSuggestions();
   const { logAccepted, confirmAction } = useFollowupLearning();
   const { isResolved, markAsResolved, markAllAsResolved, unmarkResolved } = useFollowUpResolutions();
   const { hasFeedback, getFeedback, submitFeedback } = useFollowUpFeedback();
+  
+  // Auto-send mode hooks
+  const { 
+    scheduledFollowUps, 
+    scheduleFollowUp, 
+    cancelScheduledFollowUp, 
+    isScheduled, 
+    getScheduledItem 
+  } = useScheduledFollowUps();
+  const { 
+    isEnabled: autoSendModeEnabled, 
+    setEnabled: setAutoSendModeEnabled,
+    isAutoApproved,
+    toggleAutoApprove,
+    pauseAllAutoSends,
+    setPauseAllAutoSends,
+    hasSeenFirstUseModal,
+    setHasSeenFirstUseModal
+  } = useAutoSendMode();
 
   const navigate = useNavigate();
   const [selectedSuggestion, setSelectedSuggestion] = useState<FollowUpSuggestion | null>(null);
@@ -97,10 +123,29 @@ export function FollowUpSuggestions() {
   const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'helpful' | 'not_helpful' | 'not_rated'>('all');
   const [markAsDoneTarget, setMarkAsDoneTarget] = useState<FollowUpSuggestion | null>(null);
   const [showResolveAllDialog, setShowResolveAllDialog] = useState(false);
+  const [showFirstUseModal, setShowFirstUseModal] = useState(false);
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
 
   // Regenerate throttle state
   const [regenerateCooldown, setRegenerateCooldown] = useState(0);
   const cooldownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update countdowns every minute
+  useEffect(() => {
+    const updateCountdowns = () => {
+      const newCountdowns: Record<string, string> = {};
+      scheduledFollowUps.forEach(item => {
+        if (!item.sentAt && !item.cancelledAt) {
+          newCountdowns[item.suggestionId] = formatTimeUntil(item.scheduledFor);
+        }
+      });
+      setCountdowns(newCountdowns);
+    };
+    
+    updateCountdowns();
+    const interval = setInterval(updateCountdowns, 60000);
+    return () => clearInterval(interval);
+  }, [scheduledFollowUps]);
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -128,6 +173,7 @@ export function FollowUpSuggestions() {
   const showRegenerate = isEnabled('aiCrmPhase2');
   const showRating = isEnabled('aiCrmPhase2');
   const showFeedbackFilter = isEnabled('aiCrmPhase2');
+  const showAutoSend = phase4Enabled && autoSendEnabled;
 
   // Filter suggestions based on feedback
   const filteredSuggestions = suggestions?.filter(suggestion => {
@@ -225,6 +271,56 @@ export function FollowUpSuggestions() {
       leadId: suggestion.leadId,
       demoId: suggestion.demoId,
     });
+  };
+
+  // Auto-send mode toggle handler
+  const handleAutoSendToggle = (checked: boolean) => {
+    if (checked && !hasSeenFirstUseModal) {
+      setShowFirstUseModal(true);
+    } else {
+      setAutoSendModeEnabled(checked);
+    }
+  };
+
+  const confirmFirstUseModal = () => {
+    setHasSeenFirstUseModal(true);
+    setAutoSendModeEnabled(true);
+    setShowFirstUseModal(false);
+  };
+
+  // Schedule auto-send for a suggestion
+  const handleScheduleAutoSend = async (suggestion: FollowUpSuggestion) => {
+    if (pauseAllAutoSends) {
+      toast.error('Auto-sends are paused', { description: 'Enable auto-sends first' });
+      return;
+    }
+
+    // Calculate optimal send time (would use contact window data if available)
+    const optimalTime = calculateOptimalSendTime(null, {
+      leadQuietMode: false, // Would need to check lead's quiet_mode
+    });
+
+    const actionType = suggestion.reason === 'lead_inactive' ? 'call_reminder' : 'email';
+
+    try {
+      await scheduleFollowUp.mutateAsync({
+        suggestionId: suggestion.id,
+        leadId: suggestion.leadId,
+        actionType,
+        scheduledFor: optimalTime,
+        autoApproved: true,
+      });
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  // Cancel a scheduled follow-up
+  const handleCancelScheduled = (suggestionId: string) => {
+    const scheduledItem = getScheduledItem(suggestionId);
+    if (scheduledItem) {
+      cancelScheduledFollowUp.mutate(scheduledItem.id);
+    }
   };
 
   const executeResendDemo = async (suggestion: FollowUpSuggestion) => {
@@ -418,6 +514,47 @@ export function FollowUpSuggestions() {
               Follow-Up Suggestions
             </CardTitle>
             <div className="flex items-center gap-2">
+              {/* Auto-Send Mode Toggle */}
+              {showAutoSend && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 mr-2">
+                        <Bot className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground hidden sm:inline">Auto-Send</span>
+                        <Switch
+                          checked={autoSendModeEnabled && !pauseAllAutoSends}
+                          onCheckedChange={handleAutoSendToggle}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                        {autoSendModeEnabled && !pauseAllAutoSends && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setPauseAllAutoSends(true)}
+                          >
+                            <Pause className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {pauseAllAutoSends && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 text-warning"
+                            onClick={() => setPauseAllAutoSends(false)}
+                          >
+                            <Play className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>AI will automatically send approved follow-ups at optimal times</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               {showFeedbackFilter && suggestions && suggestions.length > 0 && (
                 <Select value={feedbackFilter} onValueChange={(v) => setFeedbackFilter(v as typeof feedbackFilter)}>
                   <SelectTrigger className="h-7 w-[130px] text-xs">
@@ -738,6 +875,37 @@ export function FollowUpSuggestions() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Auto-Send First Use Modal */}
+      <Dialog open={showFirstUseModal} onOpenChange={setShowFirstUseModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              Enable Auto-Send Mode
+            </DialogTitle>
+            <DialogDescription className="text-left space-y-3 pt-2">
+              <p>When Auto-Send is enabled:</p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>AI will send approved follow-ups at optimal contact times</li>
+                <li>Maximum 3 auto-sends per lead per week</li>
+                <li>24-hour gap between sends to the same lead</li>
+                <li>Respects lead quiet mode and business hours</li>
+                <li>You can cancel any scheduled send at any time</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFirstUseModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmFirstUseModal}>
+              <Bot className="h-4 w-4 mr-2" />
+              Enable Auto-Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

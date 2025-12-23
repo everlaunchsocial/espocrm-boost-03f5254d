@@ -5,6 +5,8 @@ interface FeatureFlags {
   aiCrmPhase1: boolean;
   aiCrmPhase2: boolean;
   aiCrmPhase3: boolean;
+  aiCrmPhase4: boolean;
+  aiCrmPhase4AutoSend: boolean;
 }
 
 interface FeatureFlagsStore {
@@ -23,6 +25,8 @@ const defaultFlags: FeatureFlags = {
   aiCrmPhase1: !isProduction, // ON for dev/staging, OFF for production
   aiCrmPhase2: !isProduction, // ON for dev/staging, OFF for production
   aiCrmPhase3: !isProduction, // ON for dev/staging, OFF for production
+  aiCrmPhase4: !isProduction, // ON for dev/staging, OFF for production
+  aiCrmPhase4AutoSend: !isProduction, // ON for dev/staging, OFF for production
 };
 
 export const useFeatureFlags = create<FeatureFlagsStore>()(
@@ -38,7 +42,7 @@ export const useFeatureFlags = create<FeatureFlagsStore>()(
     }),
     {
       name: 'feature-flags',
-      version: 2, // Bump version to reset stale localStorage values
+      version: 3, // Bump version to reset stale localStorage values
     }
   )
 );

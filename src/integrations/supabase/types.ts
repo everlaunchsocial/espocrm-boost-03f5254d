@@ -3798,6 +3798,59 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_follow_ups: {
+        Row: {
+          action_type: string
+          auto_approved: boolean
+          cancelled_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          lead_id: string
+          message_body: string | null
+          message_subject: string | null
+          scheduled_for: string
+          sent_at: string | null
+          suggestion_id: string
+        }
+        Insert: {
+          action_type: string
+          auto_approved?: boolean
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id: string
+          message_body?: string | null
+          message_subject?: string | null
+          scheduled_for: string
+          sent_at?: string | null
+          suggestion_id: string
+        }
+        Update: {
+          action_type?: string
+          auto_approved?: boolean
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string
+          message_body?: string | null
+          message_subject?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          suggestion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_follow_ups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sender_addresses: {
         Row: {
           created_at: string
