@@ -233,3 +233,6 @@ verify_jwt = true
 
 [functions.enrich-lead-google]
 verify_jwt = true
+
+[functions.process-scheduled-follow-ups]
+verify_jwt = false
