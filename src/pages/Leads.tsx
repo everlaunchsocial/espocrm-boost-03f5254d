@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLeads, useAddLead, useUpdateLead, useDeleteLead, useConvertLeadToContact } from '@/hooks/useCRMData';
 import { usePersistedFormState } from '@/hooks/usePersistedFormState';
+import { normalizeUrl } from '@/utils/normalizeUrl';
 import { useLeadTagsMap } from '@/hooks/useLeadTagsMap';
 import { useLeadsWithTags } from '@/hooks/useLeadTags';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
@@ -162,13 +163,41 @@ export default function Leads() {
     return result;
   }, [leads, selectedTags, tagFilterMode, filteredLeadIds, activeSmartFilters, followUpLeadIds, recentActivityLeadIds]);
 
-  // Use persisted form state for new leads only (not editing)
+  // Use persisted form state - always active when form is open
   const { 
-    values: formValues, 
-    setValues: setFormValues, 
-    updateField, 
+    values: persistedValues, 
+    setValues: setPersistedValues, 
+    updateField: updatePersistedField, 
     clearDraft 
-  } = usePersistedFormState('crm_lead', defaultFormValues, formOpen && !editingLead);
+  } = usePersistedFormState('crm_lead', defaultFormValues, formOpen);
+  
+  // Use local state for editing to avoid persisted state conflicts
+  const [editFormValues, setEditFormValues] = useState<Record<string, any>>({});
+  
+  // Determine which values to use based on editing mode
+  const formValues = editingLead ? editFormValues : persistedValues;
+  
+  // Update field handler that works for both modes
+  const updateField = useCallback((name: string, value: any) => {
+    if (editingLead) {
+      setEditFormValues(prev => ({ ...prev, [name]: value }));
+    } else {
+      updatePersistedField(name, value);
+    }
+  }, [editingLead, updatePersistedField]);
+  
+  // Wrapper for setFormValues
+  const setFormValues = useCallback((valuesOrUpdater: Record<string, any> | ((prev: Record<string, any>) => Record<string, any>)) => {
+    if (editingLead) {
+      if (typeof valuesOrUpdater === 'function') {
+        setEditFormValues(valuesOrUpdater);
+      } else {
+        setEditFormValues(valuesOrUpdater);
+      }
+    } else {
+      setPersistedValues(valuesOrUpdater);
+    }
+  }, [editingLead, setPersistedValues]);
 
   const columns = [
     {
@@ -366,15 +395,23 @@ export default function Leads() {
   };
 
   const handleSubmit = async () => {
+    // Normalize URL before saving
+    const normalizedValues = {
+      ...formValues,
+      website: normalizeUrl(formValues.website),
+    };
+    
     if (editingLead) {
-      await updateLead.mutateAsync({ id: editingLead.id, lead: formValues });
+      await updateLead.mutateAsync({ id: editingLead.id, lead: normalizedValues });
       toast.success('Lead updated successfully');
+      setEditFormValues({});
     } else {
-      await addLead.mutateAsync(formValues as any);
+      await addLead.mutateAsync(normalizedValues as any);
       toast.success('Lead created successfully');
       clearDraft();
     }
     setFormOpen(false);
+    setEditingLead(null);
   };
 
   if (isLoading) {

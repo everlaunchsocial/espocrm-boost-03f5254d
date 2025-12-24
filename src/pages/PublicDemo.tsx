@@ -50,9 +50,27 @@ const PublicDemo = () => {
   const [contactInfoRequest, setContactInfoRequest] = useState<ContactInfoRequest | null>(null);
   const pendingContactRequest = useRef<ContactInfoRequest | null>(null);
 
-  // Scroll to top on page load - use layoutEffect for synchronous execution before paint
+  // Scroll to top on page load - disable browser scroll restoration and force scroll
   useLayoutEffect(() => {
+    // Disable browser's automatic scroll restoration
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    
+    // Force scroll to top synchronously
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    
+    // Also use requestAnimationFrame for after-paint scroll
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
+    
+    return () => {
+      // Restore default behavior on unmount
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'auto';
+      }
+    };
   }, [id]);
 
   useEffect(() => {
@@ -73,6 +91,11 @@ const PublicDemo = () => {
 
       setDemo(result.data);
       setLoading(false);
+      
+      // Scroll to top again after content loads (handles async content)
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      });
       
       // Fetch mobile screenshot via Firecrawl if we have a website URL
       if (result.data?.website_url) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
 const STORAGE_PREFIX = 'form_draft_';
@@ -18,6 +18,30 @@ export function usePersistedFormState(
   
   const [values, setValues] = useState<Record<string, any>>(defaultValues);
   const [hasDraft, setHasDraft] = useState(false);
+  const valuesRef = useRef(values);
+  const isOpenRef = useRef(isOpen);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    valuesRef.current = values;
+  }, [values]);
+  
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  // Save to localStorage function
+  const saveToStorage = useCallback(() => {
+    const currentValues = valuesRef.current;
+    const hasContent = Object.values(currentValues).some(v => v && v !== '');
+    if (hasContent) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(currentValues));
+      } catch (e) {
+        console.error('Failed to save form draft:', e);
+      }
+    }
+  }, [storageKey]);
 
   // Load draft when form opens
   useEffect(() => {
@@ -40,23 +64,53 @@ export function usePersistedFormState(
     }
   }, [isOpen, storageKey]);
 
-  // Save to localStorage whenever values change
+  // Save to localStorage whenever values change (aggressive save)
   useEffect(() => {
     if (isOpen) {
-      const hasContent = Object.values(values).some(v => v && v !== '');
-      if (hasContent) {
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(values));
-        } catch (e) {
-          console.error('Failed to save form draft:', e);
-        }
-      }
+      saveToStorage();
     }
-  }, [values, isOpen, storageKey]);
+  }, [values, isOpen, saveToStorage]);
+
+  // Handle visibility change - save when tab loses focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && isOpenRef.current) {
+        saveToStorage();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (isOpenRef.current) {
+        saveToStorage();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+    };
+  }, [saveToStorage]);
 
   const updateField = useCallback((name: string, value: any) => {
-    setValues(prev => ({ ...prev, [name]: value }));
-  }, []);
+    setValues(prev => {
+      const updated = { ...prev, [name]: value };
+      // Immediately save to localStorage on each field update
+      try {
+        const hasContent = Object.values(updated).some(v => v && v !== '');
+        if (hasContent) {
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+        }
+      } catch (e) {
+        console.error('Failed to save form draft:', e);
+      }
+      return updated;
+    });
+  }, [storageKey]);
 
   const clearDraft = useCallback(() => {
     try {
