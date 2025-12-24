@@ -18,6 +18,7 @@ import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AvatarSelector, AvatarOption, AVATAR_OPTIONS } from './AvatarSelector';
+import { normalizeUrl, isValidUrl } from '@/utils/normalizeUrl';
 
 interface DemoCreationModalProps {
   open: boolean;
@@ -86,6 +87,12 @@ export function DemoCreationModal({
       setError('Website URL is required');
       return;
     }
+    
+    // Validate URL format (lenient - accepts with or without protocol)
+    if (!isValidUrl(websiteUrl.trim())) {
+      setError('Please enter a valid website URL (e.g., example.com)');
+      return;
+    }
 
     if (!leadId && !contactId) {
       setError('Demo must be tied to a Lead or Contact');
@@ -98,11 +105,14 @@ export function DemoCreationModal({
       // Get current user for rep_id
       const { data: { user } } = await supabase.auth.getUser();
       
+      // Normalize URL before saving
+      const normalizedWebsiteUrl = normalizeUrl(websiteUrl.trim());
+      
       const result = await createDemo({
         lead_id: leadId || null,
         contact_id: contactId || null,
         business_name: businessName.trim(),
-        website_url: websiteUrl.trim(),
+        website_url: normalizedWebsiteUrl,
         ai_persona_name: aiPersonaName.trim() || selectedAvatar?.name || undefined,
         avatar_url: selectedAvatar?.imageUrl || undefined,
         chat_title: chatTitle.trim() || undefined,
@@ -188,12 +198,15 @@ export function DemoCreationModal({
             </Label>
             <Input
               id="websiteUrl"
-              type="url"
+              type="text"
               value={websiteUrl}
               onChange={(e) => setWebsiteUrl(e.target.value)}
-              placeholder="https://example.com"
+              placeholder="example.com"
               required
             />
+            <p className="text-xs text-muted-foreground">
+              Enter with or without https://
+            </p>
           </div>
 
           {/* AI Avatar Selection */}
