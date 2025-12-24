@@ -50,25 +50,40 @@ const PublicDemo = () => {
   const [contactInfoRequest, setContactInfoRequest] = useState<ContactInfoRequest | null>(null);
   const pendingContactRequest = useRef<ContactInfoRequest | null>(null);
 
+  // Force scroll to top helper - handles all scroll containers
+  const forceScrollTop = () => {
+    const el = document.scrollingElement || document.documentElement;
+    el.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo(0, 0);
+    const root = document.getElementById("root");
+    if (root) root.scrollTop = 0;
+  };
+
   // Scroll to top on page load - disable browser scroll restoration and force scroll
   useLayoutEffect(() => {
-    // Disable browser's automatic scroll restoration
-    if ('scrollRestoration' in history) {
-      history.scrollRestoration = 'manual';
+    const prev = "scrollRestoration" in history ? history.scrollRestoration : undefined;
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
     }
-    
-    // Force scroll to top synchronously
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    
-    // Also use requestAnimationFrame for after-paint scroll
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    });
-    
+
+    forceScrollTop();
+    requestAnimationFrame(forceScrollTop);
+
+    const t1 = window.setTimeout(forceScrollTop, 50);
+    const t2 = window.setTimeout(forceScrollTop, 250);
+    const t3 = window.setTimeout(forceScrollTop, 800);
+
+    const onLoad = () => forceScrollTop();
+    window.addEventListener("load", onLoad);
+
     return () => {
-      // Restore default behavior on unmount
-      if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'auto';
+      window.removeEventListener("load", onLoad);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+      if ("scrollRestoration" in history && prev) {
+        history.scrollRestoration = prev;
       }
     };
   }, [id]);
@@ -93,9 +108,8 @@ const PublicDemo = () => {
       setLoading(false);
       
       // Scroll to top again after content loads (handles async content)
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      });
+      requestAnimationFrame(forceScrollTop);
+      setTimeout(forceScrollTop, 0);
       
       // Fetch mobile screenshot via Firecrawl if we have a website URL
       if (result.data?.website_url) {
