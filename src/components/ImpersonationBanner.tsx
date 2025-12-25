@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -7,25 +7,38 @@ import { supabase } from '@/integrations/supabase/client';
 
 export function ImpersonationBanner() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { role } = useUserRole();
   const [impersonatingUsername, setImpersonatingUsername] = useState<string | null>(null);
   const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Read from localStorage - called on mount and on every route change
+  const syncFromStorage = useCallback(() => {
     const username = localStorage.getItem('impersonating_affiliate_username');
     const id = localStorage.getItem('impersonating_affiliate_id');
     setImpersonatingUsername(username);
     setImpersonatingId(id);
+  }, []);
 
-    // Listen for storage changes (in case it's cleared elsewhere)
+  // Sync on mount
+  useEffect(() => {
+    syncFromStorage();
+  }, [syncFromStorage]);
+
+  // Re-sync on every route change to ensure banner persists
+  useEffect(() => {
+    syncFromStorage();
+  }, [location.pathname, syncFromStorage]);
+
+  // Listen for storage changes from other tabs
+  useEffect(() => {
     const handleStorageChange = () => {
-      setImpersonatingUsername(localStorage.getItem('impersonating_affiliate_username'));
-      setImpersonatingId(localStorage.getItem('impersonating_affiliate_id'));
+      syncFromStorage();
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [syncFromStorage]);
 
   // Only show banner if impersonating AND user is super_admin
   if (!impersonatingUsername || role !== 'super_admin') {
