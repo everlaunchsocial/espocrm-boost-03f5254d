@@ -2504,8 +2504,11 @@ export type Database = {
           minutes_used: number
           onboarding_completed_at: string | null
           onboarding_current_step: number | null
+          onboarding_reminder_24h_sent_at: string | null
+          onboarding_reminder_48h_sent_at: string | null
           onboarding_stage: string | null
           overage_rate: number
+          payment_received_at: string | null
           phone: string | null
           phone_tested_at: string | null
           plan_name: string | null
@@ -2514,6 +2517,7 @@ export type Database = {
           testing_code: string | null
           user_id: string
           website_url: string | null
+          welcome_email_sent_at: string | null
         }
         Insert: {
           additional_notification_emails?: string[] | null
@@ -2540,8 +2544,11 @@ export type Database = {
           minutes_used?: number
           onboarding_completed_at?: string | null
           onboarding_current_step?: number | null
+          onboarding_reminder_24h_sent_at?: string | null
+          onboarding_reminder_48h_sent_at?: string | null
           onboarding_stage?: string | null
           overage_rate?: number
+          payment_received_at?: string | null
           phone?: string | null
           phone_tested_at?: string | null
           plan_name?: string | null
@@ -2550,6 +2557,7 @@ export type Database = {
           testing_code?: string | null
           user_id: string
           website_url?: string | null
+          welcome_email_sent_at?: string | null
         }
         Update: {
           additional_notification_emails?: string[] | null
@@ -2576,8 +2584,11 @@ export type Database = {
           minutes_used?: number
           onboarding_completed_at?: string | null
           onboarding_current_step?: number | null
+          onboarding_reminder_24h_sent_at?: string | null
+          onboarding_reminder_48h_sent_at?: string | null
           onboarding_stage?: string | null
           overage_rate?: number
+          payment_received_at?: string | null
           phone?: string | null
           phone_tested_at?: string | null
           plan_name?: string | null
@@ -2586,6 +2597,7 @@ export type Database = {
           testing_code?: string | null
           user_id?: string
           website_url?: string | null
+          welcome_email_sent_at?: string | null
         }
         Relationships: [
           {
@@ -8063,7 +8075,33 @@ export type Database = {
         }[]
       }
       get_global_role_for_user: { Args: { p_user_id: string }; Returns: string }
+      get_incomplete_onboarding_customers: {
+        Args: { p_limit?: number }
+        Returns: {
+          affiliate_id: string
+          affiliate_username: string
+          business_name: string
+          contact_name: string
+          hours_since_payment: number
+          id: string
+          lead_email: string
+          onboarding_stage: string
+          payment_received_at: string
+        }[]
+      }
       get_my_global_role: { Args: never; Returns: string }
+      get_my_incomplete_customers: {
+        Args: never
+        Returns: {
+          business_name: string
+          contact_name: string
+          hours_since_payment: number
+          id: string
+          lead_email: string
+          onboarding_stage: string
+          payment_received_at: string
+        }[]
+      }
       get_my_parent_affiliate_id: { Args: never; Returns: string }
       get_my_role: { Args: never; Returns: string }
       get_own_affiliate_id: { Args: { _user_id: string }; Returns: string }
