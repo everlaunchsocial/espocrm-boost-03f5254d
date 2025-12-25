@@ -83,6 +83,28 @@ Deno.serve(async (req) => {
 
         console.log("Processing customer:", customerId, "plan:", planId, "affiliate:", affiliateId);
 
+        // Check if affiliate is a company account (direct sales)
+        let isCompanyAccount = false;
+        let effectiveAffiliateId = affiliateId;
+        let customerSource = 'affiliate';
+
+        if (affiliateId) {
+          const { data: affiliateData } = await supabase
+            .from("affiliates")
+            .select("is_company_account")
+            .eq("id", affiliateId)
+            .single();
+          
+          if (affiliateData?.is_company_account) {
+            isCompanyAccount = true;
+            effectiveAffiliateId = null; // Company sales have null affiliate_id
+            customerSource = 'direct';
+            console.log("Affiliate is company account - marking as direct sale");
+          }
+        } else {
+          customerSource = 'direct';
+        }
+
         // Get plan details
         const { data: plan, error: planFetchError } = await supabase
           .from("customer_plans")
@@ -121,12 +143,11 @@ Deno.serve(async (req) => {
             minutes_included: plan?.minutes_included || 0,
             overage_rate: plan?.overage_rate || 0,
             plan_name: plan?.name || null,
+            customer_source: customerSource,
           };
           
-          // Also update affiliate_id if provided (allows attribution on existing profiles)
-          if (affiliateId) {
-            updateData.affiliate_id = affiliateId;
-          }
+          // Set affiliate_id based on company account check
+          updateData.affiliate_id = effectiveAffiliateId;
           
           const { error: updateError } = await supabase
             .from("customer_profiles")
@@ -148,7 +169,8 @@ Deno.serve(async (req) => {
               contact_name: customerName || null,
               website_url: websiteUrl || null,
               customer_plan_id: planId,
-              affiliate_id: affiliateId || null,
+              affiliate_id: effectiveAffiliateId,
+              customer_source: customerSource,
               billing_cycle_start: cycleStart,
               billing_cycle_end: cycleEnd,
               minutes_included: plan?.minutes_included || 0,
@@ -213,8 +235,8 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Distribute commissions if affiliate attached
-        if (affiliateId) {
+        // Distribute commissions if affiliate attached (not company account)
+        if (effectiveAffiliateId) {
           // Get plan setup fee for commission calculation
           const { data: planData } = await supabase
             .from("customer_plans")

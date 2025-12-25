@@ -468,7 +468,9 @@ export type Database = {
           demo_credits_remaining: number | null
           demo_credits_reset_at: string | null
           demo_credits_used_this_month: number | null
+          exclude_from_leaderboards: boolean | null
           id: string
+          is_company_account: boolean | null
           parent_affiliate_id: string | null
           user_id: string
           username: string
@@ -482,7 +484,9 @@ export type Database = {
           demo_credits_remaining?: number | null
           demo_credits_reset_at?: string | null
           demo_credits_used_this_month?: number | null
+          exclude_from_leaderboards?: boolean | null
           id?: string
+          is_company_account?: boolean | null
           parent_affiliate_id?: string | null
           user_id: string
           username: string
@@ -496,7 +500,9 @@ export type Database = {
           demo_credits_remaining?: number | null
           demo_credits_reset_at?: string | null
           demo_credits_used_this_month?: number | null
+          exclude_from_leaderboards?: boolean | null
           id?: string
+          is_company_account?: boolean | null
           parent_affiliate_id?: string | null
           user_id?: string
           username?: string
@@ -2486,6 +2492,7 @@ export type Database = {
           contact_name: string | null
           created_at: string
           customer_plan_id: string | null
+          customer_source: string | null
           customer_timezone: string | null
           embed_installed_at: string | null
           id: string
@@ -2521,6 +2528,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           customer_plan_id?: string | null
+          customer_source?: string | null
           customer_timezone?: string | null
           embed_installed_at?: string | null
           id?: string
@@ -2556,6 +2564,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           customer_plan_id?: string | null
+          customer_source?: string | null
           customer_timezone?: string | null
           embed_installed_at?: string | null
           id?: string

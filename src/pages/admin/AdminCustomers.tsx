@@ -27,6 +27,7 @@ interface Customer {
   lead_email: string | null;
   onboarding_stage: string | null;
   affiliate_id: string | null;
+  customer_source: string | null;
   created_at: string;
   affiliate_username?: string | null;
 }
@@ -154,7 +155,8 @@ export default function AdminCustomers() {
               <TableHead>Business</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Onboarding</TableHead>
-              <TableHead>Referred By</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead>Joined</TableHead>
               <TableHead>Joined</TableHead>
               {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
@@ -201,12 +203,14 @@ export default function AdminCustomers() {
                   </TableCell>
                   <TableCell>{getOnboardingBadge(customer.onboarding_stage)}</TableCell>
                   <TableCell>
-                    {customer.affiliate_username ? (
-                      <Badge variant="outline" className="font-mono">
-                        @{customer.affiliate_username}
+                    {customer.customer_source === 'direct' || !customer.affiliate_username ? (
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        Direct
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground text-sm">Direct</span>
+                      <Badge variant="outline" className="font-mono text-blue-400 border-blue-500/30">
+                        @{customer.affiliate_username}
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
