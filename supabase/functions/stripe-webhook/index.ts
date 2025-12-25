@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
-import { Resend } from "https://esm.sh/resend@4.0.0";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -181,6 +181,8 @@ Deno.serve(async (req) => {
               plan_name: plan?.name || null,
               onboarding_stage: "pending_portal_entry",
               onboarding_current_step: 0,
+              payment_received_at: new Date().toISOString(),
+              lead_email: session.customer_email || session.customer_details?.email || null,
             })
             .select("id")
             .single();
@@ -192,6 +194,18 @@ Deno.serve(async (req) => {
           
           customerProfileId = newProfile.id;
           console.log("Created customer profile:", customerProfileId);
+        }
+        
+        // Also set payment_received_at for existing profiles
+        if (existingProfile) {
+          await supabase
+            .from("customer_profiles")
+            .update({ 
+              payment_received_at: new Date().toISOString(),
+              lead_email: session.customer_email || session.customer_details?.email || null,
+            })
+            .eq("id", customerProfileId)
+            .is("payment_received_at", null);
         }
 
         // Check if billing subscription exists
@@ -380,18 +394,59 @@ Deno.serve(async (req) => {
 
           if (isNewCustomerProfile && resendApiKey && customerEmail) {
             const resend = new Resend(resendApiKey);
-            const siteUrl = Deno.env.get("SITE_URL") || "";
-            const loginUrl = siteUrl ? `${siteUrl.replace(/\/$/, "")}/auth` : null;
+            const loginUrl = "https://tryeverlaunch.com/auth";
+            const onboardingUrl = "https://tryeverlaunch.com/customer/onboarding/wizard/1";
+            
+            // Get affiliate username if available
+            let affiliateUsername = "";
+            if (effectiveAffiliateId) {
+              const { data: affData } = await supabase
+                .from("affiliates")
+                .select("username")
+                .eq("id", effectiveAffiliateId)
+                .single();
+              affiliateUsername = affData?.username || "";
+            }
 
-            const subject = "Welcome to EverLaunch";
+            const subject = "Welcome to EverLaunch! Your Account is Ready";
             const html = `
-              <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; line-height: 1.5;">
-                <h1 style="margin: 0 0 12px; font-size: 20px;">Welcome to EverLaunch</h1>
-                <p style="margin: 0 0 12px;">Your subscription is active and your account is ready.</p>
-                ${businessName ? `<p style="margin: 0 0 12px;"><strong>Business:</strong> ${businessName}</p>` : ""}
-                <p style="margin: 0 0 16px;">Next step: log in and finish setup whenever you're ready.</p>
-                ${loginUrl ? `<p style="margin: 0 0 16px;"><a href="${loginUrl}" style="display:inline-block;background:#111827;color:#ffffff;padding:10px 14px;border-radius:10px;text-decoration:none;">Log in</a></p>` : ""}
-                <p style="margin: 0; color: #6b7280; font-size: 12px;">If you didn’t purchase this, you can ignore this email.</p>
+              <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; line-height: 1.6; max-width: 600px; margin: 0 auto; color: #1f2937;">
+                <h1 style="margin: 0 0 16px; font-size: 24px; color: #111827;">Welcome to EverLaunch!</h1>
+                <p style="margin: 0 0 20px; font-size: 16px;">Your payment has been processed and your account is ready.</p>
+                
+                <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 0 0 24px;">
+                  <h3 style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #6b7280; text-transform: uppercase;">YOUR ACCOUNT DETAILS</h3>
+                  ${businessName ? `<p style="margin: 0 0 8px;"><strong>Business:</strong> ${businessName}</p>` : ""}
+                  <p style="margin: 0 0 8px;"><strong>Email:</strong> ${customerEmail}</p>
+                  <p style="margin: 0;"><strong>Login:</strong> <a href="${loginUrl}" style="color: #2563eb;">${loginUrl}</a></p>
+                </div>
+                
+                <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 0 0 24px;">
+                  <p style="margin: 0; font-size: 15px; color: #92400e;">
+                    <strong>⚠️ IMPORTANT - Complete Your Setup:</strong><br>
+                    You need to finish setting up your account to activate your AI receptionist. This takes about 5 minutes.
+                  </p>
+                </div>
+                
+                <p style="text-align: center; margin: 0 0 24px;">
+                  <a href="${onboardingUrl}" style="display: inline-block; background: #111827; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">Complete Setup Now</a>
+                </p>
+                
+                <div style="margin: 0 0 24px;">
+                  <p style="margin: 0 0 8px; font-weight: 600;">What happens during setup:</p>
+                  <ul style="margin: 0; padding-left: 20px; color: #4b5563;">
+                    <li>Connect your business phone number</li>
+                    <li>Set your business hours and services</li>
+                    <li>Customize your AI's responses</li>
+                    <li>Test your AI receptionist</li>
+                  </ul>
+                </div>
+                
+                <p style="margin: 0 0 24px; color: #dc2626; font-weight: 500;">Until setup is complete, your AI cannot answer calls.</p>
+                
+                ${affiliateUsername ? `<p style="margin: 0 0 16px; color: #6b7280; font-size: 14px;">Questions? Your affiliate partner <strong>@${affiliateUsername}</strong> can help, or email us at <a href="mailto:support@everlaunch.ai" style="color: #2563eb;">support@everlaunch.ai</a></p>` : `<p style="margin: 0 0 16px; color: #6b7280; font-size: 14px;">Questions? Email us at <a href="mailto:support@everlaunch.ai" style="color: #2563eb;">support@everlaunch.ai</a></p>`}
+                
+                <p style="margin: 0; color: #374151;">Welcome aboard!<br><strong>- The EverLaunch Team</strong></p>
               </div>
             `;
 
@@ -406,6 +461,11 @@ Deno.serve(async (req) => {
               console.error("Welcome email send error:", (sendResult as any).error);
             } else {
               console.log("Welcome email sent to:", customerEmail);
+              // Mark welcome email as sent
+              await supabase
+                .from("customer_profiles")
+                .update({ welcome_email_sent_at: new Date().toISOString() })
+                .eq("id", customerProfileId);
             }
           } else if (isNewCustomerProfile && !resendApiKey) {
             console.log("RESEND_API_KEY not set; skipping welcome email");
