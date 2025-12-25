@@ -7276,6 +7276,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vapi_accounts: {
         Row: {
           api_key: string
@@ -8019,6 +8043,13 @@ export type Database = {
           total_amount: number
         }[]
       }
+      get_affiliate_by_username: {
+        Args: { p_username: string }
+        Returns: {
+          id: string
+          username: string
+        }[]
+      }
       get_affiliate_id_by_username: {
         Args: { p_username: string }
         Returns: string
@@ -8034,6 +8065,7 @@ export type Database = {
       get_global_role_for_user: { Args: { p_user_id: string }; Returns: string }
       get_my_global_role: { Args: never; Returns: string }
       get_my_parent_affiliate_id: { Args: never; Returns: string }
+      get_my_role: { Args: never; Returns: string }
       get_own_affiliate_id: { Args: { _user_id: string }; Returns: string }
       get_pipeline_status_order: { Args: { p_status: string }; Returns: number }
       get_struggling_verticals: {
@@ -8061,7 +8093,15 @@ export type Database = {
           occurrence_count: number
         }[]
       }
+      get_user_role: { Args: { _user_id: string }; Returns: string }
       has_permission: { Args: { p_permission: string }; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       increment_demo_voice_count: {
         Args: { demo_id: string }
         Returns: undefined
@@ -8115,6 +8155,7 @@ export type Database = {
           title: string
         }[]
       }
+      set_my_role_affiliate: { Args: never; Returns: boolean }
       test_add_minutes_for_customer: {
         Args: { p_customer_id: string; p_minutes: number }
         Returns: {
@@ -8131,6 +8172,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "super_admin" | "admin" | "affiliate" | "customer"
       avatar_profile_status:
         | "draft"
         | "uploading"
@@ -8294,6 +8336,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["super_admin", "admin", "affiliate", "customer"],
       avatar_profile_status: [
         "draft",
         "uploading",

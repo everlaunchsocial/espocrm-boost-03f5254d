@@ -18,26 +18,32 @@ interface UseAffiliateContextResult {
 }
 
 /**
- * Load affiliate context by username from the affiliates table
+ * Load affiliate context by username using public RPC (works for unauthenticated users)
  */
 export async function loadAffiliateContext(username: string): Promise<AffiliateContext | null> {
-  const { data, error } = await supabase
-    .from('affiliates')
-    .select('*')
-    .eq('username', username.toLowerCase())
-    .maybeSingle();
+  // Use the public RPC that bypasses RLS for attribution
+  const { data, error } = await supabase.rpc('get_affiliate_by_username', {
+    p_username: username.toLowerCase()
+  });
 
-  if (error || !data) {
+  if (error) {
+    console.error('[loadAffiliateContext] RPC error:', error);
     return null;
   }
 
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  const affiliate = Array.isArray(data) ? data[0] : data;
+  
   return {
-    id: data.id,
-    username: data.username,
-    userId: data.user_id,
-    commissionPlanId: data.commission_plan_id,
-    parentAffiliateId: data.parent_affiliate_id,
-    createdAt: data.created_at,
+    id: affiliate.id,
+    username: affiliate.username,
+    userId: '', // Not returned by public RPC for security
+    commissionPlanId: null,
+    parentAffiliateId: null,
+    createdAt: '',
   };
 }
 
