@@ -114,16 +114,23 @@ Deno.serve(async (req) => {
           customerProfileId = existingProfile.id;
           console.log("Updating existing customer profile:", customerProfileId);
           
+          const updateData: Record<string, unknown> = {
+            customer_plan_id: planId,
+            billing_cycle_start: cycleStart,
+            billing_cycle_end: cycleEnd,
+            minutes_included: plan?.minutes_included || 0,
+            overage_rate: plan?.overage_rate || 0,
+            plan_name: plan?.name || null,
+          };
+          
+          // Also update affiliate_id if provided (allows attribution on existing profiles)
+          if (affiliateId) {
+            updateData.affiliate_id = affiliateId;
+          }
+          
           const { error: updateError } = await supabase
             .from("customer_profiles")
-            .update({
-              customer_plan_id: planId,
-              billing_cycle_start: cycleStart,
-              billing_cycle_end: cycleEnd,
-              minutes_included: plan?.minutes_included || 0,
-              overage_rate: plan?.overage_rate || 0,
-              plan_name: plan?.name || null,
-            })
+            .update(updateData)
             .eq("id", customerProfileId);
 
           if (updateError) {

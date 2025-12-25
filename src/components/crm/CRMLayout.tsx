@@ -71,6 +71,7 @@ const crmNavigation = [
 const adminNavigation = [
   { name: 'Operations', href: '/admin/operations', icon: FolderOpen, superAdminOnly: true },
   { name: 'Affiliates', href: '/admin/affiliates', icon: Users },
+  { name: 'Customers', href: '/admin/customers', icon: Building2 },
   { name: 'Affiliate Videos', href: '/admin/affiliate-videos', icon: Video },
   { name: 'Payouts', href: '/admin/payouts', icon: DollarSign },
   { name: 'Customer Usage', href: '/admin/customer-usage', icon: BarChart3 },
