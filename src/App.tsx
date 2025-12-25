@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SubdomainRouter } from "./components/SubdomainRouter";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { CRMLayout } from "./components/crm/CRMLayout";
 import { AffiliateLayout } from "./components/affiliate/AffiliateLayout";
 import { CustomerPortalLayout } from "./components/customer/CustomerPortalLayout";
@@ -63,6 +64,7 @@ import CustomerBuySuccess from "./pages/customer/CustomerBuySuccess";
 
 // Affiliate pages
 import AffiliateDashboard from "./pages/affiliate/AffiliateDashboard";
+import AffiliateCustomers from "./pages/affiliate/AffiliateCustomers";
 import AffiliateLeads from "./pages/affiliate/AffiliateLeads";
 import AffiliateDemos from "./pages/affiliate/AffiliateDemos";
 import AffiliateCommissions from "./pages/affiliate/AffiliateCommissions";
@@ -143,6 +145,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <ScrollToTop />
+        <ImpersonationBanner />
         <SubdomainRouter>
           <Routes>
           {/* Public pages - outside any layout */}
@@ -231,6 +234,8 @@ const App = () => (
           {/* Affiliate routes - inside AffiliateLayout */}
           <Route element={<AffiliateLayout />}>
             <Route path="/affiliate" element={<AffiliateDashboard />} />
+            <Route path="/affiliate/customers" element={<AffiliateCustomers />} />
+            <Route path="/affiliate/accounts" element={<Navigate to="/affiliate/customers" replace />} />
             <Route path="/affiliate/abandonments" element={<AffiliateAbandonments />} />
             <Route path="/affiliate/leads" element={<AffiliateLeads />} />
             <Route path="/affiliate/demos" element={<AffiliateDemos />} />

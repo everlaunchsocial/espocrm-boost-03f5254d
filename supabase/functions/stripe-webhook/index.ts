@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -128,6 +129,8 @@ Deno.serve(async (req) => {
           .select("id")
           .eq("user_id", customerId)
           .maybeSingle();
+
+        const isNewCustomerProfile = !existingProfile;
 
         let customerProfileId: string;
 
@@ -369,6 +372,48 @@ Deno.serve(async (req) => {
         }
 
         console.log("Customer activation complete for:", customerProfileId);
+
+        // Send welcome email (only on first successful activation)
+        try {
+          const resendApiKey = Deno.env.get("RESEND_API_KEY");
+          const customerEmail = session.customer_email || session.customer_details?.email;
+
+          if (isNewCustomerProfile && resendApiKey && customerEmail) {
+            const resend = new Resend(resendApiKey);
+            const siteUrl = Deno.env.get("SITE_URL") || "";
+            const loginUrl = siteUrl ? `${siteUrl.replace(/\/$/, "")}/auth` : null;
+
+            const subject = "Welcome to EverLaunch";
+            const html = `
+              <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; line-height: 1.5;">
+                <h1 style="margin: 0 0 12px; font-size: 20px;">Welcome to EverLaunch</h1>
+                <p style="margin: 0 0 12px;">Your subscription is active and your account is ready.</p>
+                ${businessName ? `<p style="margin: 0 0 12px;"><strong>Business:</strong> ${businessName}</p>` : ""}
+                <p style="margin: 0 0 16px;">Next step: log in and finish setup whenever you're ready.</p>
+                ${loginUrl ? `<p style="margin: 0 0 16px;"><a href="${loginUrl}" style="display:inline-block;background:#111827;color:#ffffff;padding:10px 14px;border-radius:10px;text-decoration:none;">Log in</a></p>` : ""}
+                <p style="margin: 0; color: #6b7280; font-size: 12px;">If you didn’t purchase this, you can ignore this email.</p>
+              </div>
+            `;
+
+            const sendResult = await resend.emails.send({
+              from: "EverLaunch <info@everlaunch.ai>",
+              to: [customerEmail],
+              subject,
+              html,
+            });
+
+            if ((sendResult as any)?.error) {
+              console.error("Welcome email send error:", (sendResult as any).error);
+            } else {
+              console.log("Welcome email sent to:", customerEmail);
+            }
+          } else if (isNewCustomerProfile && !resendApiKey) {
+            console.log("RESEND_API_KEY not set; skipping welcome email");
+          }
+        } catch (emailErr) {
+          console.error("Failed to send welcome email:", emailErr);
+        }
+
         break;
       }
 

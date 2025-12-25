@@ -45,7 +45,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ImpersonationBanner } from '@/components/ImpersonationBanner';
+
 
 interface AffiliateLayoutProps {
   children?: ReactNode;
@@ -53,20 +53,15 @@ interface AffiliateLayoutProps {
 
 const affiliateNavigation = [
   { name: 'Dashboard', href: '/affiliate', icon: LayoutDashboard },
-  { name: 'Abandonments', href: '/affiliate/abandonments', icon: UserX, hasBadge: true },
-  { name: 'Calendar', href: '/affiliate/calendar', icon: CalendarDays },
-  { name: 'Email', href: '/affiliate/email', icon: Mail },
-  { name: 'Contacts', href: '/affiliate/contacts', icon: Users },
-  { name: 'Accounts', href: '/affiliate/accounts', icon: Building2 },
+  { name: 'Customers', href: '/affiliate/customers', icon: Building2 },
   { name: 'Leads', href: '/affiliate/leads', icon: UserPlus },
-  { name: 'Deals', href: '/affiliate/deals', icon: Handshake },
-  { name: 'Tasks', href: '/affiliate/tasks', icon: CheckSquare },
   { name: 'Demos', href: '/affiliate/demos', icon: Presentation },
   { name: 'Videos', href: '/affiliate/videos', icon: Video },
   { name: 'Sales Tools', href: '/affiliate/sales-tools', icon: Sparkles },
   { name: 'Commissions', href: '/affiliate/commissions', icon: DollarSign },
   { name: 'Team', href: '/affiliate/team', icon: Users },
   { name: 'How-To', href: '/affiliate/training', icon: GraduationCap },
+  { name: 'Abandonments', href: '/affiliate/abandonments', icon: UserX, hasBadge: true },
   { name: 'Billing', href: '/affiliate/billing', icon: CreditCard },
   { name: 'Settings', href: '/affiliate/settings', icon: Settings },
 ];
@@ -227,7 +222,6 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
 
   return (
     <>
-      <ImpersonationBanner />
       <div className={cn("flex h-screen overflow-hidden bg-background", isImpersonating && "pt-10")}>
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
