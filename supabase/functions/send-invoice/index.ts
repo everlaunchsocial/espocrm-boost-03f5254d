@@ -71,7 +71,7 @@ serve(async (req: Request) => {
     `;
 
     await resend.emails.send({
-      from: "Invoices <john@localsearch365.com>",
+      from: "EverLaunch <invoices@send.everlaunch.ai>",
       to: [invoice.customer_email],
       subject: `Invoice ${invoice.invoice_number} - ${invoice.job_title}`,
       html,

@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
     if (resend) {
       try {
         await resend.emails.send({
-          from: "EverLaunch Admin <noreply@tryeverlaunch.com>",
+          from: "EverLaunch Admin <noreply@send.everlaunch.ai>",
           to: adminEmails,
           subject: `[Daily Digest] ${incompleteCustomers.length} Customers Need Onboarding Follow-up`,
           html,

@@ -451,7 +451,7 @@ Deno.serve(async (req) => {
             `;
 
             const sendResult = await resend.emails.send({
-              from: "EverLaunch <info@everlaunch.ai>",
+              from: "EverLaunch <info@send.everlaunch.ai>",
               to: [customerEmail],
               subject,
               html,

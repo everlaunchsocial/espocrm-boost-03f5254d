@@ -194,7 +194,7 @@ serve(async (req) => {
         
         try {
           const emailResult = await resend.emails.send({
-            from: 'EverLaunch AI <info@everlaunch.ai>',
+            from: 'EverLaunch AI <info@send.everlaunch.ai>',
             to: emailRecipients,
             subject: `${isTestLabel}🔔 New Lead: ${leadName} via ${lead_data.source}`,
             html: `

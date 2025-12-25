@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
         if (resend) {
           try {
             await resend.emails.send({
-              from: "EverLaunch <noreply@tryeverlaunch.com>",
+              from: "EverLaunch <noreply@send.everlaunch.ai>",
               to: [customer.lead_email],
               subject,
               html,
@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
           try {
             // Send to customer (and CC admin)
             await resend.emails.send({
-              from: "EverLaunch <noreply@tryeverlaunch.com>",
+              from: "EverLaunch <noreply@send.everlaunch.ai>",
               to: [customer.lead_email],
               cc: ["support@everlaunch.ai"],
               subject,
@@ -308,7 +308,7 @@ Deno.serve(async (req) => {
               // In production, you'd look up the affiliate's email
               try {
                 await resend.emails.send({
-                  from: "EverLaunch <noreply@tryeverlaunch.com>",
+                  from: "EverLaunch <noreply@send.everlaunch.ai>",
                   to: ["support@everlaunch.ai"], // In production: send to affiliate's email
                   subject: `${affiliateSubject} (@${affiliateInfo.username})`,
                   html: affiliateHtml,

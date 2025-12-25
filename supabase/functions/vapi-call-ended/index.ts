@@ -363,7 +363,7 @@ serve(async (req) => {
 
           // Send transcript email to prospect
           const prospectEmailResponse = await resend.emails.send({
-            from: "EverLaunch AI <info@everlaunch.ai>",
+            from: "EverLaunch AI <info@send.everlaunch.ai>",
             to: [prospectEmail],
             subject: `Your ${businessName} AI Demo Transcript`,
             html: `
@@ -458,7 +458,7 @@ ${transcript}
     const formattedDuration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
     const emailResponse = await resend.emails.send({
-      from: "EverLaunch AI <info@everlaunch.ai>",
+      from: "EverLaunch AI <info@send.everlaunch.ai>",
       to: [TRANSCRIPT_EMAIL],
       subject: `📞 Vapi Call Transcript - ${callerPhone} (${formattedDuration})`,
       html: `
