@@ -424,7 +424,7 @@ Deno.serve(async (req) => {
                 <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 0 0 24px;">
                   <p style="margin: 0; font-size: 15px; color: #92400e;">
                     <strong>⚠️ IMPORTANT - Complete Your Setup:</strong><br>
-                    You need to finish setting up your account to activate your AI receptionist. This takes about 5 minutes.
+                    You need to finish setting up your account to activate your AI Employee. This takes about 5 minutes.
                   </p>
                 </div>
                 
@@ -438,7 +438,7 @@ Deno.serve(async (req) => {
                     <li>Connect your business phone number</li>
                     <li>Set your business hours and services</li>
                     <li>Customize your AI's responses</li>
-                    <li>Test your AI receptionist</li>
+                    <li>Test your AI Employee</li>
                   </ul>
                 </div>
                 
