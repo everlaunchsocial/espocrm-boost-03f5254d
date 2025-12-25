@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export type GlobalRole = 'super_admin' | 'admin' | 'affiliate' | 'customer';
 
 interface UseUserRoleResult {
-  role: GlobalRole;
+  role: GlobalRole | null;
   isLoading: boolean;
   userId: string | null;
   isAdmin: boolean;
@@ -13,16 +13,13 @@ interface UseUserRoleResult {
   refreshRole: () => Promise<void>;
 }
 
-export function getGlobalRole(profile: { global_role?: string } | null): GlobalRole {
-  if (!profile?.global_role) return 'customer';
-  const validRoles: GlobalRole[] = ['super_admin', 'admin', 'affiliate', 'customer'];
-  return validRoles.includes(profile.global_role as GlobalRole) 
-    ? (profile.global_role as GlobalRole) 
-    : 'customer';
-}
-
+/**
+ * Hook to get the current user's role from the user_roles table.
+ * Uses the secure get_my_role RPC which bypasses RLS.
+ * Returns null for role if not authenticated or role lookup fails.
+ */
 export function useUserRole(): UseUserRoleResult {
-  const [role, setRole] = useState<GlobalRole>('customer');
+  const [role, setRole] = useState<GlobalRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -30,7 +27,6 @@ export function useUserRole(): UseUserRoleResult {
   const queuedRef = useState({ queued: false })[0];
 
   const fetchUserRole = useCallback(async () => {
-    // Prevent stampedes (multiple components mount + auth events)
     const now = Date.now();
     if (inFlightRef.inFlight) return;
     if (now - inFlightRef.lastRun < 500) return;
@@ -40,40 +36,38 @@ export function useUserRole(): UseUserRoleResult {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) throw error;
-
-      const session = data?.session ?? null;
-      if (!session) {
-        setRole('customer');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        setRole(null);
         setUserId(null);
+        setIsLoading(false);
+        inFlightRef.inFlight = false;
         return;
       }
 
-      const currentUserId = session.user.id;
-      setUserId(currentUserId);
+      setUserId(session.user.id);
 
-      // Try the standard RPC first
-      const { data: globalRole, error: roleError } = await supabase.rpc('get_my_global_role');
-      if (!roleError && globalRole) {
-        setRole(getGlobalRole({ global_role: globalRole }));
+      // Use the secure RPC to get role from user_roles table
+      const { data: roleData, error: roleError } = await supabase.rpc('get_my_role');
+      
+      if (roleError) {
+        console.error('[useUserRole] RPC error:', roleError);
+        setRole(null);
+        setIsLoading(false);
+        inFlightRef.inFlight = false;
         return;
       }
 
-      // Fallback: use the user_id-based RPC for reliability
-      const { data: fallbackRole, error: fallbackError } = await supabase.rpc('get_global_role_for_user', {
-        p_user_id: currentUserId,
-      });
-
-      if (!fallbackError && fallbackRole) {
-        setRole(getGlobalRole({ global_role: fallbackRole }));
+      if (roleData && ['super_admin', 'admin', 'affiliate', 'customer'].includes(roleData)) {
+        setRole(roleData as GlobalRole);
       } else {
-        setRole('customer');
+        console.warn('[useUserRole] No role found for user');
+        setRole(null);
       }
-    } catch (error) {
-      console.error('[useUserRole] Unexpected error:', error);
-      setRole('customer');
-      setUserId(null);
+    } catch (err) {
+      console.error('[useUserRole] Unexpected error:', err);
+      setRole(null);
     } finally {
       inFlightRef.inFlight = false;
       setIsLoading(false);
@@ -84,23 +78,20 @@ export function useUserRole(): UseUserRoleResult {
     fetchUserRole();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // Never call supabase inside the callback; defer to avoid deadlocks / loops.
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
         if (queuedRef.queued) return;
         queuedRef.queued = true;
         setTimeout(() => {
           queuedRef.queued = false;
           fetchUserRole();
-        }, 0);
+        }, 50);
       } else if (event === 'SIGNED_OUT') {
-        setRole('customer');
+        setRole(null);
         setUserId(null);
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, [fetchUserRole, queuedRef]);
 
   return useMemo(() => ({

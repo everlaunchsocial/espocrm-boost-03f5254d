@@ -89,19 +89,25 @@ export function CustomerPortalLayout() {
   };
 
   // Allow super_admin/admin to bypass customer check
-  const canAccessCustomerPortal = isCustomer || role === 'super_admin' || role === 'admin';
+  // Only consider isCustomer true if role is explicitly 'customer', not null
+  const canAccessCustomerPortal = role === 'customer' || role === 'super_admin' || role === 'admin';
 
   // Redirect logic
   useEffect(() => {
     if (isLoading) return;
+    
+    // If role is null (lookup failed or not set), don't redirect to onboarding
+    if (role === null) {
+      return; // Will show "no access" message instead of forcing onboarding
+    }
 
     // Non-customers cannot access customer portal (unless admin)
     if (!canAccessCustomerPortal) {
       return; // Will show "no access" message
     }
 
-    // If onboarding not complete, redirect to wizard
-    if (customerProfile && !isOnboardingComplete) {
+    // ONLY force onboarding if user is explicitly a customer AND has incomplete onboarding
+    if (role === 'customer' && customerProfile && !isOnboardingComplete) {
       const step = customerProfile.onboarding_current_step || 1;
       navigate(`/customer/onboarding/wizard/${step}`);
       return;
@@ -111,7 +117,7 @@ export function CustomerPortalLayout() {
     if (location.pathname === '/customer') {
       navigate('/customer/dashboard');
     }
-  }, [isLoading, isCustomer, customerProfile, isOnboardingComplete, location.pathname, navigate]);
+  }, [isLoading, role, customerProfile, isOnboardingComplete, location.pathname, navigate, canAccessCustomerPortal]);
 
   // Loading state
   if (isLoading) {
