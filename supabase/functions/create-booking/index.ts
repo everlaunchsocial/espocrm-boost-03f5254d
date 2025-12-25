@@ -183,7 +183,7 @@ serve(async (req: Request): Promise<Response> => {
       // Email to prospect
       try {
         await resend.emails.send({
-          from: "EverLaunch <info@everlaunch.ai>",
+          from: "EverLaunch <info@send.everlaunch.ai>",
           to: [prospectEmail],
           subject: `Your call is confirmed - ${formattedDate}`,
           html: `
@@ -239,7 +239,7 @@ serve(async (req: Request): Promise<Response> => {
       // Email to rep/team (use a default notification email or could be configured per rep)
       try {
         await resend.emails.send({
-          from: "EverLaunch <info@everlaunch.ai>",
+          from: "EverLaunch <info@send.everlaunch.ai>",
           to: ["john@localsearch365.com"], // TODO: Make this configurable per rep
           subject: `New booking: ${prospectName} - ${formattedDate} at ${formattedTime}`,
           html: `

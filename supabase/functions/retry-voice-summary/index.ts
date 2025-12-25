@@ -73,7 +73,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'EverLaunch <notifications@everlaunch.ai>',
+        from: 'EverLaunch <notifications@send.everlaunch.ai>',
         to: [userEmail],
         subject: 'Your Daily Voice Summary (Retry)',
         html: summaryContent || '<p>Your daily summary is ready.</p>',
