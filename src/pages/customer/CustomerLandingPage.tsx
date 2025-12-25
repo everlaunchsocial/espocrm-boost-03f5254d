@@ -102,9 +102,14 @@ export default function CustomerLandingPage() {
     }
   }, [affiliate?.id]);
 
-  // Navigate directly to checkout with selected plan
+  // Navigate to checkout with selected plan and affiliate reference
   const handlePlanSelect = (planId: string) => {
-    navigate(`/buy?plan=${planId}`);
+    const params = new URLSearchParams();
+    params.set('plan', planId);
+    if (affiliate?.username) {
+      params.set('ref', affiliate.username);
+    }
+    navigate(`/buy?${params.toString()}`);
   };
 
   // Scroll to pricing section
