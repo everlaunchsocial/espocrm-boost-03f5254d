@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SubdomainRouter } from "./components/SubdomainRouter";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
+import { RoleRouteGuard } from "./components/RoleRouteGuard";
 import { CRMLayout } from "./components/crm/CRMLayout";
 import { AffiliateLayout } from "./components/affiliate/AffiliateLayout";
 import { CustomerPortalLayout } from "./components/customer/CustomerPortalLayout";
@@ -147,6 +148,7 @@ const App = () => (
       <BrowserRouter>
         <ScrollToTop />
         <ImpersonationBanner />
+        <RoleRouteGuard />
         <SubdomainRouter>
           <Routes>
           {/* Public pages - outside any layout */}

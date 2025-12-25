@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, KeyRound, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { getRedirectPathForRole, AppRole } from '@/hooks/useAuthRole';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -66,29 +67,15 @@ export default function ResetPassword() {
       setIsSuccess(true);
       toast.success('Password updated successfully!');
       
-      // Get user role and redirect appropriately
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('global_role')
-          .eq('user_id', user.id)
-          .single();
+      // Get user role using the secure RPC
+      const { data: roleData } = await supabase.rpc('get_my_role');
+      const role = (roleData && ['super_admin', 'admin', 'affiliate', 'customer'].includes(roleData)) 
+        ? roleData as AppRole 
+        : null;
 
-        setTimeout(() => {
-          if (profile?.global_role === 'super_admin' || profile?.global_role === 'admin') {
-            navigate('/');
-          } else if (profile?.global_role === 'affiliate') {
-            navigate('/affiliate');
-          } else if (profile?.global_role === 'customer') {
-            navigate('/customer');
-          } else {
-            navigate('/');
-          }
-        }, 2000);
-      } else {
-        setTimeout(() => navigate('/auth'), 2000);
-      }
+      setTimeout(() => {
+        navigate(getRedirectPathForRole(role), { replace: true });
+      }, 2000);
     } catch (error: any) {
       toast.error(error.message || 'Failed to update password');
     } finally {

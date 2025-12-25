@@ -6,96 +6,57 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2, Users, AlertCircle } from 'lucide-react';
+import { useAuthRole, getRedirectPathForRole } from '@/hooks/useAuthRole';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
+  const { role, isLoading: isRoleLoading, userId, error: roleError, refetch } = useAuthRole();
   const [isProcessing, setIsProcessing] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authMode, setAuthMode] = useState<'login' | 'forgot'>('login');
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    // Check if already logged in
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Redirect based on role
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('global_role')
-          .eq('user_id', user.id)
-          .single();
-
-        const role = profile?.global_role || 'customer';
-
-        if (role === 'super_admin' || role === 'admin') {
-          navigate('/dashboard');
-        } else if (role === 'affiliate') {
-          // Check if affiliate record actually exists
-          const { data: affiliate } = await supabase
-            .from('affiliates')
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          if (affiliate) {
-            navigate('/affiliate');
-          } else {
-            // Profile says affiliate but no record - send to complete signup
-            navigate('/affiliate-signup');
-          }
-        } else if (role === 'customer') {
-          navigate('/customer');
-        } else {
-          navigate('/');
-        }
+    // If user is logged in and we have their role, redirect them
+    if (!isRoleLoading && userId && role) {
+      // For affiliates, verify affiliate record exists
+      if (role === 'affiliate') {
+        supabase
+          .from('affiliates')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle()
+          .then(({ data: affiliate }) => {
+            if (affiliate) {
+              navigate('/affiliate', { replace: true });
+            } else {
+              // Profile says affiliate but no record - send to complete signup
+              navigate('/affiliate-signup', { replace: true });
+            }
+          });
+      } else {
+        navigate(getRedirectPathForRole(role), { replace: true });
       }
-      setIsLoading(false);
-    };
+    }
+  }, [isRoleLoading, userId, role, navigate]);
 
-    checkAuth();
+  // Handle role error with retry
+  useEffect(() => {
+    if (roleError && userId && retryCount < 3) {
+      const timer = setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        refetch();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [roleError, userId, retryCount, refetch]);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Skip redirects for password recovery - let ResetPassword.tsx handle it
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         navigate('/reset-password');
-        return;
-      }
-
-      if (event === 'SIGNED_IN' && session?.user) {
-        // Defer the profile fetch to avoid deadlock
-        setTimeout(async () => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('global_role')
-            .eq('user_id', session.user.id)
-            .single();
-
-          const role = profile?.global_role || 'customer';
-
-          if (role === 'super_admin' || role === 'admin') {
-            navigate('/dashboard');
-          } else if (role === 'affiliate') {
-            // Check if affiliate record actually exists
-            const { data: affiliate } = await supabase
-              .from('affiliates')
-              .select('id')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-            
-            if (affiliate) {
-              navigate('/affiliate');
-            } else {
-              navigate('/affiliate-signup');
-            }
-          } else if (role === 'customer') {
-            navigate('/customer');
-          } else {
-            navigate('/');
-          }
-        }, 0);
       }
     });
 
@@ -105,6 +66,7 @@ export default function Auth() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
+    setRetryCount(0);
 
     try {
       if (authMode === 'forgot') {
@@ -121,6 +83,7 @@ export default function Auth() {
         });
         if (error) throw error;
         toast.success('Signed in successfully!');
+        // The useAuthRole hook will pick up the session change and trigger redirect
       }
     } catch (error: any) {
       toast.error(error.message || 'Authentication failed');
@@ -129,10 +92,52 @@ export default function Auth() {
     }
   };
 
-  if (isLoading) {
+  // Show loading state while checking auth
+  if (isRoleLoading && userId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Determining account type...</p>
+      </div>
+    );
+  }
+
+  // Show error state if role lookup failed after retries
+  if (roleError && userId && retryCount >= 3) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 text-destructive" />
+            </div>
+            <CardTitle className="text-xl">Account Setup Issue</CardTitle>
+            <CardDescription>
+              We couldn't determine your account type. This may be a temporary issue.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              className="w-full" 
+              onClick={() => {
+                setRetryCount(0);
+                refetch();
+              }}
+            >
+              Try Again
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={async () => {
+                await supabase.auth.signOut();
+                navigate('/auth');
+              }}
+            >
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
