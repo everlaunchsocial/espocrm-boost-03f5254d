@@ -7,9 +7,9 @@ import { Check, Loader2, ArrowLeft } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getStoredAffiliateId } from "@/utils/affiliateAttribution";
+import { getStoredAffiliateId, storeAffiliateAttribution } from "@/utils/affiliateAttribution";
 import { getAffiliateUsernameFromPath } from "@/utils/subdomainRouting";
-import { useAffiliateContext } from "@/hooks/useAffiliateContext";
+import { useAffiliateContext, loadAffiliateContext } from "@/hooks/useAffiliateContext";
 
 // Plans must match database codes: starter, growth, professional
 const plans = [
@@ -79,22 +79,42 @@ export default function CustomerCheckoutPage() {
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
 
-  // Get affiliate from subdomain or stored attribution
+  // Get affiliate from URL ref param, subdomain, or stored attribution
+  const refFromUrl = searchParams.get("ref");
   const affiliateUsername = getAffiliateUsernameFromPath(window.location.pathname);
   const { affiliate } = useAffiliateContext(affiliateUsername || undefined);
   const [resolvedAffiliateId, setResolvedAffiliateId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Priority: subdomain affiliate > stored attribution
-    if (affiliate?.id) {
-      setResolvedAffiliateId(affiliate.id);
-    } else {
+    const resolveAffiliate = async () => {
+      // Priority 1: URL ref parameter (from navigation)
+      if (refFromUrl) {
+        const affiliateContext = await loadAffiliateContext(refFromUrl);
+        if (affiliateContext?.id) {
+          setResolvedAffiliateId(affiliateContext.id);
+          storeAffiliateAttribution(affiliateContext.id);
+          console.log("Resolved affiliate from URL ref:", refFromUrl, affiliateContext.id);
+          return;
+        }
+      }
+      
+      // Priority 2: Path-based affiliate (subdomain/replicated sites)
+      if (affiliate?.id) {
+        setResolvedAffiliateId(affiliate.id);
+        console.log("Resolved affiliate from path:", affiliate.id);
+        return;
+      }
+      
+      // Priority 3: Fall back to stored attribution
       const storedId = getStoredAffiliateId();
       if (storedId) {
         setResolvedAffiliateId(storedId);
+        console.log("Resolved affiliate from storage:", storedId);
       }
-    }
-  }, [affiliate?.id]);
+    };
+    
+    resolveAffiliate();
+  }, [refFromUrl, affiliate?.id]);
 
   // Get the selected plan details
   const currentPlan = plans.find(p => p.id === selectedPlan);

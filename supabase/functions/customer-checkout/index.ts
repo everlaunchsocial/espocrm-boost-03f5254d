@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     const body: CheckoutRequest = await req.json();
     const { planId, customerId, affiliateId, customerEmail, customerName, businessName, websiteUrl, successUrl, cancelUrl } = body;
 
-    console.log("Creating checkout session for customer:", customerId, "plan:", planId);
+    console.log("Creating checkout session for customer:", customerId, "plan:", planId, "affiliate:", affiliateId || "none");
 
     // Fetch plan details including Stripe price IDs
     const { data: plan, error: planError } = await supabase
