@@ -28,6 +28,7 @@ interface Affiliate {
   parent_affiliate_id: string | null;
   affiliate_plan_id: string | null;
   demo_credits_balance: number | null;
+  is_company_account: boolean | null;
   customer_count?: number;
 }
 
@@ -40,10 +41,11 @@ export default function AdminAffiliates() {
   const { data: affiliates, isLoading } = useQuery({
     queryKey: ['admin-affiliates'],
     queryFn: async () => {
-      // Fetch affiliates
+      // Fetch affiliates (exclude company accounts)
       const { data: affiliateData, error } = await supabase
         .from('affiliates')
         .select('*')
+        .eq('is_company_account', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
