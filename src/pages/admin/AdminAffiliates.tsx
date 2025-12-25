@@ -28,6 +28,7 @@ interface Affiliate {
   parent_affiliate_id: string | null;
   affiliate_plan_id: string | null;
   demo_credits_balance: number | null;
+  customer_count?: number;
 }
 
 export default function AdminAffiliates() {
@@ -39,13 +40,31 @@ export default function AdminAffiliates() {
   const { data: affiliates, isLoading } = useQuery({
     queryKey: ['admin-affiliates'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch affiliates
+      const { data: affiliateData, error } = await supabase
         .from('affiliates')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Affiliate[];
+
+      // Fetch customer counts per affiliate
+      const { data: customerCounts } = await supabase
+        .from('customer_profiles')
+        .select('affiliate_id');
+
+      // Count customers per affiliate
+      const countMap = new Map<string, number>();
+      customerCounts?.forEach((c) => {
+        if (c.affiliate_id) {
+          countMap.set(c.affiliate_id, (countMap.get(c.affiliate_id) || 0) + 1);
+        }
+      });
+
+      return (affiliateData || []).map((a) => ({
+        ...a,
+        customer_count: countMap.get(a.id) || 0,
+      })) as Affiliate[];
     },
   });
 
@@ -125,6 +144,7 @@ export default function AdminAffiliates() {
             <TableHeader>
               <TableRow>
                 <TableHead>Username</TableHead>
+                <TableHead>Customers</TableHead>
                 <TableHead>Credits</TableHead>
                 <TableHead>Joined</TableHead>
                 {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
@@ -142,6 +162,11 @@ export default function AdminAffiliates() {
                         </Badge>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={affiliate.customer_count ? "default" : "secondary"}>
+                      {affiliate.customer_count || 0}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     {affiliate.demo_credits_balance !== null ? (
@@ -172,7 +197,7 @@ export default function AdminAffiliates() {
               ))}
               {filteredAffiliates.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 4 : 3} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">
                     No affiliates found
                   </TableCell>
                 </TableRow>
