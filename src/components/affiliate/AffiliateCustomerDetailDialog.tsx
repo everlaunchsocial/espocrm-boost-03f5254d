@@ -5,9 +5,11 @@ import { Separator } from '@/components/ui/separator';
 import { 
   Building2, User, Mail, Phone, Calendar, CreditCard, 
   ExternalLink, AlertTriangle, CheckCircle2, XCircle,
-  MessageSquare, History, HelpCircle, Send
+  History, HelpCircle, Send, TrendingUp, TrendingDown, Minus,
+  ArrowRight, Activity
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, differenceInHours, differenceInDays } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 export interface AffiliateCustomerData {
   id: string;
@@ -20,6 +22,7 @@ export interface AffiliateCustomerData {
   createdAt: Date | null;
   paymentReceivedAt?: Date | null;
   onboardingStage: string | null;
+  lastActiveAt?: Date | null;
   // Optional commission info
   commissionAmount?: number;
   commissionLevel?: number;
@@ -49,14 +52,6 @@ function formatCurrency(amount: number): string {
 }
 
 function getSetupProgress(stage: string | null): { completed: number; total: number; missing: string[] } {
-  const allSteps = [
-    'Payment received',
-    'Phone number connected',
-    'Business hours set',
-    'Voice settings configured',
-    'Live testing complete',
-  ];
-  
   const stageKey = stage?.toLowerCase() || '';
   
   if (stageKey.includes('complete') || stageKey.includes('done')) {
@@ -103,12 +98,97 @@ function getSetupProgress(stage: string | null): { completed: number; total: num
   return { completed, total: 5, missing };
 }
 
+export type UsageStatus = 'active' | 'low' | 'at_risk' | 'unknown';
+
+export function getUsageStatus(lastActiveAt: Date | null | undefined): { 
+  status: UsageStatus; 
+  label: string; 
+  icon: string;
+  trend: 'up' | 'down' | 'stable';
+  description: string;
+} {
+  if (!lastActiveAt) {
+    return { 
+      status: 'unknown', 
+      label: 'No Activity', 
+      icon: '⚪',
+      trend: 'stable',
+      description: 'No call activity recorded yet'
+    };
+  }
+  
+  const hoursAgo = differenceInHours(new Date(), lastActiveAt);
+  const daysAgo = differenceInDays(new Date(), lastActiveAt);
+  
+  if (hoursAgo < 24) {
+    return { 
+      status: 'active', 
+      label: 'Active', 
+      icon: '🟢',
+      trend: 'up',
+      description: `Last active ${formatDistanceToNow(lastActiveAt)} ago`
+    };
+  } else if (daysAgo <= 7) {
+    return { 
+      status: 'low', 
+      label: 'Low Usage', 
+      icon: '🟡',
+      trend: 'stable',
+      description: `Last active ${daysAgo} day${daysAgo > 1 ? 's' : ''} ago`
+    };
+  } else {
+    return { 
+      status: 'at_risk', 
+      label: 'At Risk', 
+      icon: '🔴',
+      trend: 'down',
+      description: `Last active ${daysAgo} days ago`
+    };
+  }
+}
+
+function UsageStatusDisplay({ lastActiveAt }: { lastActiveAt: Date | null | undefined }) {
+  const usage = getUsageStatus(lastActiveAt);
+  
+  const TrendIcon = usage.trend === 'up' ? TrendingUp : usage.trend === 'down' ? TrendingDown : Minus;
+  const trendColor = usage.trend === 'up' ? 'text-emerald-500' : usage.trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
+  
+  return (
+    <div className={`rounded-lg p-3 ${
+      usage.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800' :
+      usage.status === 'low' ? 'bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800' :
+      usage.status === 'at_risk' ? 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800' :
+      'bg-muted/50 border border-border'
+    }`}>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{usage.icon}</span>
+          <span className="font-medium">{usage.label}</span>
+        </div>
+        <TrendIcon className={`h-4 w-4 ${trendColor}`} />
+      </div>
+      <p className="text-sm text-muted-foreground">{usage.description}</p>
+      
+      {usage.status === 'at_risk' && (
+        <div className="mt-2 pt-2 border-t border-red-200 dark:border-red-800">
+          <p className="text-xs text-red-700 dark:text-red-400 flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            This customer may need help. Consider reaching out.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AffiliateCustomerDetailDialog({
   customer,
   affiliateUsername,
   open,
   onOpenChange,
 }: AffiliateCustomerDetailDialogProps) {
+  const navigate = useNavigate();
+  
   if (!customer) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -152,14 +232,24 @@ export function AffiliateCustomerDetailDialog({
     }
   };
 
+  const handleViewFullContact = () => {
+    onOpenChange(false);
+    navigate(`/affiliate/customers/${customer.id}`);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            {customer.businessName || 'Customer Details'}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              {customer.businessName || 'Customer Details'}
+            </DialogTitle>
+            <Button variant="ghost" size="sm" onClick={handleViewFullContact}>
+              View Full Contact <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -240,7 +330,18 @@ export function AffiliateCustomerDetailDialog({
 
           <Separator />
 
-          {/* Status & Progress */}
+          {/* Usage Status */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+              <Activity className="h-3 w-3" />
+              Usage Status
+            </label>
+            <UsageStatusDisplay lastActiveAt={customer.lastActiveAt} />
+          </div>
+
+          <Separator />
+
+          {/* Setup Status & Progress */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -348,6 +449,9 @@ export function AffiliateCustomerDetailDialog({
                 View Call History
               </Button>
             </div>
+            <Button variant="default" className="w-full mt-2" onClick={handleViewFullContact}>
+              View Full Contact <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
           </div>
         </div>
       </DialogContent>
