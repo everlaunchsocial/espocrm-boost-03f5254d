@@ -57,6 +57,7 @@ import Auth from "./pages/Auth";
 import Product from "./pages/Product";
 import CustomerBuy from "./pages/CustomerBuy";
 import ProspectSearch from "./pages/ProspectSearch";
+import VoiceNotes from "./pages/VoiceNotes";
 
 // New customer pre-signup pages
 import CustomerLandingPage from "./pages/customer/CustomerLandingPage";
@@ -153,6 +154,7 @@ const App = () => (
         <SubdomainRouter>
           <Routes>
           {/* Public pages - outside any layout */}
+          <Route path="/voice-notes" element={<VoiceNotes />} />
           <Route path="/demo/:id" element={<PublicDemo />} />
           <Route path="/v/:slug" element={<VideoLandingPage />} />
           <Route path="/sales" element={<Sales />} />
