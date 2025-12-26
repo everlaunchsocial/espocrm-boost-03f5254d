@@ -16,6 +16,10 @@ serve(async (req) => {
     const body = await req.json();
     console.log('Vapi webhook received:', JSON.stringify(body, null, 2));
 
+    // Extract call ID for metadata injection
+    const callId = body.message?.call?.id || body.call?.id;
+    console.log('Call ID:', callId);
+
     // Extract caller ID from Vapi payload
     const callerPhone = body.message?.call?.customer?.number || 
                         body.call?.customer?.number || 
@@ -88,6 +92,46 @@ serve(async (req) => {
     // Get affiliate username from the joined affiliate record
     const affiliateName = demo.affiliates?.username || 'your rep';
     console.log('Found demo:', demo.id, demo.business_name, 'Prospect:', prospectName, 'Affiliate:', affiliateName);
+
+    // CRITICAL: Inject demo_id into VAPI call metadata so vapi-call-ended can send transcript emails
+    if (callId) {
+      const VAPI_API_KEY = Deno.env.get('VAPI_API_KEY');
+      if (VAPI_API_KEY) {
+        try {
+          console.log('Injecting demo_id into call metadata for call:', callId);
+          const patchResponse = await fetch(`https://api.vapi.ai/call/${callId}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${VAPI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              metadata: {
+                demo_id: demo.id,
+                affiliate_id: demo.affiliate_id,
+                call_type: 'demo',
+                prospect_email: prospectEmail,
+                prospect_name: prospectName,
+              }
+            }),
+          });
+          const patchResult = await patchResponse.json();
+          console.log('Call metadata update result:', JSON.stringify(patchResult, null, 2));
+          if (!patchResponse.ok) {
+            console.error('Failed to update call metadata:', patchResult);
+          } else {
+            console.log('Successfully injected demo_id into call metadata');
+          }
+        } catch (patchError) {
+          console.error('Error patching call metadata:', patchError);
+          // Don't fail the whole request, just log the error
+        }
+      } else {
+        console.warn('VAPI_API_KEY not available for metadata injection');
+      }
+    } else {
+      console.warn('No call ID available for metadata injection');
+    }
 
     // Store affiliate name and prospect email in the response for the system prompt to reference
     // Demo script: Address prospect by name, explain it's a demo, ask if they want to hear it
