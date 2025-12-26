@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,8 @@ import { useAuthRole, getRedirectPathForRole } from '@/hooks/useAuthRole';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
   const { role, isLoading: isRoleLoading, userId, error: roleError, refetch } = useAuthRole();
   const [isProcessing, setIsProcessing] = useState(false);
   const [email, setEmail] = useState('');
@@ -21,6 +23,12 @@ export default function Auth() {
   useEffect(() => {
     // If user is logged in and we have their role, redirect them
     if (!isRoleLoading && userId && role) {
+      // If there's a redirect param, use it (e.g., from welcome email)
+      if (redirectTo) {
+        navigate(redirectTo, { replace: true });
+        return;
+      }
+      
       // For affiliates, verify affiliate record exists
       if (role === 'affiliate') {
         supabase
@@ -40,7 +48,7 @@ export default function Auth() {
         navigate(getRedirectPathForRole(role), { replace: true });
       }
     }
-  }, [isRoleLoading, userId, role, navigate]);
+  }, [isRoleLoading, userId, role, navigate, redirectTo]);
 
   // Handle role error with retry
   useEffect(() => {
