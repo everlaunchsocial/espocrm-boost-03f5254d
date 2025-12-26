@@ -165,7 +165,7 @@ const App = () => (
           <Route path="/voice-notes" element={<VoiceNotes />} />
           <Route path="/demo/:id" element={<PublicDemo />} />
           <Route path="/v/:slug" element={<VideoLandingPage />} />
-          <Route path="/sales" element={<Sales />} />
+          {/* <Route path="/sales" element={<Sales />} /> */} {/* Disabled - use /:username affiliate landing pages instead */}
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/biz" element={<BusinessOpportunity />} />
           <Route path="/partner" element={<AffiliateSignup />} />
