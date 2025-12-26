@@ -145,8 +145,9 @@ export function useCustomerOnboarding() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // No user - they need to buy/signup first
-        navigate('/buy');
+        // No user - redirect to auth with return path to onboarding
+        const currentPath = window.location.pathname;
+        navigate(`/auth?redirect=${encodeURIComponent(currentPath)}`);
         return;
       }
 
@@ -160,7 +161,8 @@ export function useCustomerOnboarding() {
       if (profileError) throw profileError;
       
       if (!profile) {
-        // No customer profile - redirect to purchase
+        // User is logged in but has no customer profile - they need to purchase first
+        // Only redirect to /buy if they're trying to access onboarding, not auth
         navigate('/buy');
         return;
       }
