@@ -212,11 +212,25 @@ export function AffiliateCustomerDetailDialog({
 
   const handleEmailClick = () => {
     if (customer.email) {
-      const subject = encodeURIComponent('Help with your EverLaunch setup');
-      const body = encodeURIComponent(
-        `Hi ${customer.contactName || 'there'},\n\nI noticed you haven't completed your EverLaunch setup yet. I'm here to help!\n\nPlease let me know if you have any questions or need assistance getting started.\n\nBest regards,\n${affiliateUsername || 'Your EverLaunch Partner'}`
-      );
-      window.location.href = `mailto:${customer.email}?subject=${subject}&body=${body}`;
+      const affiliateName = affiliateUsername || 'Your EverLaunch Partner';
+      const affiliateUrl = affiliateUsername ? `tryeverlaunch.com/${affiliateUsername}` : 'tryeverlaunch.com';
+      
+      const subject = 'Help with your EverLaunch setup';
+      const body = `Hi ${customer.contactName || 'there'},
+
+I'm ${affiliateName}, your EverLaunch partner. I noticed you haven't completed your setup yet.
+
+I'm here to help! What questions can I answer?
+
+Best regards,
+${affiliateName}
+
+---
+Get your AI receptionist: ${affiliateUrl}`;
+
+      // Always open Gmail web interface
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(customer.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(gmailUrl, '_blank');
     }
   };
 
