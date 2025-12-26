@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, CheckCircle, Phone, Calendar, Users } from "lucide-react";
+import { Loader2, Phone, Calendar, Users, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStoredAffiliateId, storeAffiliateAttribution } from "@/utils/affiliateAttribution";
 import { getAffiliateUsernameFromPath } from "@/utils/subdomainRouting";
 import { useAffiliateContext } from "@/hooks/useAffiliateContext";
+import { z } from "zod";
 
 const businessTypes = [
   "Home Services (Plumber, HVAC, Electrician)",
@@ -24,15 +26,36 @@ const businessTypes = [
   "Other",
 ];
 
+const formSchema = z.object({
+  firstName: z.string().min(1, "First name is required").max(50),
+  lastName: z.string().min(1, "Last name is required").max(50),
+  email: z.string().email("Please enter a valid email").max(255),
+  phone: z.string().min(7, "Please enter a valid phone number").max(20),
+  businessName: z.string().min(1, "Business name is required").max(100),
+  businessType: z.string().optional(),
+  websiteUrl: z.string().url("Please enter a valid URL (include https://)").min(1, "Website URL is required"),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
 export default function DemoRequestPage() {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isCreatingDemo, setIsCreatingDemo] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+  const [demoUrl, setDemoUrl] = useState<string | null>(null);
   
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [businessType, setBusinessType] = useState("");
+  const [formData, setFormData] = useState<FormData>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    businessName: "",
+    businessType: "",
+    websiteUrl: "",
+  });
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  const [submitError, setSubmitError] = useState("");
 
   // Get affiliate from subdomain or stored attribution
   const affiliateUsername = getAffiliateUsernameFromPath(window.location.pathname);
@@ -52,80 +75,125 @@ export default function DemoRequestPage() {
     }
   }, [affiliate?.id]);
 
+  // Countdown effect
+  useEffect(() => {
+    if (isCreatingDemo && demoUrl && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (isCreatingDemo && countdown === 0 && demoUrl) {
+      // Extract demo ID from URL and navigate
+      const demoId = demoUrl.split("/demo/")[1];
+      if (demoId) {
+        navigate(`/demo/${demoId}`);
+      }
+    }
+  }, [isCreatingDemo, countdown, demoUrl, navigate]);
+
+  const handleChange = (field: keyof FormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+    setSubmitError("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name || !email || !businessName) {
-      toast.error("Please fill in all required fields");
+    setSubmitError("");
+
+    // Validate form
+    const result = formSchema.safeParse(formData);
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof FormData, string>> = {};
+      result.error.errors.forEach((err) => {
+        const field = err.path[0] as keyof FormData;
+        fieldErrors[field] = err.message;
+      });
+      setErrors(fieldErrors);
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Create a lead record for the demo request
-      const { error } = await supabase.from("leads").insert({
-        first_name: name.split(" ")[0] || name,
-        last_name: name.split(" ").slice(1).join(" ") || "",
-        email,
-        phone,
-        company: businessName,
-        industry: businessType || "Other",
-        source: "demo_request",
-        affiliate_id: resolvedAffiliateId,
-        pipeline_status: "new_lead",
-        status: "new",
-        notes: `Demo request submitted. Business type: ${businessType}`,
+      const { data, error } = await supabase.functions.invoke("request-demo", {
+        body: {
+          affiliateId: resolvedAffiliateId || null,
+          affiliateUsername: affiliateUsername || null,
+          businessName: formData.businessName,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          websiteUrl: formData.websiteUrl,
+          businessType: formData.businessType || undefined,
+        },
       });
 
-      if (error) throw error;
-
-      // Optionally notify the affiliate via edge function
-      if (resolvedAffiliateId) {
-        // Fire and forget - don't block on notification
-        supabase.functions.invoke("request-demo", {
-          body: {
-            affiliateId: resolvedAffiliateId,
-            leadName: name,
-            leadEmail: email,
-            leadPhone: phone,
-            businessName,
-            businessType,
-          },
-        }).catch(console.error);
+      if (error) {
+        console.error("Request demo error:", error);
+        setSubmitError("Something went wrong. Please try again.");
+        return;
       }
 
-      setIsSubmitted(true);
-      toast.success("Demo request submitted successfully!");
-    } catch (error) {
-      console.error("Demo request error:", error);
-      toast.error("Failed to submit demo request. Please try again.");
+      if (!data?.success) {
+        setSubmitError(data?.error || "Something went wrong. Please try again.");
+        return;
+      }
+
+      // Success - start countdown and redirect
+      setDemoUrl(data.demoUrl);
+      setIsCreatingDemo(true);
+      toast.success("Your personalized demo is ready!");
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      setSubmitError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isSubmitted) {
+  // Countdown/Creating Demo Screen
+  if (isCreatingDemo) {
     return (
-      <div className="min-h-screen bg-background py-20">
+      <div className="min-h-screen bg-background flex items-center justify-center py-12">
         <div className="container mx-auto px-4">
-          <Card className="mx-auto max-w-md text-center">
-            <CardHeader>
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <CheckCircle className="h-8 w-8 text-primary" />
+          <Card className="mx-auto max-w-md text-center border-primary/20">
+            <CardContent className="pt-12 pb-12">
+              <div className="relative mx-auto mb-8 h-24 w-24">
+                {/* Animated ring */}
+                <div className="absolute inset-0 rounded-full border-4 border-primary/20"></div>
+                <div 
+                  className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"
+                  style={{ animationDuration: "1s" }}
+                ></div>
+                {/* Countdown number */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-3xl font-bold text-primary">{countdown}</span>
+                </div>
               </div>
-              <CardTitle className="text-2xl">Thank You!</CardTitle>
-              <CardDescription>
-                We've received your demo request. One of our team members will reach out within 24 hours to schedule your personalized demo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-6 text-sm text-muted-foreground">
-                In the meantime, feel free to explore what our AI receptionist can do for your business.
+              
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+                <h2 className="text-2xl font-bold text-foreground">Creating Your Personalized Demo</h2>
+                <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+              </div>
+              
+              <p className="text-muted-foreground mb-6">
+                We're building an AI experience customized for your business...
               </p>
-              <Button onClick={() => window.location.href = "/"}>
-                Back to Home
-              </Button>
+              
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>✓ Analyzing your website</p>
+                <p>✓ Configuring AI voice assistant</p>
+                <p>✓ Setting up chat widget</p>
+              </div>
+
+              <p className="mt-8 text-xs text-muted-foreground">
+                Check your email for a link to your demo!
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -176,9 +244,9 @@ export default function DemoRequestPage() {
                   <Users className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Q&A Session</h3>
+                  <h3 className="font-semibold text-foreground">Instant Demo Access</h3>
                   <p className="text-sm text-muted-foreground">
-                    Get answers to all your questions from our team
+                    Your personalized AI demo will be ready in seconds
                   </p>
                 </div>
               </div>
@@ -186,63 +254,115 @@ export default function DemoRequestPage() {
           </div>
 
           {/* Right side - Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Request Your Demo</CardTitle>
+          <Card className="border-primary/20">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-2 h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <CardTitle className="text-xl">Get Your Personalized Demo</CardTitle>
               <CardDescription>
-                Fill out the form below and we'll be in touch within 24 hours.
+                Enter your details and we'll create your custom AI demo instantly
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Your Name *</Label>
+                  <Label htmlFor="businessName">Business Name *</Label>
                   <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="John Smith"
-                    required
+                    id="businessName"
+                    value={formData.businessName}
+                    onChange={(e) => handleChange("businessName", e.target.value)}
+                    placeholder="Acme Services"
+                    className={errors.businessName ? "border-destructive" : ""}
                   />
+                  {errors.businessName && (
+                    <p className="text-sm text-destructive">{errors.businessName}</p>
+                  )}
                 </div>
-                
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name *</Label>
+                    <Input
+                      id="firstName"
+                      value={formData.firstName}
+                      onChange={(e) => handleChange("firstName", e.target.value)}
+                      placeholder="John"
+                      className={errors.firstName ? "border-destructive" : ""}
+                    />
+                    {errors.firstName && (
+                      <p className="text-sm text-destructive">{errors.firstName}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      value={formData.lastName}
+                      onChange={(e) => handleChange("lastName", e.target.value)}
+                      placeholder="Smith"
+                      className={errors.lastName ? "border-destructive" : ""}
+                    />
+                    {errors.lastName && (
+                      <p className="text-sm text-destructive">{errors.lastName}</p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="email">Email *</Label>
                   <Input
                     id="email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="john@business.com"
-                    required
+                    value={formData.email}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    placeholder="john@acmeservices.com"
+                    className={errors.email ? "border-destructive" : ""}
                   />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="phone">Mobile Phone *</Label>
                   <Input
                     id="phone"
                     type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    value={formData.phone}
+                    onChange={(e) => handleChange("phone", e.target.value)}
                     placeholder="(555) 123-4567"
+                    className={errors.phone ? "border-destructive" : ""}
                   />
+                  {errors.phone && (
+                    <p className="text-sm text-destructive">{errors.phone}</p>
+                  )}
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label htmlFor="businessName">Business Name *</Label>
+                  <Label htmlFor="websiteUrl">Website URL *</Label>
                   <Input
-                    id="businessName"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder="Your Business Name"
-                    required
+                    id="websiteUrl"
+                    type="url"
+                    value={formData.websiteUrl}
+                    onChange={(e) => handleChange("websiteUrl", e.target.value)}
+                    placeholder="https://www.yourbusiness.com"
+                    className={errors.websiteUrl ? "border-destructive" : ""}
                   />
+                  {errors.websiteUrl && (
+                    <p className="text-sm text-destructive">{errors.websiteUrl}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    We'll use your website to personalize your AI demo
+                  </p>
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="businessType">Business Type</Label>
-                  <Select value={businessType} onValueChange={setBusinessType}>
+                  <Select 
+                    value={formData.businessType} 
+                    onValueChange={(value) => handleChange("businessType", value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select your industry" />
                     </SelectTrigger>
@@ -255,20 +375,26 @@ export default function DemoRequestPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {submitError && (
+                  <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-destructive">{submitError}</p>
+                  </div>
+                )}
                 
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
+                      Creating Your Demo...
                     </>
                   ) : (
-                    "Request Demo"
+                    "Get My Personalized Demo"
                   )}
                 </Button>
                 
                 <p className="text-center text-xs text-muted-foreground">
-                  No credit card required. We'll contact you to schedule your demo.
+                  You'll receive a link to your personalized voice + chat demo by email
                 </p>
               </form>
             </CardContent>
