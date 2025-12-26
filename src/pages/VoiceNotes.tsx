@@ -156,37 +156,38 @@ const VoiceNotes = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Recording Button */}
-            <div className="bg-card rounded-lg border p-8 text-center">
+            {/* Recording Button - Compact */}
+            <div className="bg-card rounded-lg border p-4 flex items-center gap-4">
               <button
                 onClick={handleToggleRecording}
                 className={cn(
-                  'w-24 h-24 rounded-full flex items-center justify-center mx-auto transition-all',
-                  'focus:outline-none focus:ring-4 focus:ring-primary/20',
+                  'w-12 h-12 rounded-full flex items-center justify-center transition-all flex-shrink-0',
+                  'focus:outline-none focus:ring-2 focus:ring-primary/20',
                   isListening
-                    ? 'bg-destructive text-destructive-foreground animate-pulse shadow-lg shadow-destructive/30'
+                    ? 'bg-destructive text-destructive-foreground animate-pulse shadow-md shadow-destructive/30'
                     : 'bg-primary text-primary-foreground hover:bg-primary/90'
                 )}
               >
                 {isListening ? (
-                  <MicOff className="h-10 w-10" />
+                  <MicOff className="h-5 w-5" />
                 ) : (
-                  <Mic className="h-10 w-10" />
+                  <Mic className="h-5 w-5" />
                 )}
               </button>
 
-              <p className="mt-4 text-lg font-medium">
-                {isListening ? 'Recording...' : 'Click to Record'}
-              </p>
-
-              <p className="text-2xl font-mono text-muted-foreground mt-2">
-                {formatDuration(duration)}
-              </p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">
+                  {isListening ? 'Recording...' : 'Click to Record'}
+                </p>
+                <p className="text-lg font-mono text-muted-foreground">
+                  {formatDuration(duration)}
+                </p>
+              </div>
 
               {/* Live transcript preview */}
               {isListening && interimTranscript && (
-                <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground italic">
+                <div className="flex-1 p-2 bg-muted/50 rounded-lg max-w-xs">
+                  <p className="text-xs text-muted-foreground italic truncate">
                     {interimTranscript}
                   </p>
                 </div>
