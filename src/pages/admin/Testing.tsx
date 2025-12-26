@@ -31,12 +31,15 @@ import {
   Globe,
   History,
   RefreshCw,
-  Mail
+  Mail,
+  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { TestEmailsPanel } from "@/components/testing/TestEmailsPanel";
 import { useTestModeStatus } from "@/hooks/useTestMode";
+import { TestOrchestratorChat } from "@/components/testing/TestOrchestratorChat";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   demo: <Globe className="h-4 w-4" />,
@@ -63,11 +66,14 @@ export default function Testing() {
   const completeStep = useCompleteTestStep();
   const completeRun = useCompleteTestRun();
   const { isTestMode } = useTestModeStatus();
+  const { role } = useUserRole();
+  const isSuperAdmin = role === 'super_admin';
   
   const [selectedSuite, setSelectedSuite] = useState<TestSuite | null>(null);
   const [stepNotes, setStepNotes] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [showEmails, setShowEmails] = useState(false);
+  const [showOrchestrator, setShowOrchestrator] = useState(false);
 
   const handleStartTest = async (suite: TestSuite) => {
     try {
@@ -329,11 +335,21 @@ export default function Testing() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <Button 
+                variant={showOrchestrator ? "default" : "outline"} 
+                size="sm"
+                onClick={() => { setShowOrchestrator(!showOrchestrator); setShowHistory(false); setShowEmails(false); }}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {showOrchestrator ? "Hide AI" : "AI Orchestrator"}
+              </Button>
+            )}
             {isTestMode && (
               <Button 
                 variant={showEmails ? "default" : "outline"} 
                 size="sm"
-                onClick={() => { setShowEmails(!showEmails); setShowHistory(false); }}
+                onClick={() => { setShowEmails(!showEmails); setShowHistory(false); setShowOrchestrator(false); }}
               >
                 <Mail className="h-4 w-4 mr-2" />
                 {showEmails ? "Hide Emails" : "Test Emails"}
@@ -342,7 +358,7 @@ export default function Testing() {
             <Button 
               variant={showHistory ? "default" : "outline"} 
               size="sm"
-              onClick={() => { setShowHistory(!showHistory); setShowEmails(false); }}
+              onClick={() => { setShowHistory(!showHistory); setShowEmails(false); setShowOrchestrator(false); }}
             >
               <History className="h-4 w-4 mr-2" />
               {showHistory ? "Show Suites" : "History"}
@@ -357,7 +373,10 @@ export default function Testing() {
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-6">
-          {showEmails ? (
+          {showOrchestrator && isSuperAdmin ? (
+            // AI Orchestrator view
+            <TestOrchestratorChat />
+          ) : showEmails ? (
             // Test Emails view
             <TestEmailsPanel />
           ) : showHistory ? (
