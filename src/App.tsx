@@ -159,6 +159,7 @@ const App = () => (
           <Routes>
           {/* Test mode entry - for automation tools */}
           <Route path="/test-mode-entry" element={<TestModeEntry />} />
+          <Route path="/testing" element={<Testing />} />
           
           {/* Public pages - outside any layout */}
           <Route path="/voice-notes" element={<VoiceNotes />} />
