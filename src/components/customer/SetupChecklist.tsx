@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { 
   CheckCircle2, 
   Circle, 
+  Building2,
   Mic, 
   BookOpen, 
-  Users, 
+  UserPlus, 
   Calendar, 
   Rocket,
   ArrowRight
@@ -14,6 +15,7 @@ import { Link } from 'react-router-dom';
 
 interface ChecklistItem {
   id: string;
+  stepNumber: number;
   label: string;
   description: string;
   link: string;
@@ -22,15 +24,23 @@ interface ChecklistItem {
 }
 
 interface SetupChecklistProps {
+  // Step 1: Business Profile
+  businessProfileComplete: boolean;
+  // Step 2: Voice & Personality
   voiceComplete: boolean;
+  // Step 3: Knowledge & Content
   knowledgeComplete: boolean;
+  // Step 4: Lead Capture
   leadsComplete: boolean;
+  // Step 5: Calendar
   calendarComplete: boolean;
   calendarOptional: boolean;
+  // Step 6: Deploy
   deployComplete: boolean;
 }
 
 export function SetupChecklist({
+  businessProfileComplete,
   voiceComplete,
   knowledgeComplete,
   leadsComplete,
@@ -38,41 +48,55 @@ export function SetupChecklist({
   calendarOptional,
   deployComplete
 }: SetupChecklistProps) {
+  // Steps must match onboarding wizard exactly
   const items: ChecklistItem[] = [
     {
+      id: 'business-profile',
+      stepNumber: 1,
+      label: "Business Profile",
+      description: "Tell us about your business so we can personalize your AI assistant.",
+      link: '/customer/onboarding/wizard/1',
+      isComplete: businessProfileComplete,
+    },
+    {
       id: 'voice',
-      label: "Set your AI's voice & greeting",
-      description: "Your AI will sound on-brand and greet callers the right way.",
-      link: '/customer/settings/voice',
+      stepNumber: 2,
+      label: "Voice & Personality",
+      description: "Choose your AI assistant's voice and greeting message.",
+      link: '/customer/onboarding/wizard/2',
       isComplete: voiceComplete,
     },
     {
       id: 'knowledge',
-      label: "Connect your website & documents",
-      description: "Give your AI the knowledge it needs to answer questions.",
-      link: '/customer/settings/knowledge',
+      stepNumber: 3,
+      label: "Knowledge & Content",
+      description: "Help your AI learn about your business from your website and documents.",
+      link: '/customer/onboarding/wizard/3',
       isComplete: knowledgeComplete,
     },
     {
       id: 'leads',
-      label: "Make sure new leads reach you",
-      description: "Configure how and where you get notified about new leads.",
-      link: '/customer/settings/leads',
+      stepNumber: 4,
+      label: "Lead Capture",
+      description: "Configure how you receive leads and notifications.",
+      link: '/customer/onboarding/wizard/4',
       isComplete: leadsComplete,
     },
     {
       id: 'calendar',
-      label: "Connect calendar for bookings",
-      description: calendarOptional ? "Optional: Let your AI book meetings for you." : "Let your AI book meetings for you.",
-      link: '/customer/settings/calendar',
+      stepNumber: 5,
+      label: "Calendar",
+      description: calendarOptional ? "Optional: Let your AI book appointments for you." : "Let your AI book appointments for you.",
+      link: '/customer/onboarding/wizard/5',
       isComplete: calendarComplete,
       isOptional: calendarOptional,
     },
     {
       id: 'deploy',
-      label: "Deploy your AI on your website and phone",
+      stepNumber: 6,
+      label: "Deploy",
       description: "Add the embed code and test your AI phone number.",
-      link: '/customer/settings/deploy',
+      link: '/customer/onboarding/wizard/6',
       isComplete: deployComplete,
     },
   ];
@@ -80,6 +104,19 @@ export function SetupChecklist({
   const completedCount = items.filter(item => item.isComplete).length;
   const totalCount = items.length;
   const allComplete = completedCount === totalCount;
+
+  // Get icon for each step
+  const getStepIcon = (id: string) => {
+    switch (id) {
+      case 'business-profile': return Building2;
+      case 'voice': return Mic;
+      case 'knowledge': return BookOpen;
+      case 'leads': return UserPlus;
+      case 'calendar': return Calendar;
+      case 'deploy': return Rocket;
+      default: return Rocket;
+    }
+  };
 
   return (
     <Card>
@@ -97,11 +134,7 @@ export function SetupChecklist({
       </CardHeader>
       <CardContent className="space-y-3">
         {items.map((item) => {
-          const Icon = item.id === 'voice' ? Mic 
-            : item.id === 'knowledge' ? BookOpen 
-            : item.id === 'leads' ? Users 
-            : item.id === 'calendar' ? Calendar 
-            : Rocket;
+          const Icon = getStepIcon(item.id);
 
           return (
             <div
@@ -121,6 +154,9 @@ export function SetupChecklist({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                    Step {item.stepNumber}
+                  </span>
                   <Icon className="h-4 w-4 text-primary shrink-0" />
                   <span className={`font-medium text-sm ${item.isComplete ? 'text-success' : 'text-foreground'}`}>
                     {item.label}

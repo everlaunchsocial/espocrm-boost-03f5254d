@@ -72,23 +72,27 @@ export default function CustomerDashboard() {
     ? format(new Date(billing.billing_cycle_end), 'MMM d, yyyy')
     : 'Not set';
 
-  // Calculate checklist completion status - less strict requirements
-  // Voice: Complete if they set voice_gender OR voice_style (configured voice personality)
+  // Calculate checklist completion status - matches onboarding wizard steps exactly
+  
+  // Step 1: Business Profile - Complete if business_name AND business_type are set
+  const businessProfileComplete = !!(customerProfile?.business_name && customerProfile?.business_type);
+  
+  // Step 2: Voice & Personality - Complete if voice_gender is configured
   const voiceComplete = !!(voiceSettings?.voice_gender || voiceSettings?.voice_style);
   
-  // Knowledge: Complete if website URL exists OR has document knowledge
+  // Step 3: Knowledge & Content - Complete if website URL exists OR has document knowledge
   const hasWebsiteKnowledge = !!customerProfile?.website_url;
   const hasDocumentKnowledge = knowledgeSources.some(s => s.source_type === 'document');
   const knowledgeComplete = hasWebsiteKnowledge || hasDocumentKnowledge;
   
-  // Leads: Complete if lead_capture_enabled OR has notification configured (optional feature)
+  // Step 4: Lead Capture - Complete if lead_capture_enabled OR has notification configured
   const leadsComplete = !!(customerProfile?.lead_capture_enabled || customerProfile?.lead_email || customerProfile?.lead_sms_number);
   
-  // Calendar: Optional - complete if provider is set OR marked as disabled intentionally
+  // Step 5: Calendar - Optional - complete if provider is set OR marked as disabled
   const calendarOptional = true; // Calendar is always optional
   const calendarComplete = !!(calendarIntegration?.provider || calendarIntegration?.appointments_enabled === false);
   
-  // Deploy: Complete if either embed installed OR phone provisioned (one is enough)
+  // Step 6: Deploy - Complete if embed installed OR phone provisioned
   const deployComplete = !!(customerProfile?.embed_installed_at || twilioNumber);
 
   return (
@@ -106,6 +110,7 @@ export default function CustomerDashboard() {
 
         {/* Setup Checklist */}
         <SetupChecklist
+          businessProfileComplete={businessProfileComplete}
           voiceComplete={voiceComplete}
           knowledgeComplete={knowledgeComplete}
           leadsComplete={leadsComplete}
