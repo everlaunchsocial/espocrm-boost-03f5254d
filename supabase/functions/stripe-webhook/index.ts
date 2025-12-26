@@ -395,7 +395,7 @@ Deno.serve(async (req) => {
           if (isNewCustomerProfile && resendApiKey && customerEmail) {
             const resend = new Resend(resendApiKey);
             const loginUrl = "https://tryeverlaunch.com/auth";
-            const onboardingUrl = "https://tryeverlaunch.com/customer/onboarding/wizard/1";
+            const onboardingUrl = "https://tryeverlaunch.com/auth?redirect=/customer/onboarding/wizard/1";
             
             // Get affiliate username if available
             let affiliateUsername = "";

@@ -20,26 +20,57 @@ export default function ResetPassword() {
   useEffect(() => {
     // Listen for PASSWORD_RECOVERY event which confirms valid reset session
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[ResetPassword] Auth event:', event);
       if (event === 'PASSWORD_RECOVERY') {
         // Valid recovery session - allow password reset
+        console.log('[ResetPassword] PASSWORD_RECOVERY event received');
         setIsValidSession(true);
       }
     });
 
-    // Also check if we already have a session (user might have arrived here already)
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // We have a session - assume it's valid for password reset
-        // The user clicked a valid reset link which created this session
+    // Check URL hash for recovery token (Supabase embeds it in hash)
+    const checkForRecoverySession = async () => {
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.replace('#', ''));
+      const accessToken = params.get('access_token');
+      const type = params.get('type');
+      
+      console.log('[ResetPassword] URL hash type:', type, 'hasAccessToken:', !!accessToken);
+      
+      // If we have a recovery token in URL, this is definitely a password reset
+      if (type === 'recovery' && accessToken) {
+        console.log('[ResetPassword] Recovery token found in URL');
         setIsValidSession(true);
+        return;
+      }
+      
+      // Also check if we already have a session 
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('[ResetPassword] Session check:', !!session);
+      
+      if (session) {
+        // We have a session - but we need to distinguish between:
+        // 1. User arrived via password reset link (should show form)
+        // 2. User navigated here while logged in (should redirect or show expired)
+        
+        // Check if this looks like a recovery flow based on URL or recent event
+        const isFromRecoveryLink = type === 'recovery' || hash.includes('type=recovery');
+        
+        if (isFromRecoveryLink) {
+          setIsValidSession(true);
+        } else {
+          // User navigated here directly while logged in - show the form anyway
+          // They might have refreshed the page after getting here via reset link
+          setIsValidSession(true);
+        }
       } else {
         // No session at all - invalid or expired link
+        console.log('[ResetPassword] No session found - link expired');
         setIsValidSession(false);
       }
     };
     
-    checkSession();
+    checkForRecoverySession();
 
     return () => subscription.unsubscribe();
   }, []);
