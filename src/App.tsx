@@ -8,6 +8,7 @@ import { SubdomainRouter } from "./components/SubdomainRouter";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { RoleRouteGuard } from "./components/RoleRouteGuard";
+import { TestModeIndicator } from "./components/TestModeIndicator";
 import { CRMLayout } from "./components/crm/CRMLayout";
 import { AffiliateLayout } from "./components/affiliate/AffiliateLayout";
 import { CustomerPortalLayout } from "./components/customer/CustomerPortalLayout";
@@ -139,6 +140,7 @@ import OnboardingStep4 from "./pages/customer/OnboardingStep4";
 import OnboardingStep5 from "./pages/customer/OnboardingStep5";
 import OnboardingStep6 from "./pages/customer/OnboardingStep6";
 import VerticalLandingPage from "./pages/verticals/VerticalLandingPage";
+import TestModeEntry from "./pages/TestModeEntry";
 
 const queryClient = new QueryClient();
 
@@ -151,8 +153,12 @@ const App = () => (
         <ScrollToTop />
         <ImpersonationBanner />
         <RoleRouteGuard />
+        <TestModeIndicator />
         <SubdomainRouter>
           <Routes>
+          {/* Test mode entry - for automation tools */}
+          <Route path="/test-mode-entry" element={<TestModeEntry />} />
+          
           {/* Public pages - outside any layout */}
           <Route path="/voice-notes" element={<VoiceNotes />} />
           <Route path="/demo/:id" element={<PublicDemo />} />
