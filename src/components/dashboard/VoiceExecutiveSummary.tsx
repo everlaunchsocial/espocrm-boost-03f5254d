@@ -20,7 +20,6 @@ export function VoiceExecutiveSummary() {
   const [isGenerating, setIsGenerating] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-
   const stopAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -44,20 +43,20 @@ export function VoiceExecutiveSummary() {
     setIsGenerating(true);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('preview-voice', {
+      // Use the OpenAI-based preview voice function to avoid Cartesia key issues.
+      const { data, error: fnError } = await supabase.functions.invoke('ai-assistant-preview-voice', {
         body: {
-          voice_id: DEFAULT_VOICE_ID,
           text: summary.voiceScript,
-          speed: 1.0
+          voice: 'nova',
         }
       });
 
-      if (fnError || !data?.audio) {
-        throw new Error(fnError?.message || 'Failed to generate audio');
+      if (fnError || !data?.audioContent) {
+        throw new Error(fnError?.message || data?.error || 'Failed to generate audio');
       }
 
       // Create audio from base64
-      const audioUrl = `data:audio/mp3;base64,${data.audio}`;
+      const audioUrl = `data:audio/mp3;base64,${data.audioContent}`;
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 

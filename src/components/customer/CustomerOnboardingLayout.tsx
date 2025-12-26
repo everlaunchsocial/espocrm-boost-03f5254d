@@ -1,9 +1,11 @@
 import { ReactNode, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface CustomerOnboardingLayoutProps {
   children: ReactNode;
@@ -22,7 +24,7 @@ const steps = [
 export function CustomerOnboardingLayout({ children, currentStep }: CustomerOnboardingLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoading, customerProfile, isOnboardingComplete } = useCustomerOnboarding();
+  const { isLoading, customerProfile, isOnboardingComplete, profileLoadState, refetch } = useCustomerOnboarding();
 
   useEffect(() => {
     if (!isLoading && customerProfile) {
@@ -42,6 +44,64 @@ export function CustomerOnboardingLayout({ children, currentStep }: CustomerOnbo
       }
     }
   }, [isLoading, customerProfile, isOnboardingComplete, navigate, location.pathname]);
+
+  if (isLoading && profileLoadState === 'polling') {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-xl mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  Finishing your setup…
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Your account is being finalized. This usually takes a few seconds.
+                </p>
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-4/5" />
+                  <Skeleton className="h-3 w-3/5" />
+                </div>
+                <Button variant="outline" onClick={() => refetch()}>
+                  Retry now
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoading && profileLoadState === 'not_found') {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-xl mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle>We couldn't find your customer setup yet</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Sometimes the setup takes a moment after payment. Please retry, or log in again.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button onClick={() => refetch()}>Try again</Button>
+                  <Button variant="outline" onClick={() => navigate('/auth')}>
+                    Go to login
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
