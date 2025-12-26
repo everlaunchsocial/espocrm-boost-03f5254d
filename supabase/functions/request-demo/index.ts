@@ -283,6 +283,7 @@ serve(async (req: Request): Promise<Response> => {
         chat_primary_color: "#6366f1",
         passcode: passcode,
         status: "draft",
+        source: "web_form", // Track that this demo came from the public web form
       })
       .select()
       .single();

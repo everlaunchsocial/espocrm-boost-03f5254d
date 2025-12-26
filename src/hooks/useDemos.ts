@@ -7,6 +7,9 @@ export type DemoStatus = 'draft' | 'sent' | 'viewed' | 'engaged';
 export type VoiceProvider = 'openai' | 'elevenlabs';
 
 // Demo model matching the public.demos table
+// Demo source types
+export type DemoSource = 'web_form' | 'affiliate_manual' | 'landing_page';
+
 export interface Demo {
   id: string;
   rep_id: string | null;
@@ -26,6 +29,7 @@ export interface Demo {
   vapi_assistant_id: string | null;
   passcode: string | null;
   status: DemoStatus;
+  source: DemoSource;
   email_sent_at: string | null;
   first_viewed_at: string | null;
   last_viewed_at: string | null;
@@ -59,6 +63,7 @@ export interface CreateDemoInput {
   elevenlabs_agent_id?: string | null;
   vapi_assistant_id?: string | null;
   status?: DemoStatus;
+  source?: DemoSource;
 }
 
 // Result type for operations
@@ -179,7 +184,8 @@ export const useDemos = () => {
           elevenlabs_agent_id: input.elevenlabs_agent_id ?? null,
           vapi_assistant_id: input.vapi_assistant_id ?? null,
           passcode: passcode,
-          status: input.status ?? 'draft'
+          status: input.status ?? 'draft',
+          source: input.source ?? 'affiliate_manual'
         })
         .select()
         .single();
