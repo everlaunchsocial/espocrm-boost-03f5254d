@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { CheckCircle, Loader2, Mail, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -11,6 +11,7 @@ export default function CustomerBuySuccess() {
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   const sessionId = searchParams.get("session_id");
 
@@ -36,7 +37,7 @@ export default function CustomerBuySuccess() {
         if (!user) {
           // User might need to log in again after Stripe redirect
           toast.info("Please log in to continue with setup");
-          navigate("/auth");
+          navigate("/auth?redirect=/customer/onboarding/wizard/1");
           return;
         }
 
@@ -67,6 +68,20 @@ export default function CustomerBuySuccess() {
 
   const handleContinue = () => {
     navigate("/customer/onboarding/wizard/1");
+  };
+
+  const handleResendWelcomeEmail = async () => {
+    setIsResendingEmail(true);
+    try {
+      const { error } = await supabase.functions.invoke('resend-welcome-email');
+      if (error) throw error;
+      toast.success("Welcome email sent! Check your inbox (and spam folder).");
+    } catch (err) {
+      console.error("Error resending welcome email:", err);
+      toast.error("Failed to resend email. Please try again.");
+    } finally {
+      setIsResendingEmail(false);
+    }
   };
 
   if (isProcessing) {
@@ -104,7 +119,7 @@ export default function CustomerBuySuccess() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md text-center">
         <CardHeader>
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -115,13 +130,43 @@ export default function CustomerBuySuccess() {
             Your payment was successful. Let's set up your AI receptionist.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <p className="text-sm text-muted-foreground">
             The setup process takes about 5 minutes. We'll help you configure your AI to perfectly represent your business.
           </p>
-          <Button onClick={handleContinue} className="w-full">
-            Start Setup
+          
+          <Button onClick={handleContinue} className="w-full" size="lg">
+            Start Setup Now
           </Button>
+          
+          <div className="border-t pt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+              <Mail className="h-4 w-4" />
+              <span>A welcome email is on its way!</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-2">
+              Didn't receive it? Check your spam folder or resend:
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResendWelcomeEmail}
+              disabled={isResendingEmail}
+              className="w-full"
+            >
+              {isResendingEmail ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Resend Welcome Email
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
