@@ -67,7 +67,105 @@ Deno.serve(async (req) => {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         console.log("Checkout session completed:", session.id);
+        console.log("Session metadata:", session.metadata);
 
+        // Check if this is an affiliate upgrade checkout
+        const isAffiliateUpgrade = session.metadata?.is_upgrade === "true" && session.metadata?.affiliate_id;
+        
+        if (isAffiliateUpgrade) {
+          // Handle affiliate subscription upgrade
+          const affiliateIdForUpgrade = session.metadata?.affiliate_id;
+          const planCode = session.metadata?.plan_code;
+          const previousPlan = session.metadata?.previous_plan;
+          const stripeCustomerId = session.customer as string;
+          const stripeSubscriptionId = session.subscription as string;
+          
+          console.log("Processing affiliate upgrade:", affiliateIdForUpgrade, "to plan:", planCode);
+          
+          // Get the new plan details
+          const { data: newPlan, error: planError } = await supabase
+            .from("affiliate_plans")
+            .select("id, code, name, demo_credits_per_month")
+            .eq("code", planCode)
+            .single();
+          
+          if (planError || !newPlan) {
+            console.error("Error fetching affiliate plan:", planError);
+            break;
+          }
+          
+          // Update affiliate's plan
+          const { error: updateError } = await supabase
+            .from("affiliates")
+            .update({ 
+              affiliate_plan_id: newPlan.id,
+              demo_credits_balance: newPlan.code === "agency" ? null : newPlan.demo_credits_per_month
+            })
+            .eq("id", affiliateIdForUpgrade);
+          
+          if (updateError) {
+            console.error("Error updating affiliate plan:", updateError);
+          } else {
+            console.log("Updated affiliate", affiliateIdForUpgrade, "to plan", newPlan.code);
+          }
+          
+          // Check if billing subscription exists, create or update
+          const { data: existingSub } = await supabase
+            .from("billing_subscriptions")
+            .select("id")
+            .eq("affiliate_id", affiliateIdForUpgrade)
+            .eq("subscription_type", "affiliate")
+            .maybeSingle();
+          
+          if (existingSub) {
+            // Update existing subscription
+            await supabase
+              .from("billing_subscriptions")
+              .update({
+                status: "active",
+                stripe_customer_id: stripeCustomerId,
+                stripe_subscription_id: stripeSubscriptionId,
+                plan_id: newPlan.id,
+              })
+              .eq("id", existingSub.id);
+          } else {
+            // Create new billing subscription
+            await supabase
+              .from("billing_subscriptions")
+              .insert({
+                affiliate_id: affiliateIdForUpgrade,
+                subscription_type: "affiliate",
+                status: "active",
+                stripe_customer_id: stripeCustomerId,
+                stripe_subscription_id: stripeSubscriptionId,
+                plan_id: newPlan.id,
+              });
+          }
+          
+          // Log plan history
+          const { data: oldPlan } = await supabase
+            .from("affiliate_plans")
+            .select("id")
+            .eq("code", previousPlan)
+            .single();
+          
+          await supabase
+            .from("affiliate_plan_history")
+            .insert({
+              affiliate_id: affiliateIdForUpgrade,
+              old_plan_id: oldPlan?.id || null,
+              new_plan_id: newPlan.id,
+              old_plan_code: previousPlan || null,
+              new_plan_code: newPlan.code,
+              stripe_subscription_id: stripeSubscriptionId,
+              initiated_by: "stripe_checkout",
+            });
+          
+          console.log("Affiliate upgrade checkout complete:", affiliateIdForUpgrade, "now on", planCode);
+          break;
+        }
+
+        // Regular customer checkout flow
         const customerId = session.metadata?.customer_id; // This is auth.users.id
         const planId = session.metadata?.plan_id;
         const affiliateId = session.metadata?.affiliate_id || null;
@@ -78,7 +176,7 @@ Deno.serve(async (req) => {
         const stripeSubscriptionId = session.subscription as string;
 
         if (!customerId) {
-          console.error("No customer_id in session metadata");
+          console.error("No customer_id in session metadata - not a customer checkout");
           break;
         }
 
