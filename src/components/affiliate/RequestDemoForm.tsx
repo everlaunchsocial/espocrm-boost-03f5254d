@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2, CheckCircle, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
+import { normalizeUrl, isValidUrl } from '@/utils/normalizeUrl';
 
 const formSchema = z.object({
   businessName: z.string().min(1, 'Business name is required').max(100),
@@ -13,7 +14,7 @@ const formSchema = z.object({
   lastName: z.string().min(1, 'Last name is required').max(50),
   email: z.string().email('Please enter a valid email').max(255),
   phone: z.string().min(7, 'Please enter a valid phone number').max(20),
-  websiteUrl: z.string().url('Please enter a valid URL').optional().or(z.literal('')),
+  websiteUrl: z.string().optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -46,12 +47,30 @@ export function RequestDemoForm({ affiliateId, affiliateUsername }: RequestDemoF
     setSubmitError('');
   };
 
+  const handleWebsiteBlur = () => {
+    if (formData.websiteUrl) {
+      const normalized = normalizeUrl(formData.websiteUrl);
+      if (normalized !== formData.websiteUrl) {
+        setFormData((prev) => ({ ...prev, websiteUrl: normalized }));
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
 
+    // Normalize website URL before validation
+    const normalizedWebsiteUrl = formData.websiteUrl ? normalizeUrl(formData.websiteUrl) : '';
+    
+    // Validate URL if provided
+    if (normalizedWebsiteUrl && !isValidUrl(normalizedWebsiteUrl)) {
+      setErrors({ websiteUrl: 'Please enter a valid website (e.g., yourbusiness.com)' });
+      return;
+    }
+
     // Validate form
-    const result = formSchema.safeParse(formData);
+    const result = formSchema.safeParse({ ...formData, websiteUrl: normalizedWebsiteUrl });
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof FormData, string>> = {};
       result.error.errors.forEach((err) => {
@@ -208,10 +227,11 @@ export function RequestDemoForm({ affiliateId, affiliateUsername }: RequestDemoF
             <Label htmlFor="websiteUrl">Website URL (optional)</Label>
             <Input
               id="websiteUrl"
-              type="url"
+              type="text"
               value={formData.websiteUrl}
               onChange={(e) => handleChange('websiteUrl', e.target.value)}
-              placeholder="https://www.yourbusiness.com"
+              onBlur={handleWebsiteBlur}
+              placeholder="yourbusiness.com"
               className={errors.websiteUrl ? 'border-destructive' : ''}
             />
             {errors.websiteUrl && (

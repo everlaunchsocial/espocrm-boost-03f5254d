@@ -220,8 +220,8 @@ export default function KnowledgeSettings() {
                 <Label htmlFor="website-url">Website URL</Label>
                 <Input
                   id="website-url"
-                  type="url"
-                  placeholder="https://yourbusiness.com"
+                  type="text"
+                  placeholder="yourbusiness.com"
                   value={websiteUrl}
                   onChange={(e) => setWebsiteUrl(e.target.value)}
                   onBlur={handleWebsiteUrlBlur}

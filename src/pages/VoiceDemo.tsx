@@ -9,6 +9,7 @@ import { WebsitePreview } from "@/components/voice-demo/WebsitePreview";
 import { BusinessInfoCard } from "@/components/voice-demo/BusinessInfoCard";
 import { VoiceWidget, VoiceProvider } from "@/components/voice-demo/VoiceWidget";
 import { ProviderToggle } from "@/components/voice-demo/ProviderToggle";
+import { normalizeUrl } from "@/utils/normalizeUrl";
 
 interface BusinessInfo {
   businessName: string;
@@ -40,10 +41,16 @@ const VoiceDemo = () => {
       return;
     }
 
-    // Normalize URL
-    let normalizedUrl = url;
-    if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
-      normalizedUrl = 'https://' + normalizedUrl;
+    // Normalize URL using utility
+    const normalizedUrl = normalizeUrl(url);
+    
+    if (!normalizedUrl) {
+      toast({
+        title: "URL required",
+        description: "Please enter a valid website URL",
+        variant: "destructive",
+      });
+      return;
     }
 
     setIsAnalyzing(true);
@@ -121,8 +128,8 @@ const VoiceDemo = () => {
             <div className="relative flex-1">
               <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                type="url"
-                placeholder="https://example.com"
+                type="text"
+                placeholder="yourbusiness.com"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyDown={handleKeyDown}
