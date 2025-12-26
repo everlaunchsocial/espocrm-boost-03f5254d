@@ -105,10 +105,19 @@ export function useCustomerOnboarding() {
   const [calendarIntegration, setCalendarIntegration] = useState<CalendarIntegration | null>(null);
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
   const [twilioNumber, setTwilioNumber] = useState<string | null>(null);
+  const [profileLoadState, setProfileLoadState] = useState<'loading' | 'found' | 'not_found' | 'polling'>('loading');
 
   // Track if phone AI sync is needed (debounced to avoid multiple calls)
   const phoneAiSyncPending = useRef(false);
   const phoneAiSyncTimeout = useRef<NodeJS.Timeout | null>(null);
+  const pollAttemptsRef = useRef(0);
+  const maxPollAttempts = 15; // Poll for up to ~30 seconds (15 attempts * 2 seconds)
+  
+  // Check if current path is an onboarding route
+  const isOnboardingRoute = () => {
+    const path = window.location.pathname;
+    return path.startsWith('/customer/onboarding');
+  };
   
   // Trigger vapi-update-assistant to refresh phone AI prompt
   const syncPhoneAiAssistant = useCallback(async (customerId: string) => {
@@ -141,6 +150,111 @@ export function useCustomerOnboarding() {
     }, 1000);
   }, [syncPhoneAiAssistant]);
 
+  // Poll for customer profile (for newly created customers via welcome email)
+  const pollForProfile = useCallback(async (userId: string): Promise<CustomerProfile | null> => {
+    console.log(`[useCustomerOnboarding] Polling for profile, attempt ${pollAttemptsRef.current + 1}/${maxPollAttempts}`);
+    
+    const { data: profile, error } = await supabase
+      .from('customer_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('[useCustomerOnboarding] Poll error:', error);
+      return null;
+    }
+    
+    return profile as unknown as CustomerProfile | null;
+  }, []);
+
+  const startPolling = useCallback(async (userId: string) => {
+    setProfileLoadState('polling');
+    pollAttemptsRef.current = 0;
+    
+    const poll = async (): Promise<CustomerProfile | null> => {
+      if (pollAttemptsRef.current >= maxPollAttempts) {
+        console.log('[useCustomerOnboarding] Max poll attempts reached');
+        return null;
+      }
+      
+      const profile = await pollForProfile(userId);
+      if (profile) {
+        return profile;
+      }
+      
+      pollAttemptsRef.current++;
+      // Wait 2 seconds before next attempt
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return poll();
+    };
+    
+    return poll();
+  }, [pollForProfile]);
+
+  // Helper to fetch related data after profile is found
+  const fetchRelatedData = useCallback(async (profile: CustomerProfile) => {
+    // Fetch voice settings
+    const { data: voice } = await supabase
+      .from('voice_settings')
+      .select('*')
+      .eq('customer_id', profile.id)
+      .maybeSingle();
+    
+    setVoiceSettings(voice as unknown as VoiceSettings);
+
+    // Fetch chat settings
+    const { data: chat } = await supabase
+      .from('chat_settings')
+      .select('*')
+      .eq('customer_id', profile.id)
+      .maybeSingle();
+    
+    setChatSettings(chat as unknown as ChatSettings);
+
+    // Fetch calendar integration
+    const { data: calendar } = await supabase
+      .from('calendar_integrations')
+      .select('*')
+      .eq('customer_id', profile.id)
+      .maybeSingle();
+    
+    setCalendarIntegration(calendar as unknown as CalendarIntegration);
+
+    // Fetch knowledge sources
+    const { data: sources } = await supabase
+      .from('customer_knowledge_sources')
+      .select('*')
+      .eq('customer_id', profile.id)
+      .order('created_at', { ascending: false });
+    
+    setKnowledgeSources((sources || []) as unknown as KnowledgeSource[]);
+
+    // Fetch phone number from customer_phone_numbers (Vapi) or fallback to twilio_numbers
+    const { data: vapiPhone } = await supabase
+      .from('customer_phone_numbers')
+      .select('phone_number')
+      .eq('customer_id', profile.id)
+      .eq('status', 'active')
+      .maybeSingle();
+    
+    if (vapiPhone?.phone_number) {
+      setTwilioNumber(vapiPhone.phone_number);
+    } else {
+      // Fallback to legacy twilio_numbers table
+      const { data: twilio } = await supabase
+        .from('twilio_numbers')
+        .select('twilio_number')
+        .eq('customer_id', profile.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      
+      setTwilioNumber(twilio?.twilio_number || null);
+    }
+    
+    setIsLoading(false);
+  }, []);
+
   const fetchCustomerData = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -161,79 +275,41 @@ export function useCustomerOnboarding() {
       if (profileError) throw profileError;
       
       if (!profile) {
-        // User is logged in but has no customer profile - they need to purchase first
-        // Only redirect to /buy if they're trying to access onboarding, not auth
+        // If on an onboarding route, poll for profile (customer may have just been created)
+        if (isOnboardingRoute()) {
+          console.log('[useCustomerOnboarding] No profile found on onboarding route, starting poll...');
+          const polledProfile = await startPolling(user.id);
+          
+          if (polledProfile) {
+            console.log('[useCustomerOnboarding] Profile found after polling');
+            setCustomerProfile(polledProfile);
+            setProfileLoadState('found');
+            await fetchRelatedData(polledProfile);
+            return;
+          } else {
+            // Polling failed - show not found state (UI can show retry options)
+            console.log('[useCustomerOnboarding] Profile not found after polling');
+            setProfileLoadState('not_found');
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        // Not on onboarding route and no profile - redirect to buy
         navigate('/buy');
         return;
       }
-
+      
+      setProfileLoadState('found');
       setCustomerProfile(profile as unknown as CustomerProfile);
-
-      // Fetch voice settings
-      const { data: voice } = await supabase
-        .from('voice_settings')
-        .select('*')
-        .eq('customer_id', profile.id)
-        .maybeSingle();
-      
-      setVoiceSettings(voice as unknown as VoiceSettings);
-
-      // Fetch chat settings
-      const { data: chat } = await supabase
-        .from('chat_settings')
-        .select('*')
-        .eq('customer_id', profile.id)
-        .maybeSingle();
-      
-      setChatSettings(chat as unknown as ChatSettings);
-
-      // Fetch calendar integration
-      const { data: calendar } = await supabase
-        .from('calendar_integrations')
-        .select('*')
-        .eq('customer_id', profile.id)
-        .maybeSingle();
-      
-      setCalendarIntegration(calendar as unknown as CalendarIntegration);
-
-      // Fetch knowledge sources
-      const { data: sources } = await supabase
-        .from('customer_knowledge_sources')
-        .select('*')
-        .eq('customer_id', profile.id)
-        .order('created_at', { ascending: false });
-      
-      setKnowledgeSources((sources || []) as unknown as KnowledgeSource[]);
-
-      // Fetch phone number from customer_phone_numbers (Vapi) or fallback to twilio_numbers
-      const { data: vapiPhone } = await supabase
-        .from('customer_phone_numbers')
-        .select('phone_number')
-        .eq('customer_id', profile.id)
-        .eq('status', 'active')
-        .maybeSingle();
-      
-      if (vapiPhone?.phone_number) {
-        setTwilioNumber(vapiPhone.phone_number);
-      } else {
-        // Fallback to legacy twilio_numbers table
-        const { data: twilio } = await supabase
-          .from('twilio_numbers')
-          .select('twilio_number')
-          .eq('customer_id', profile.id)
-          .eq('status', 'active')
-          .maybeSingle();
-        
-        setTwilioNumber(twilio?.twilio_number || null);
-      }
+      await fetchRelatedData(profile as unknown as CustomerProfile);
 
     } catch (error) {
       console.error('Error fetching customer data:', error);
       toast.error('Failed to load your data');
-    } finally {
       setIsLoading(false);
     }
-  }, [navigate]);
+  }, [navigate, startPolling, fetchRelatedData]);
 
   useEffect(() => {
     fetchCustomerData();
@@ -513,6 +589,7 @@ export function useCustomerOnboarding() {
     calendarIntegration,
     knowledgeSources,
     twilioNumber,
+    profileLoadState,
     updateProfile,
     updateVoiceSettings,
     updateChatSettings,

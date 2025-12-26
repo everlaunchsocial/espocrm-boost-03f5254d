@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,25 +31,53 @@ const VoiceNotes = () => {
     resetTranscript,
   } = useCallAssistant();
 
-  const [pendingTranscript, setPendingTranscript] = useState('');
+  // Track the last length of transcript we've already appended to avoid duplication
+  const lastAppendedLengthRef = useRef(0);
+  const activeNoteIdRef = useRef<string | null>(null);
 
-  // When we get a final transcript, append it to the note
+  // Reset tracking when active note changes
   useEffect(() => {
-    if (transcript && transcript !== pendingTranscript) {
-      setPendingTranscript(transcript);
-      if (activeNote) {
-        const separator = activeNote.content ? '\n\n' : '';
-        updateNote(activeNote.id, activeNote.content + separator + transcript);
+    if (activeNoteId !== activeNoteIdRef.current) {
+      activeNoteIdRef.current = activeNoteId;
+      lastAppendedLengthRef.current = 0;
+    }
+  }, [activeNoteId]);
+
+  // When we get a final transcript, append ONLY the delta (new portion)
+  useEffect(() => {
+    if (transcript && activeNote) {
+      const currentLen = transcript.length;
+      const lastLen = lastAppendedLengthRef.current;
+      
+      // Only append if there's new content
+      if (currentLen > lastLen) {
+        const delta = transcript.slice(lastLen);
+        const separator = activeNote.content && lastLen === 0 ? '\n\n' : '';
+        updateNote(activeNote.id, activeNote.content + separator + delta);
+        lastAppendedLengthRef.current = currentLen;
       }
     }
-  }, [transcript, pendingTranscript, activeNote, updateNote]);
+  }, [transcript, activeNote, updateNote]);
+
+  // Handle tab visibility - stop recording when tab becomes hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isListening) {
+        stopListening();
+        toast.info('Recording paused - tab was hidden');
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isListening, stopListening]);
 
   const handleToggleRecording = () => {
     if (isListening) {
       stopListening();
     } else {
       resetTranscript();
-      setPendingTranscript('');
+      lastAppendedLengthRef.current = 0; // Reset delta tracking
       // Create a new note if none exists
       if (!activeNote) {
         createNote();
@@ -85,7 +113,7 @@ const VoiceNotes = () => {
       stopListening();
     }
     resetTranscript();
-    setPendingTranscript('');
+    lastAppendedLengthRef.current = 0; // Reset delta tracking
     createNote();
   };
 
