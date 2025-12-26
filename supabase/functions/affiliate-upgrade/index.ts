@@ -140,8 +140,8 @@ Deno.serve(async (req) => {
     if (subError || !subscription?.stripe_subscription_id) {
       console.log("No active subscription found - creating new checkout session");
       
-      // Determine site URL for redirects
-      const siteUrl = Deno.env.get("SITE_URL") || "https://espocrm-boost.lovable.app";
+      // Determine site URL for redirects - use production URL
+      const siteUrl = Deno.env.get("SITE_URL") || "https://tryeverlaunch.com";
       
       // Create Stripe checkout session for the new plan
       const session = await stripe.checkout.sessions.create({
@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
       // If subscription exists but is not active, create new checkout
       console.log("Subscription is not active - creating new checkout session");
       
-      const siteUrl = Deno.env.get("SITE_URL") || "https://espocrm-boost.lovable.app";
+      const siteUrl = Deno.env.get("SITE_URL") || "https://tryeverlaunch.com";
       
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
