@@ -2,15 +2,26 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentAffiliate } from './useCurrentAffiliate';
 import { useUserRole } from './useUserRole';
-import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths } from 'date-fns';
 
 export type CommissionStatus = 'pending' | 'paid' | 'all';
 export type DateRange = 'this_month' | 'last_month' | 'last_3_months' | 'all_time';
+
+export interface CustomerInfo {
+  id: string;
+  businessName: string | null;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  planName: string | null;
+  createdAt: Date | null;
+}
 
 export interface CommissionRow {
   id: string;
   affiliateId: string;
   customerId: string;
+  customer: CustomerInfo | null;
   amount: number;
   commissionLevel: number;
   status: string;
@@ -58,6 +69,7 @@ function getDateRange(range: DateRange): { start: Date | null; end: Date | null 
 
 /**
  * Fetch commissions for the current affiliate with filters
+ * Now includes customer details (business_name, contact_name, phone, plan_name)
  */
 export function useAffiliateCommissions(
   statusFilter: CommissionStatus = 'all',
@@ -75,7 +87,17 @@ export function useAffiliateCommissions(
 
       let query = supabase
         .from('affiliate_commissions')
-        .select('*')
+        .select(`
+          *,
+          customer_profiles!affiliate_commissions_customer_id_fkey (
+            id,
+            business_name,
+            contact_name,
+            phone,
+            plan_name,
+            created_at
+          )
+        `)
         .eq('affiliate_id', affiliateId)
         .order('created_at', { ascending: false });
 
@@ -95,10 +117,19 @@ export function useAffiliateCommissions(
       const { data, error } = await query;
       if (error) throw error;
 
-      return data.map((row): CommissionRow => ({
+      return data.map((row: any): CommissionRow => ({
         id: row.id,
         affiliateId: row.affiliate_id,
         customerId: row.customer_id,
+        customer: row.customer_profiles ? {
+          id: row.customer_profiles.id,
+          businessName: row.customer_profiles.business_name,
+          contactName: row.customer_profiles.contact_name,
+          phone: row.customer_profiles.phone,
+          email: null, // Not in customer_profiles, can add later if needed
+          planName: row.customer_profiles.plan_name,
+          createdAt: row.customer_profiles.created_at ? new Date(row.customer_profiles.created_at) : null,
+        } : null,
         amount: Number(row.amount),
         commissionLevel: row.commission_level,
         status: row.status,
@@ -220,7 +251,18 @@ export function useAllCommissions(
 
       let query = supabase
         .from('affiliate_commissions')
-        .select('*, affiliates(username)')
+        .select(`
+          *,
+          affiliates(username),
+          customer_profiles!affiliate_commissions_customer_id_fkey (
+            id,
+            business_name,
+            contact_name,
+            phone,
+            plan_name,
+            created_at
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (statusFilter !== 'all') {
@@ -237,11 +279,20 @@ export function useAllCommissions(
       const { data, error } = await query;
       if (error) throw error;
 
-      return data.map((row: any) => ({
+      return data.map((row: any): CommissionRow & { affiliateUsername: string } => ({
         id: row.id,
         affiliateId: row.affiliate_id,
         affiliateUsername: row.affiliates?.username || 'Unknown',
         customerId: row.customer_id,
+        customer: row.customer_profiles ? {
+          id: row.customer_profiles.id,
+          businessName: row.customer_profiles.business_name,
+          contactName: row.customer_profiles.contact_name,
+          phone: row.customer_profiles.phone,
+          email: null,
+          planName: row.customer_profiles.plan_name,
+          createdAt: row.customer_profiles.created_at ? new Date(row.customer_profiles.created_at) : null,
+        } : null,
         amount: Number(row.amount),
         commissionLevel: row.commission_level,
         status: row.status,

@@ -4,10 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DollarSign, Clock, CheckCircle, Users, TrendingUp, AlertCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DollarSign, Clock, CheckCircle, Users, TrendingUp, AlertCircle, Eye, Download, Flag, Building2, Phone, User } from 'lucide-react';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import {
   useAffiliateCommissions,
   useCommissionSummary,
@@ -18,6 +20,8 @@ import {
 import { useCurrentAffiliate } from '@/hooks/useCurrentAffiliate';
 import { useAffiliatePayouts, PayoutRow } from '@/hooks/usePayouts';
 import { EarningsDisclaimer } from '@/components/EarningsDisclaimer';
+import { CustomerDetailDialog } from '@/components/affiliate/CustomerDetailDialog';
+import { toast } from 'sonner';
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -172,7 +176,7 @@ function EarningsTrendChart() {
           tickLine={false}
           tickFormatter={(v) => `$${v}`}
         />
-        <Tooltip 
+        <RechartsTooltip 
           formatter={(value: number) => [`$${value.toFixed(2)}`, '']}
           contentStyle={{ 
             backgroundColor: 'hsl(var(--popover))', 
@@ -188,6 +192,63 @@ function EarningsTrendChart() {
   );
 }
 
+interface CustomerCellProps {
+  commission: CommissionRow;
+  onViewCustomer: (commission: CommissionRow) => void;
+}
+
+function CustomerCell({ commission, onViewCustomer }: CustomerCellProps) {
+  const customer = commission.customer;
+  const businessName = customer?.businessName || 'Unknown Customer';
+  const contactName = customer?.contactName;
+  const phone = customer?.phone;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => onViewCustomer(commission)}
+            className="text-left hover:bg-accent/50 rounded px-2 py-1 -mx-2 -my-1 transition-colors group"
+          >
+            <div className="font-medium text-primary group-hover:underline">
+              {businessName}
+            </div>
+            {contactName && (
+              <div className="text-xs text-muted-foreground">
+                {contactName}
+              </div>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="max-w-xs">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="font-semibold">{businessName}</span>
+            </div>
+            {contactName && (
+              <div className="flex items-center gap-2 text-sm">
+                <User className="h-3 w-3 text-muted-foreground" />
+                <span>{contactName}</span>
+              </div>
+            )}
+            {phone && (
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-3 w-3 text-muted-foreground" />
+                <span>{phone}</span>
+              </div>
+            )}
+            <div className="text-xs text-muted-foreground pt-1 border-t">
+              Click to view full details
+            </div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 function CommissionsTable({
   commissions,
   isLoading,
@@ -197,6 +258,26 @@ function CommissionsTable({
   isLoading: boolean;
   showLevel?: boolean;
 }) {
+  const [selectedCommission, setSelectedCommission] = useState<CommissionRow | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleViewCustomer = (commission: CommissionRow) => {
+    setSelectedCommission(commission);
+    setDialogOpen(true);
+  };
+
+  const handleDownloadInvoice = (commission: CommissionRow) => {
+    // TODO: Implement invoice download
+    toast.info('Invoice download coming soon!');
+  };
+
+  const handleReportIssue = (commission: CommissionRow) => {
+    // TODO: Implement issue reporting
+    toast.info('Issue reporting coming soon!', {
+      description: 'Contact support@everlaunch.ai for commission issues.',
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -220,38 +301,101 @@ function CommissionsTable({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Customer</TableHead>
-          {showLevel && <TableHead>Level</TableHead>}
-          <TableHead className="text-right">Amount</TableHead>
-          <TableHead>Status</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {commissions.map((commission) => (
-          <TableRow key={commission.id}>
-            <TableCell>{format(commission.createdAt, 'MMM d, yyyy')}</TableCell>
-            <TableCell className="font-mono text-xs">
-              {commission.customerId.slice(0, 8)}...
-            </TableCell>
-            {showLevel && (
-              <TableCell>
-                <CommissionLevelBadge level={commission.commissionLevel} />
-              </TableCell>
-            )}
-            <TableCell className="text-right font-medium">
-              {formatCurrency(commission.amount)}
-            </TableCell>
-            <TableCell>
-              <StatusBadge status={commission.status} />
-            </TableCell>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Customer</TableHead>
+            {showLevel && <TableHead>Level</TableHead>}
+            <TableHead className="text-right">Amount</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {commissions.map((commission) => (
+            <TableRow key={commission.id}>
+              <TableCell>{format(commission.createdAt, 'MMM d, yyyy')}</TableCell>
+              <TableCell>
+                <CustomerCell 
+                  commission={commission} 
+                  onViewCustomer={handleViewCustomer} 
+                />
+              </TableCell>
+              {showLevel && (
+                <TableCell>
+                  <CommissionLevelBadge level={commission.commissionLevel} />
+                </TableCell>
+              )}
+              <TableCell className="text-right font-medium">
+                {formatCurrency(commission.amount)}
+              </TableCell>
+              <TableCell>
+                <StatusBadge status={commission.status} />
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-1">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleViewCustomer(commission)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>View Customer</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleDownloadInvoice(commission)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Download Invoice</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleReportIssue(commission)}
+                        >
+                          <Flag className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Report Issue</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      <CustomerDetailDialog
+        customer={selectedCommission?.customer || null}
+        commissionAmount={selectedCommission?.amount}
+        commissionLevel={selectedCommission?.commissionLevel}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
+    </>
   );
 }
 
