@@ -35,7 +35,8 @@ import {
   Mail,
   Sparkles,
   Loader2,
-  Wrench
+  Wrench,
+  Phone
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { VoiceNoteButton } from "@/components/testing/VoiceNoteButton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   demo: <Globe className="h-4 w-4" />,
@@ -83,6 +85,22 @@ export default function Testing() {
   const [showHistory, setShowHistory] = useState(false);
   const [showEmails, setShowEmails] = useState(false);
   const [showOrchestrator, setShowOrchestrator] = useState(false);
+  const [isConfiguringHotline, setIsConfiguringHotline] = useState(false);
+
+  const handleConfigureDemoHotline = async () => {
+    setIsConfiguringHotline(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('configure-demo-hotline');
+      if (error) throw error;
+      toast.success("Demo hotline configured successfully!");
+      console.log("Demo hotline configured:", data);
+    } catch (error: any) {
+      console.error("Failed to configure demo hotline:", error);
+      toast.error(`Failed to configure demo hotline: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsConfiguringHotline(false);
+    }
+  };
 
   // Redirect non-super-admins
   useEffect(() => {
@@ -420,6 +438,21 @@ export default function Testing() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleConfigureDemoHotline}
+                disabled={isConfiguringHotline}
+              >
+                {isConfiguringHotline ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Phone className="h-4 w-4 mr-2" />
+                )}
+                {isConfiguringHotline ? "Configuring..." : "Reconfigure Hotline"}
+              </Button>
+            )}
             {isSuperAdmin && (
               <Button 
                 variant={showOrchestrator ? "default" : "outline"} 
