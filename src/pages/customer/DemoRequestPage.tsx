@@ -12,6 +12,7 @@ import { getStoredAffiliateId, storeAffiliateAttribution } from "@/utils/affilia
 import { getAffiliateUsernameFromPath } from "@/utils/subdomainRouting";
 import { useAffiliateContext } from "@/hooks/useAffiliateContext";
 import { z } from "zod";
+import { normalizeUrl, isValidUrl } from "@/utils/normalizeUrl";
 
 const businessTypes = [
   "Home Services (Plumber, HVAC, Electrician)",
@@ -33,7 +34,7 @@ const formSchema = z.object({
   phone: z.string().min(7, "Please enter a valid phone number").max(20),
   businessName: z.string().min(1, "Business name is required").max(100),
   businessType: z.string().optional(),
-  websiteUrl: z.string().url("Please enter a valid URL (include https://)").min(1, "Website URL is required"),
+  websiteUrl: z.string().min(1, "Website URL is required"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -99,12 +100,30 @@ export default function DemoRequestPage() {
     setSubmitError("");
   };
 
+  const handleWebsiteBlur = () => {
+    if (formData.websiteUrl) {
+      const normalized = normalizeUrl(formData.websiteUrl);
+      if (normalized !== formData.websiteUrl) {
+        setFormData((prev) => ({ ...prev, websiteUrl: normalized }));
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError("");
 
-    // Validate form
-    const result = formSchema.safeParse(formData);
+    // Normalize website URL before validation
+    const normalizedWebsiteUrl = normalizeUrl(formData.websiteUrl);
+    
+    // Validate URL
+    if (!isValidUrl(normalizedWebsiteUrl)) {
+      setErrors({ websiteUrl: "Please enter a valid website (e.g., yourbusiness.com)" });
+      return;
+    }
+
+    // Validate form with normalized URL
+    const result = formSchema.safeParse({ ...formData, websiteUrl: normalizedWebsiteUrl });
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof FormData, string>> = {};
       result.error.errors.forEach((err) => {
@@ -343,10 +362,11 @@ export default function DemoRequestPage() {
                   <Label htmlFor="websiteUrl">Website URL *</Label>
                   <Input
                     id="websiteUrl"
-                    type="url"
+                    type="text"
                     value={formData.websiteUrl}
                     onChange={(e) => handleChange("websiteUrl", e.target.value)}
-                    placeholder="https://www.yourbusiness.com"
+                    onBlur={handleWebsiteBlur}
+                    placeholder="yourbusiness.com"
                     className={errors.websiteUrl ? "border-destructive" : ""}
                   />
                   {errors.websiteUrl && (

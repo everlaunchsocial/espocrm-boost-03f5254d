@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useCustomerSignup, CustomerPlan, CustomerSignupData } from '@/hooks/useCustomerSignup';
 import { getStoredAffiliateId } from '@/utils/affiliateAttribution';
+import { normalizeUrl } from '@/utils/normalizeUrl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -130,7 +131,22 @@ export default function CustomerBuy() {
       return;
     }
 
+    // Normalize website URL before proceeding
+    if (formData.website) {
+      const normalized = normalizeUrl(formData.website);
+      setFormData((prev) => ({ ...prev, website: normalized }));
+    }
+
     setCurrentStep('confirm');
+  };
+
+  const handleWebsiteBlur = () => {
+    if (formData.website) {
+      const normalized = normalizeUrl(formData.website);
+      if (normalized !== formData.website) {
+        setFormData((prev) => ({ ...prev, website: normalized }));
+      }
+    }
   };
 
   const handleConfirm = async () => {
@@ -397,10 +413,11 @@ export default function CustomerBuy() {
                   </Label>
                   <Input
                     id="website"
-                    type="url"
+                    type="text"
                     value={formData.website}
                     onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                    placeholder="https://acmeplumbing.com"
+                    onBlur={handleWebsiteBlur}
+                    placeholder="yourbusiness.com"
                   />
                 </div>
 
