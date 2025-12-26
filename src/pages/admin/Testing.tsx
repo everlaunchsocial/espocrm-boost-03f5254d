@@ -219,6 +219,21 @@ export default function Testing() {
                 <Clock className="h-3 w-3" />
                 ~{suite.estimated_duration_minutes} min
               </Badge>
+              {isSuperAdmin && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleConfigureDemoHotline}
+                  disabled={isConfiguringHotline}
+                >
+                  {isConfiguringHotline ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Phone className="h-4 w-4 mr-2" />
+                  )}
+                  {isConfiguringHotline ? "Configuring..." : "Reconfigure Hotline"}
+                </Button>
+              )}
               <Button variant="destructive" size="sm" onClick={handleAbandonTest}>
                 Abandon Test
               </Button>
