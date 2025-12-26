@@ -273,12 +273,13 @@ Get your AI receptionist: ${affiliateUrl}`;
                   <span className="text-sm">Email</span>
                 </div>
                 {customer.lead_email ? (
-                  <a 
-                    href={`mailto:${customer.lead_email}`}
+                  <button
+                    type="button"
+                    onClick={handleEmailClick}
                     className="font-medium text-primary hover:underline"
                   >
                     {customer.lead_email}
-                  </a>
+                  </button>
                 ) : (
                   <span className="text-muted-foreground">Not provided</span>
                 )}

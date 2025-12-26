@@ -224,13 +224,27 @@ export default function AffiliateCustomers() {
 
   const handleEmailClick = (e: React.MouseEvent, customer: AffiliateCustomer) => {
     e.stopPropagation();
-    if (customer.lead_email) {
-      const subject = encodeURIComponent('Help with your EverLaunch setup');
-      const body = encodeURIComponent(
-        `Hi ${customer.contact_name || 'there'},\n\nI noticed you haven't completed your EverLaunch setup yet. I'm here to help!\n\nPlease let me know if you have any questions or need assistance getting started.\n\nBest regards,\n${affiliate?.username || 'Your EverLaunch Partner'}`
-      );
-      window.location.href = `mailto:${customer.lead_email}?subject=${subject}&body=${body}`;
-    }
+    if (!customer.lead_email) return;
+
+    const affiliateName = affiliate?.username || (affiliate as any)?.first_name || 'Your EverLaunch Partner';
+    const affiliateUrl = affiliate?.username ? `tryeverlaunch.com/${affiliate.username}` : 'tryeverlaunch.com';
+
+    const subject = 'Help with your EverLaunch setup';
+    const body = `Hi ${customer.contact_name || 'there'},
+
+I'm ${affiliateName}, your EverLaunch partner. I noticed you haven't completed your setup yet.
+
+I'm here to help! What questions can I answer?
+
+Best regards,
+
+${affiliateName}
+
+---
+Get your AI receptionist: ${affiliateUrl}`;
+
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(customer.lead_email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handlePhoneClick = (e: React.MouseEvent, customer: AffiliateCustomer) => {
