@@ -281,3 +281,6 @@ verify_jwt = false
 
 [functions.get-test-emails]
 verify_jwt = false
+
+[functions.ai-test-orchestrator]
+verify_jwt = true
