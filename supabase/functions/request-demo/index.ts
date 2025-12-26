@@ -8,14 +8,15 @@ const corsHeaders = {
 };
 
 interface RequestDemoPayload {
-  affiliateId: string;
-  affiliateUsername: string;
+  affiliateId?: string | null;
+  affiliateUsername?: string | null;
   businessName: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   websiteUrl?: string;
+  businessType?: string;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -61,10 +62,10 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log("Request demo payload:", payload);
 
-    const { affiliateId, affiliateUsername, businessName, firstName, lastName, email, phone, websiteUrl } = payload;
+    const { affiliateId, affiliateUsername, businessName, firstName, lastName, email, phone, websiteUrl, businessType } = payload;
 
-    // Validate required fields
-    if (!affiliateId || !businessName || !firstName || !lastName || !email || !phone) {
+    // Validate required fields (affiliateId is now optional)
+    if (!businessName || !firstName || !lastName || !email || !phone) {
       return new Response(
         JSON.stringify({ success: false, error: "Missing required fields" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -81,56 +82,98 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Get affiliate's user_id for rep_id and check demo credits
-    const { data: affiliate, error: affiliateError } = await supabase
-      .from("affiliates")
-      .select(`
-        id, 
-        user_id, 
-        username,
-        demo_credits_balance,
-        affiliate_plans (
-          demo_credits_per_month
-        )
-      `)
-      .eq("id", affiliateId)
-      .single();
+    // If no affiliateId, use the house/system affiliate (is_company_account = true)
+    let affiliate: { id: string; user_id: string; username: string; demo_credits_balance: number | null; affiliate_plans: unknown } | null = null;
+    let isUnlimited = true;
+    let effectiveAffiliateId = affiliateId;
 
-    if (affiliateError || !affiliate) {
-      console.error("Affiliate not found:", affiliateError);
-      return new Response(
-        JSON.stringify({ success: false, error: "Invalid affiliate" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    if (affiliateId) {
+      const { data: affiliateData, error: affiliateError } = await supabase
+        .from("affiliates")
+        .select(`
+          id, 
+          user_id, 
+          username,
+          demo_credits_balance,
+          affiliate_plans (
+            demo_credits_per_month
+          )
+        `)
+        .eq("id", affiliateId)
+        .single();
 
-    // Check demo credits
-    const planData = affiliate.affiliate_plans as unknown;
-    const plan = Array.isArray(planData) ? planData[0] : planData;
-    const creditsPerMonth = (plan as { demo_credits_per_month: number | null } | null)?.demo_credits_per_month ?? null;
-    const isUnlimited = creditsPerMonth === null || creditsPerMonth === -1;
-
-    if (!isUnlimited) {
-      const currentBalance = affiliate.demo_credits_balance ?? 0;
-      if (currentBalance <= 0) {
-        console.log("Affiliate has no demo credits remaining:", affiliateId);
+      if (affiliateError || !affiliateData) {
+        console.error("Affiliate not found:", affiliateError);
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: "You've used all your demo credits for this period. Please upgrade your plan or wait until your credits reset.",
-            credits_exhausted: true
-          }),
-          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          JSON.stringify({ success: false, error: "Invalid affiliate" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
+      
+      affiliate = affiliateData;
+
+      // Check demo credits
+      const planData = affiliate.affiliate_plans as unknown;
+      const plan = Array.isArray(planData) ? planData[0] : planData;
+      const creditsPerMonth = (plan as { demo_credits_per_month: number | null } | null)?.demo_credits_per_month ?? null;
+      isUnlimited = creditsPerMonth === null || creditsPerMonth === -1;
+
+      if (!isUnlimited) {
+        const currentBalance = affiliate.demo_credits_balance ?? 0;
+        if (currentBalance <= 0) {
+          console.log("Affiliate has no demo credits remaining:", affiliateId);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: "You've used all your demo credits for this period. Please upgrade your plan or wait until your credits reset.",
+              credits_exhausted: true
+            }),
+            { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      }
+    } else {
+      // No affiliate - use house account (is_company_account = true)
+      const { data: houseAffiliate, error: houseError } = await supabase
+        .from("affiliates")
+        .select(`
+          id, 
+          user_id, 
+          username,
+          demo_credits_balance,
+          affiliate_plans (
+            demo_credits_per_month
+          )
+        `)
+        .eq("is_company_account", true)
+        .limit(1)
+        .single();
+
+      if (houseError || !houseAffiliate) {
+        console.error("House affiliate not found:", houseError);
+        // Fallback: create demo without affiliate attribution
+        console.log("Proceeding without affiliate attribution");
+        effectiveAffiliateId = null;
+      } else {
+        affiliate = houseAffiliate;
+        effectiveAffiliateId = houseAffiliate.id;
+        console.log("Using house affiliate:", houseAffiliate.username);
+      }
+      // House account has unlimited credits
+      isUnlimited = true;
     }
 
     // Step 1: Check if lead already exists for this affiliate + email
-    const { data: existingLead } = await supabase
+    let existingLeadQuery = supabase
       .from("leads")
       .select("*")
-      .eq("affiliate_id", affiliateId)
-      .eq("email", email.toLowerCase())
-      .maybeSingle();
+      .eq("email", email.toLowerCase());
+    
+    if (effectiveAffiliateId) {
+      existingLeadQuery = existingLeadQuery.eq("affiliate_id", effectiveAffiliateId);
+    }
+    
+    const { data: existingLead } = await existingLeadQuery.maybeSingle();
 
     let leadId: string;
     let leadName: string;
@@ -162,9 +205,10 @@ serve(async (req: Request): Promise<Response> => {
           phone: phone,
           company: businessName,
           website: websiteUrl || null,
+          industry: businessType || null,
           source: "web", // Using 'web' as it's an allowed source value
           status: "new",
-          affiliate_id: affiliateId,
+          affiliate_id: effectiveAffiliateId,
           has_website: !!websiteUrl,
         })
         .select()
@@ -183,10 +227,14 @@ serve(async (req: Request): Promise<Response> => {
       console.log("Created new lead:", leadId);
 
       // Log activity for lead creation
+      const sourceDescription = affiliateUsername 
+        ? `${firstName} ${lastName} requested a demo via ${affiliateUsername}'s replicated page`
+        : `${firstName} ${lastName} requested a demo via the public demo request page`;
+      
       await supabase.from("activities").insert({
         type: "status-change",
         subject: `Lead created from public demo request`,
-        description: `${firstName} ${lastName} requested a demo via ${affiliateUsername}'s replicated page`,
+        description: sourceDescription,
         related_to_type: "lead",
         related_to_id: leadId,
         related_to_name: leadName,
@@ -225,8 +273,8 @@ serve(async (req: Request): Promise<Response> => {
       .from("demos")
       .insert({
         lead_id: leadId,
-        rep_id: affiliate.user_id,
-        affiliate_id: affiliateId,
+        rep_id: affiliate?.user_id || null,
+        affiliate_id: effectiveAffiliateId,
         business_name: businessName,
         website_url: websiteUrl || null,
         voice_provider: "openai",
@@ -381,20 +429,20 @@ serve(async (req: Request): Promise<Response> => {
       is_system_generated: true,
     });
 
-    // Decrement demo credits if not unlimited
-    if (!isUnlimited) {
+    // Decrement demo credits if not unlimited and affiliate exists
+    if (!isUnlimited && affiliate && effectiveAffiliateId) {
       const { error: decrementError } = await supabase
         .from("affiliates")
         .update({
           demo_credits_balance: Math.max(0, (affiliate.demo_credits_balance ?? 0) - 1),
         })
-        .eq("id", affiliateId);
+        .eq("id", effectiveAffiliateId);
 
       if (decrementError) {
         console.error("Error decrementing demo credits:", decrementError);
         // Don't fail the request - demo was created
       } else {
-        console.log("Demo credits decremented for affiliate:", affiliateId);
+        console.log("Demo credits decremented for affiliate:", effectiveAffiliateId);
       }
     }
 
