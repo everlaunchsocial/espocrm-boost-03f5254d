@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Copy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { initTestModeFromUrl } from "@/hooks/useTestMode";
 
 type FatalError = {
   message: string;
@@ -14,6 +15,11 @@ type FatalError = {
 
 export function AppBootstrap() {
   const [fatalError, setFatalError] = useState<FatalError | null>(null);
+
+  useEffect(() => {
+    // Initialize test mode from URL params on app load
+    initTestModeFromUrl();
+  }, []);
 
   useEffect(() => {
     const onError = (event: ErrorEvent) => {
