@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { 
   Search, Users, AlertCircle, CheckCircle2, Clock, 
-  Mail, Phone, MoreHorizontal, Eye, HelpCircle, History, FileDown
+  Mail, Phone, MoreHorizontal, Eye, HelpCircle, History, FileDown, Activity
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -35,7 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AffiliateCustomerDetailDialog, AffiliateCustomerData } from "@/components/affiliate/AffiliateCustomerDetailDialog";
+import { AffiliateCustomerDetailDialog, AffiliateCustomerData, getUsageStatus } from "@/components/affiliate/AffiliateCustomerDetailDialog";
 
 interface AffiliateCustomer {
   id: string;
@@ -49,6 +49,7 @@ interface AffiliateCustomer {
   phone: string | null;
   website_url: string | null;
   plan_name: string | null;
+  last_active_at: Date | null;
 }
 
 type CustomerPriority = 'urgent' | 'warning' | 'new' | 'complete' | 'pending';
@@ -111,7 +112,33 @@ function transformToDialogData(customer: AffiliateCustomer): AffiliateCustomerDa
     createdAt: customer.created_at ? new Date(customer.created_at) : null,
     paymentReceivedAt: customer.payment_received_at ? new Date(customer.payment_received_at) : null,
     onboardingStage: customer.onboarding_stage,
+    lastActiveAt: customer.last_active_at,
   };
+}
+
+function UsageStatusBadge({ lastActiveAt }: { lastActiveAt: Date | null }) {
+  const usage = getUsageStatus(lastActiveAt);
+  
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm">{usage.icon}</span>
+          <span className={`text-xs font-medium ${
+            usage.status === 'active' ? 'text-emerald-600 dark:text-emerald-400' :
+            usage.status === 'low' ? 'text-amber-600 dark:text-amber-400' :
+            usage.status === 'at_risk' ? 'text-red-600 dark:text-red-400' :
+            'text-muted-foreground'
+          }`}>
+            {usage.label}
+          </span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{usage.description}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export default function AffiliateCustomers() {
@@ -128,14 +155,41 @@ export default function AffiliateCustomers() {
     queryKey: ["affiliate-customers", affiliateId],
     enabled: !!affiliateId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get customers
+      const { data: customers, error } = await supabase
         .from("customer_profiles")
         .select("id, business_name, contact_name, onboarding_stage, customer_source, created_at, payment_received_at, lead_email, phone, website_url, plan_name")
         .eq("affiliate_id", affiliateId!)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data ?? []) as AffiliateCustomer[];
+
+      // Get last activity for each customer from vapi_calls
+      const customerIds = (customers ?? []).map(c => c.id);
+      
+      if (customerIds.length === 0) {
+        return [] as AffiliateCustomer[];
+      }
+
+      // Fetch last call for each customer
+      const { data: lastCalls } = await supabase
+        .from("vapi_calls")
+        .select("customer_id, created_at")
+        .in("customer_id", customerIds)
+        .order("created_at", { ascending: false });
+
+      // Create a map of customer_id -> last activity
+      const lastActivityMap = new Map<string, Date>();
+      (lastCalls ?? []).forEach(call => {
+        if (call.customer_id && !lastActivityMap.has(call.customer_id)) {
+          lastActivityMap.set(call.customer_id, new Date(call.created_at));
+        }
+      });
+
+      return (customers ?? []).map(c => ({
+        ...c,
+        last_active_at: lastActivityMap.get(c.id) || null,
+      })) as AffiliateCustomer[];
     },
   });
 
@@ -277,6 +331,7 @@ export default function AffiliateCustomers() {
                   <TableHead>Business</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Usage</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="w-[80px]">Actions</TableHead>
@@ -367,6 +422,9 @@ export default function AffiliateCustomers() {
                             <p>Click to view setup progress</p>
                           </TooltipContent>
                         </Tooltip>
+                      </TableCell>
+                      <TableCell>
+                        <UsageStatusBadge lastActiveAt={c.last_active_at} />
                       </TableCell>
                       <TableCell>
                         <Badge variant={c.customer_source === "direct" ? "secondary" : "outline"}>
