@@ -112,30 +112,10 @@ const VoiceNotes = () => {
             <Mic className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-semibold">Voice Notes</h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleNewNote}>
-              <Plus className="h-4 w-4 mr-1" />
-              New
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCopyPlain}
-              disabled={!activeNote?.content}
-            >
-              <Copy className="h-4 w-4 mr-1" />
-              Copy
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCopyMarkdown}
-              disabled={!activeNote?.content}
-            >
-              <FileText className="h-4 w-4 mr-1" />
-              MD
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={handleNewNote}>
+            <Plus className="h-4 w-4 mr-1" />
+            New
+          </Button>
         </div>
       </header>
 
@@ -231,14 +211,37 @@ const VoiceNotes = () => {
                   </Button>
                 )}
               </div>
-              <div className="p-4">
+              <div className="p-4 relative">
                 <Textarea
                   value={activeNote?.content || ''}
                   onChange={(e) => activeNote && updateNote(activeNote.id, e.target.value)}
                   placeholder={activeNote ? 'Your transcription will appear here...' : 'Create or select a note to get started'}
-                  className="min-h-[300px] resize-none font-mono text-sm"
+                  className="min-h-[300px] resize-none font-mono text-sm pb-14"
                   disabled={!activeNote}
                 />
+                {/* Floating copy buttons */}
+                {activeNote?.content && (
+                  <div className="absolute bottom-6 right-6 flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleCopyPlain}
+                      className="shadow-md"
+                    >
+                      <Copy className="h-4 w-4 mr-1" />
+                      Copy
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleCopyMarkdown}
+                      className="shadow-md"
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      MD
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
