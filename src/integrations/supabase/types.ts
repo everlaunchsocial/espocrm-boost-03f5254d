@@ -6630,7 +6630,9 @@ export type Database = {
       test_step_completions: {
         Row: {
           completed_at: string
+          fix_description: string | null
           id: string
+          needs_fixing: boolean | null
           notes: string | null
           result: string
           run_id: string
@@ -6640,7 +6642,9 @@ export type Database = {
         }
         Insert: {
           completed_at?: string
+          fix_description?: string | null
           id?: string
+          needs_fixing?: boolean | null
           notes?: string | null
           result: string
           run_id: string
@@ -6650,7 +6654,9 @@ export type Database = {
         }
         Update: {
           completed_at?: string
+          fix_description?: string | null
           id?: string
+          needs_fixing?: boolean | null
           notes?: string | null
           result?: string
           run_id?: string

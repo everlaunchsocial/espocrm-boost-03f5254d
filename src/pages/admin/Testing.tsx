@@ -34,7 +34,8 @@ import {
   RefreshCw,
   Mail,
   Sparkles,
-  Loader2
+  Loader2,
+  Wrench
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,9 @@ import { TestEmailsPanel } from "@/components/testing/TestEmailsPanel";
 import { useTestModeStatus } from "@/hooks/useTestMode";
 import { TestOrchestratorChat } from "@/components/testing/TestOrchestratorChat";
 import { useUserRole } from "@/hooks/useUserRole";
+import { VoiceNoteButton } from "@/components/testing/VoiceNoteButton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   demo: <Globe className="h-4 w-4" />,
@@ -74,6 +78,8 @@ export default function Testing() {
   
   const [selectedSuite, setSelectedSuite] = useState<TestSuite | null>(null);
   const [stepNotes, setStepNotes] = useState("");
+  const [needsFixing, setNeedsFixing] = useState(false);
+  const [fixDescription, setFixDescription] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [showEmails, setShowEmails] = useState(false);
   const [showOrchestrator, setShowOrchestrator] = useState(false);
@@ -128,10 +134,14 @@ export default function Testing() {
         stepIndex: activeRun.current_step_index,
         stepId: currentStep.id,
         result,
-        notes: stepNotes || undefined
+        notes: stepNotes || undefined,
+        needsFixing: needsFixing,
+        fixDescription: needsFixing ? fixDescription : undefined
       });
       
       setStepNotes("");
+      setNeedsFixing(false);
+      setFixDescription("");
       
       // Check if this was the last step
       if (activeRun.current_step_index === activeRun.suite.steps.length - 1) {
@@ -236,9 +246,12 @@ export default function Testing() {
                           <span className="text-xs text-muted-foreground">{idx + 1}</span>
                         )}
                       </div>
-                      <span className={cn("truncate", isCurrent && "font-medium")}>
+                      <span className={cn("truncate flex-1", isCurrent && "font-medium")}>
                         {step.title}
                       </span>
+                      {completion?.needs_fixing && (
+                        <Wrench className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                      )}
                     </div>
                   );
                 })}
@@ -297,13 +310,54 @@ export default function Testing() {
                     <Separator />
 
                     <div>
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Notes (optional)</h4>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-medium text-muted-foreground">Notes (optional)</h4>
+                        <VoiceNoteButton 
+                          onTranscript={(text) => setStepNotes(prev => prev ? `${prev} ${text}` : text)}
+                          disabled={completeStep.isPending}
+                        />
+                      </div>
                       <Textarea
                         placeholder="Add any observations or issues..."
                         value={stepNotes}
                         onChange={(e) => setStepNotes(e.target.value)}
                         rows={2}
                       />
+                    </div>
+
+                    {/* Needs Fixing checkbox */}
+                    <div className="flex items-start space-x-3 p-3 rounded-md bg-amber-500/10 border border-amber-500/20">
+                      <Checkbox 
+                        id="needs-fixing" 
+                        checked={needsFixing}
+                        onCheckedChange={(checked) => setNeedsFixing(checked === true)}
+                      />
+                      <div className="flex-1 space-y-2">
+                        <Label 
+                          htmlFor="needs-fixing" 
+                          className="text-sm font-medium flex items-center gap-2 cursor-pointer"
+                        >
+                          <Wrench className="h-4 w-4 text-amber-500" />
+                          Needs Fixing
+                        </Label>
+                        {needsFixing && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Textarea
+                                placeholder="Describe what's wrong and what needs to be fixed..."
+                                value={fixDescription}
+                                onChange={(e) => setFixDescription(e.target.value)}
+                                rows={2}
+                                className="flex-1"
+                              />
+                              <VoiceNoteButton 
+                                onTranscript={(text) => setFixDescription(prev => prev ? `${prev} ${text}` : text)}
+                                disabled={completeStep.isPending}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Action buttons */}

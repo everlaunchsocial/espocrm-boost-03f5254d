@@ -44,6 +44,8 @@ export interface TestStepCompletion {
   result: 'pass' | 'fail' | 'skip';
   notes: string | null;
   screenshot_url: string | null;
+  needs_fixing: boolean;
+  fix_description: string | null;
   completed_at: string;
 }
 
@@ -188,13 +190,17 @@ export function useCompleteTestStep() {
       stepIndex, 
       stepId, 
       result, 
-      notes 
+      notes,
+      needsFixing,
+      fixDescription
     }: { 
       runId: string; 
       stepIndex: number; 
       stepId: string; 
       result: 'pass' | 'fail' | 'skip';
       notes?: string;
+      needsFixing?: boolean;
+      fixDescription?: string;
     }) => {
       // Insert step completion
       const { error: stepError } = await supabase
@@ -204,7 +210,9 @@ export function useCompleteTestStep() {
           step_index: stepIndex,
           step_id: stepId,
           result,
-          notes
+          notes,
+          needs_fixing: needsFixing || false,
+          fix_description: fixDescription || null
         });
       
       if (stepError) throw stepError;
