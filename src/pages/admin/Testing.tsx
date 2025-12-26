@@ -30,10 +30,13 @@ import {
   DollarSign,
   Globe,
   History,
-  RefreshCw
+  RefreshCw,
+  Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { TestEmailsPanel } from "@/components/testing/TestEmailsPanel";
+import { useTestModeStatus } from "@/hooks/useTestMode";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   demo: <Globe className="h-4 w-4" />,
@@ -59,10 +62,12 @@ export default function Testing() {
   const startRun = useStartTestRun();
   const completeStep = useCompleteTestStep();
   const completeRun = useCompleteTestRun();
+  const { isTestMode } = useTestModeStatus();
   
   const [selectedSuite, setSelectedSuite] = useState<TestSuite | null>(null);
   const [stepNotes, setStepNotes] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [showEmails, setShowEmails] = useState(false);
 
   const handleStartTest = async (suite: TestSuite) => {
     try {
@@ -324,10 +329,20 @@ export default function Testing() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {isTestMode && (
+              <Button 
+                variant={showEmails ? "default" : "outline"} 
+                size="sm"
+                onClick={() => { setShowEmails(!showEmails); setShowHistory(false); }}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {showEmails ? "Hide Emails" : "Test Emails"}
+              </Button>
+            )}
             <Button 
               variant={showHistory ? "default" : "outline"} 
               size="sm"
-              onClick={() => setShowHistory(!showHistory)}
+              onClick={() => { setShowHistory(!showHistory); setShowEmails(false); }}
             >
               <History className="h-4 w-4 mr-2" />
               {showHistory ? "Show Suites" : "History"}
@@ -342,7 +357,10 @@ export default function Testing() {
       {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-6">
-          {showHistory ? (
+          {showEmails ? (
+            // Test Emails view
+            <TestEmailsPanel />
+          ) : showHistory ? (
             // History view
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">Recent Test Runs</h2>

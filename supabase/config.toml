@@ -278,3 +278,6 @@ verify_jwt = false
 
 [functions.setup-test-fixtures]
 verify_jwt = false
+
+[functions.get-test-emails]
+verify_jwt = false
