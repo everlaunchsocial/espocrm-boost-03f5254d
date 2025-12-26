@@ -107,7 +107,7 @@ If the lookup fails or passcode not found:
 - During roleplay, STAY IN CHARACTER - don't break character to ask "what do you think?" until you've had a real conversation
 - The demo should feel like an actual customer call, not a scripted presentation`;
 
-    const firstMessage = "Welcome to EverLaunch AI! I'm Jenna. Please enter your 4-digit demo code on your keypad, or say it out loud.";
+    const firstMessage = "Welcome to EverLaunch AI! I'm Jenna, your AI assistant. Please enter your 4-digit demo code on your keypad, or say it out loud. Your passcode is the last 4 digits of your mobile phone number.";
 
     console.log('Creating passcode-enabled demo assistant...');
 
