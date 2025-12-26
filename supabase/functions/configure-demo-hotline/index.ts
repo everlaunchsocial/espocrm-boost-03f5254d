@@ -178,8 +178,9 @@ If the lookup fails or passcode not found:
     const assistantId = assistant.id;
     console.log(`Assistant created with ID: ${assistantId}`);
 
-    // Step 4: Assign assistant to phone number
-    console.log(`Assigning assistant ${assistantId} to phone number ${phoneNumberId}...`);
+    // Step 4: Assign assistant to phone number AND set serverUrl for call-ended webhook
+    const serverUrl = `${SUPABASE_URL}/functions/v1/vapi-call-ended`;
+    console.log(`Assigning assistant ${assistantId} to phone number ${phoneNumberId} with serverUrl ${serverUrl}...`);
 
     const patchResponse = await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
       method: 'PATCH',
@@ -189,11 +190,13 @@ If the lookup fails or passcode not found:
       },
       body: JSON.stringify({
         assistantId: assistantId,
+        serverUrl: serverUrl, // CRITICAL: This enables vapi-call-ended to receive end-of-call webhooks
       }),
     });
 
     const patchResult = await patchResponse.json();
     console.log('Phone number update result:', JSON.stringify(patchResult, null, 2));
+    console.log('Verified serverUrl is set:', patchResult.serverUrl);
 
     if (!patchResponse.ok) {
       throw new Error(`Failed to update phone number: ${JSON.stringify(patchResult)}`);

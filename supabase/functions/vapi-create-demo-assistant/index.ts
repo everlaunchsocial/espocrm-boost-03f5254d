@@ -153,8 +153,10 @@ cheap, affordable, quick fix, miracle, anti-aging, guaranteed results, pain, saf
     const assistantId = assistant.id;
     console.log(`Assistant created with ID: ${assistantId}`);
 
-    // Step 2: Assign assistant to phone number
-    console.log(`Assigning assistant ${assistantId} to phone number ${phoneNumberId}...`);
+    // Step 2: Assign assistant to phone number with serverUrl for call-ended webhook
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const serverUrl = `${SUPABASE_URL}/functions/v1/vapi-call-ended`;
+    console.log(`Assigning assistant ${assistantId} to phone number ${phoneNumberId} with serverUrl ${serverUrl}...`);
 
     const patchResponse = await fetch(`https://api.vapi.ai/phone-number/${phoneNumberId}`, {
       method: 'PATCH',
@@ -164,8 +166,7 @@ cheap, affordable, quick fix, miracle, anti-aging, guaranteed results, pain, saf
       },
       body: JSON.stringify({
         assistantId: assistantId,
-        // Clear any server URL that might interfere
-        serverUrl: null,
+        serverUrl: serverUrl, // CRITICAL: Keep serverUrl for transcript emails - DO NOT set to null!
       }),
     });
 
