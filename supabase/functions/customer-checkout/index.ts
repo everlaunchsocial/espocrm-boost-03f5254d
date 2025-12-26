@@ -14,6 +14,7 @@ interface CheckoutRequest {
   customerName: string;
   businessName?: string;
   websiteUrl?: string;
+  phone?: string;
   successUrl: string;
   cancelUrl: string;
 }
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
 
   try {
     const body: CheckoutRequest = await req.json();
-    const { planId, customerId, affiliateId, customerEmail, customerName, businessName, websiteUrl, successUrl, cancelUrl } = body;
+    const { planId, customerId, affiliateId, customerEmail, customerName, businessName, websiteUrl, phone, successUrl, cancelUrl } = body;
 
     console.log("Creating checkout session for customer:", customerId, "plan:", planId, "affiliate:", affiliateId || "none");
 
@@ -115,6 +116,7 @@ Deno.serve(async (req) => {
         customer_name: customerName,
         business_name: businessName || "",
         website_url: websiteUrl || "",
+        phone: phone || "",
       },
       success_url: successUrl,
       cancel_url: cancelUrl,

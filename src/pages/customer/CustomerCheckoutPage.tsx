@@ -186,6 +186,7 @@ export default function CustomerCheckoutPage() {
             customerName: contactName,
             businessName: businessName,
             websiteUrl: websiteUrl ? normalizeUrl(websiteUrl) : undefined,
+            phone: phone,
             successUrl: `${window.location.origin}/customer/buy-success?session_id={CHECKOUT_SESSION_ID}`,
             cancelUrl: `${window.location.origin}/buy?plan=${selectedPlan}`,
           },
