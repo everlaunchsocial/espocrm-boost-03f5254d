@@ -48,7 +48,28 @@ serve(async (req) => {
     const metadata = call.metadata || message.metadata || {};
     let customerId = metadata.customer_id || call.metadata?.customer_id || null;
     const affiliateId = metadata.affiliate_id || null;
-    const demoId = metadata.demo_id || null;
+    let demoId = metadata.demo_id || null;
+    
+    // Fallback: If no demoId but transcript contains a 4-digit passcode, try to recover
+    if (!demoId && transcript) {
+      const passcodeMatch = transcript.match(/\b(\d{4})\b/);
+      if (passcodeMatch) {
+        console.log('Attempting to recover demoId from transcript passcode:', passcodeMatch[1]);
+        const supabaseTemp = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        );
+        const { data: demoRecord } = await supabaseTemp
+          .from('demos')
+          .select('id')
+          .eq('passcode', passcodeMatch[1])
+          .maybeSingle();
+        if (demoRecord) {
+          demoId = demoRecord.id;
+          console.log('Recovered demoId from transcript passcode:', demoId);
+        }
+      }
+    }
     
     // PHASE A: Detect if call came via Master Testing Line
     const viaTestingLine = metadata.via_testing_line === true || metadata.via_testing_line === 'true';
@@ -102,7 +123,7 @@ serve(async (req) => {
             caller_phone: callerPhone,
             transcript: transcript,
             summary: summary || null,
-            duration_seconds: callDuration,
+            duration_seconds: Math.round(parseFloat(String(callDuration)) || 0),
             ended_reason: endedReason,
             assistant_id: assistantId || null,
             recording_url: recordingUrl,
@@ -135,7 +156,7 @@ serve(async (req) => {
               customer_id: customerId || null,
               affiliate_id: affiliateId || null,
               demo_id: demoId || null,
-              duration_seconds: callDuration,
+              duration_seconds: Math.round(parseFloat(String(callDuration)) || 0),
               tokens_in: 0,
               tokens_out: 0,
               message_count: 0,
