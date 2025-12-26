@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { AlertTriangle, Clock, Mail, User } from "lucide-react";
+import { AlertTriangle, Clock, Mail, User, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { useState } from "react";
 
 interface IncompleteCustomer {
   id: string;
@@ -21,23 +23,75 @@ interface IncompleteCustomer {
 
 function getPriorityBadge(hours: number) {
   if (hours >= 48) {
-    return <Badge variant="destructive" className="gap-1"><span>🔴</span> Urgent</Badge>;
+    return (
+      <Badge variant="destructive" className="gap-1">
+        <span>🔴</span> Urgent
+      </Badge>
+    );
   }
   if (hours >= 24) {
-    return <Badge variant="secondary" className="gap-1 bg-yellow-500/20 text-yellow-700"><span>⚠️</span> Warning</Badge>;
+    return (
+      <Badge
+        variant="secondary"
+        className="gap-1 bg-yellow-500/20 text-yellow-700"
+      >
+        <span>⚠️</span> Warning
+      </Badge>
+    );
   }
-  return <Badge variant="outline" className="gap-1"><span>🆕</span> New</Badge>;
+  return (
+    <Badge variant="outline" className="gap-1">
+      <span>🆕</span> New
+    </Badge>
+  );
 }
 
 export function IncompleteSetupsWidget() {
+  const queryClient = useQueryClient();
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
   const { data: customers, isLoading } = useQuery({
     queryKey: ["incomplete-onboarding-customers"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_incomplete_onboarding_customers", { p_limit: 10 });
+      const { data, error } = await supabase.rpc(
+        "get_incomplete_onboarding_customers",
+        { p_limit: 10 }
+      );
       if (error) throw error;
       return (data ?? []) as IncompleteCustomer[];
     },
   });
+
+  const handleSendReminder = async (customerId: string) => {
+    try {
+      setSendingId(customerId);
+      const { data, error } = await supabase.functions.invoke(
+        "send-onboarding-reminder",
+        {
+          body: { customer_id: customerId },
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message || "Failed to send reminder");
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || "Failed to send reminder");
+      }
+
+      toast.success("Reminder sent");
+      queryClient.invalidateQueries({
+        queryKey: ["incomplete-onboarding-customers"],
+      });
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Failed to send onboarding reminder"
+      );
+    } finally {
+      setSendingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -47,7 +101,9 @@ export function IncompleteSetupsWidget() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -68,21 +124,30 @@ export function IncompleteSetupsWidget() {
       </CardHeader>
       <CardContent className="space-y-3">
         {customers.map((customer) => (
-          <div key={customer.id} className="flex items-start justify-between rounded-lg border bg-card p-3">
+          <div
+            key={customer.id}
+            className="flex items-start justify-between rounded-lg border bg-card p-3"
+          >
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 {getPriorityBadge(customer.hours_since_payment)}
-                <span className="font-medium">{customer.business_name || "Unnamed Business"}</span>
+                <span className="font-medium">
+                  {customer.business_name || "Unnamed Business"}
+                </span>
               </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  Paid {customer.payment_received_at ? formatDistanceToNow(new Date(customer.payment_received_at), { addSuffix: true }) : "recently"}
+                  Paid{" "}
+                  {customer.payment_received_at
+                    ? formatDistanceToNow(new Date(customer.payment_received_at), {
+                        addSuffix: true,
+                      })
+                    : "recently"}
                 </span>
                 {customer.affiliate_username && (
                   <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    @{customer.affiliate_username}
+                    <User className="h-3 w-3" />@{customer.affiliate_username}
                   </span>
                 )}
               </div>
@@ -94,7 +159,22 @@ export function IncompleteSetupsWidget() {
               )}
             </div>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline">Send Reminder</Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={sendingId === customer.id}
+                onClick={() => handleSendReminder(customer.id)}
+                className="gap-2"
+              >
+                {sendingId === customer.id ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send Reminder"
+                )}
+              </Button>
             </div>
           </div>
         ))}
