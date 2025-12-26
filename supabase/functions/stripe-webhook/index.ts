@@ -172,6 +172,7 @@ Deno.serve(async (req) => {
         const customerName = session.metadata?.customer_name;
         const businessName = session.metadata?.business_name;
         const websiteUrl = session.metadata?.website_url || null;
+        const customerPhone = session.metadata?.phone || null;
         const stripeCustomerId = session.customer as string;
         const stripeSubscriptionId = session.subscription as string;
 
@@ -269,6 +270,7 @@ Deno.serve(async (req) => {
               business_name: businessName || null,
               contact_name: customerName || null,
               website_url: websiteUrl || null,
+              phone: customerPhone || null,
               customer_plan_id: planId,
               affiliate_id: effectiveAffiliateId,
               customer_source: customerSource,

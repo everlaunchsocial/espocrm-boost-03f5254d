@@ -18,6 +18,9 @@ export default function ResetPassword() {
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // SECURITY: This page should ONLY show a password entry form.
+    // It must NOT auto-login or redirect until password is successfully updated.
+    
     // Listen for PASSWORD_RECOVERY event which confirms valid reset session
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('[ResetPassword] Auth event:', event);
@@ -26,6 +29,7 @@ export default function ResetPassword() {
         console.log('[ResetPassword] PASSWORD_RECOVERY event received');
         setIsValidSession(true);
       }
+      // SECURITY: Do NOT auto-redirect on SIGNED_IN - we need the user to set their password first
     });
 
     // Check URL hash for recovery token (Supabase embeds it in hash)
@@ -37,31 +41,29 @@ export default function ResetPassword() {
       
       console.log('[ResetPassword] URL hash type:', type, 'hasAccessToken:', !!accessToken);
       
-      // If we have a recovery token in URL, this is definitely a password reset
+      // SECURITY: Only allow access if this is a recovery flow
       if (type === 'recovery' && accessToken) {
-        console.log('[ResetPassword] Recovery token found in URL');
+        console.log('[ResetPassword] Recovery token found in URL - showing password form');
         setIsValidSession(true);
         return;
       }
       
-      // Also check if we already have a session 
+      // Check if we have a session from a recent PASSWORD_RECOVERY event
       const { data: { session } } = await supabase.auth.getSession();
       console.log('[ResetPassword] Session check:', !!session);
       
       if (session) {
-        // We have a session - but we need to distinguish between:
-        // 1. User arrived via password reset link (should show form)
-        // 2. User navigated here while logged in (should redirect or show expired)
-        
-        // Check if this looks like a recovery flow based on URL or recent event
+        // SECURITY: Check if this is a legitimate recovery flow
+        // The hash should contain recovery type, or we got here via PASSWORD_RECOVERY event
         const isFromRecoveryLink = type === 'recovery' || hash.includes('type=recovery');
         
         if (isFromRecoveryLink) {
           setIsValidSession(true);
         } else {
-          // User navigated here directly while logged in - show the form anyway
-          // They might have refreshed the page after getting here via reset link
-          setIsValidSession(true);
+          // User navigated here directly while logged in - this is NOT a password reset
+          // Show expired message to prevent confusion
+          console.log('[ResetPassword] User is logged in but not in recovery flow - showing expired');
+          setIsValidSession(false);
         }
       } else {
         // No session at all - invalid or expired link
@@ -95,17 +97,16 @@ export default function ResetPassword() {
 
       if (error) throw error;
 
-      setIsSuccess(true);
-      toast.success('Password updated successfully!');
+      // SECURITY: Sign out after password update to force fresh login
+      // This ensures the user must authenticate with their new password
+      await supabase.auth.signOut();
       
-      // Get user role using the secure RPC
-      const { data: roleData } = await supabase.rpc('get_my_role');
-      const role = (roleData && ['super_admin', 'admin', 'affiliate', 'customer'].includes(roleData)) 
-        ? roleData as AppRole 
-        : null;
-
+      setIsSuccess(true);
+      toast.success('Password updated successfully! Please sign in with your new password.');
+      
+      // Redirect to login page after brief delay
       setTimeout(() => {
-        navigate(getRedirectPathForRole(role), { replace: true });
+        navigate('/auth', { replace: true });
       }, 2000);
     } catch (error: any) {
       toast.error(error.message || 'Failed to update password');
@@ -157,7 +158,7 @@ export default function ResetPassword() {
             </div>
             <CardTitle>Password Updated!</CardTitle>
             <CardDescription>
-              Redirecting you to your dashboard...
+              Redirecting you to sign in with your new password...
             </CardDescription>
           </CardHeader>
         </Card>

@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, Users, AlertCircle } from 'lucide-react';
+import { Loader2, Users, AlertCircle, Chrome } from 'lucide-react';
 import { useAuthRole, getRedirectPathForRole } from '@/hooks/useAuthRole';
+import { Separator } from '@/components/ui/separator';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -96,6 +97,22 @@ export default function Auth() {
     } catch (error: any) {
       toast.error(error.message || 'Authentication failed');
     } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error(error.message || 'Google sign in failed');
       setIsProcessing(false);
     }
   };
@@ -223,6 +240,28 @@ export default function Auth() {
               </div>
             )}
           </form>
+
+          {authMode === 'login' && (
+            <>
+              <div className="relative my-6">
+                <Separator />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                  or continue with
+                </span>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleGoogleSignIn}
+                disabled={isProcessing}
+              >
+                <Chrome className="h-4 w-4 mr-2" />
+                Sign in with Google
+              </Button>
+            </>
+          )}
 
           <div className="mt-6 pt-6 border-t border-border space-y-4">
             <p className="text-center text-sm text-muted-foreground">
