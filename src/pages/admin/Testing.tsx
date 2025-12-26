@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   useTestSuites, 
   useActiveTestRun, 
@@ -32,7 +33,8 @@ import {
   History,
   RefreshCw,
   Mail,
-  Sparkles
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -58,6 +60,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function Testing() {
+  const navigate = useNavigate();
   const { data: suites, isLoading: suitesLoading } = useTestSuites();
   const { data: activeRun, isLoading: runLoading } = useActiveTestRun();
   const { data: completions } = useTestStepCompletions(activeRun?.id || null);
@@ -66,7 +69,7 @@ export default function Testing() {
   const completeStep = useCompleteTestStep();
   const completeRun = useCompleteTestRun();
   const { isTestMode } = useTestModeStatus();
-  const { role } = useUserRole();
+  const { role, isLoading: roleLoading } = useUserRole();
   const isSuperAdmin = role === 'super_admin';
   
   const [selectedSuite, setSelectedSuite] = useState<TestSuite | null>(null);
@@ -74,6 +77,34 @@ export default function Testing() {
   const [showHistory, setShowHistory] = useState(false);
   const [showEmails, setShowEmails] = useState(false);
   const [showOrchestrator, setShowOrchestrator] = useState(false);
+
+  // Redirect non-super-admins
+  useEffect(() => {
+    if (!roleLoading && role && role !== 'super_admin') {
+      toast.error("Access denied: Super admin only");
+      if (role === 'affiliate') {
+        navigate('/affiliate');
+      } else if (role === 'customer') {
+        navigate('/customer');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [role, roleLoading, navigate]);
+
+  // Show loading while checking role
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Don't render if not super admin
+  if (!isSuperAdmin) {
+    return null;
+  }
 
   const handleStartTest = async (suite: TestSuite) => {
     try {
