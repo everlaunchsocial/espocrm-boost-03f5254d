@@ -56,9 +56,24 @@ export function CustomerDetailDialog({
   }
 
   const handleEmailClick = () => {
-    if (customer.email) {
-      window.location.href = `mailto:${customer.email}`;
-    }
+    if (!customer.email) return;
+
+    const subject = 'Help with your EverLaunch setup';
+    const body = `Hi ${customer.contactName || 'there'},
+
+I'm your EverLaunch partner. I noticed you haven't completed your setup yet.
+
+I'm here to help! What questions can I answer?
+
+Best regards,
+
+Your EverLaunch Partner
+
+---
+Get your AI receptionist: tryeverlaunch.com`;
+
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(customer.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handlePhoneClick = () => {
