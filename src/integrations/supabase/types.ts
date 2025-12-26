@@ -2922,6 +2922,7 @@ export type Database = {
           passcode: string | null
           rep_id: string | null
           screenshot_url: string | null
+          source: string
           status: string
           updated_at: string
           vapi_assistant_id: string | null
@@ -2951,6 +2952,7 @@ export type Database = {
           passcode?: string | null
           rep_id?: string | null
           screenshot_url?: string | null
+          source?: string
           status?: string
           updated_at?: string
           vapi_assistant_id?: string | null
@@ -2980,6 +2982,7 @@ export type Database = {
           passcode?: string | null
           rep_id?: string | null
           screenshot_url?: string | null
+          source?: string
           status?: string
           updated_at?: string
           vapi_assistant_id?: string | null

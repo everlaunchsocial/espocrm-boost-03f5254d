@@ -6,6 +6,7 @@ import { DataTable } from '@/components/crm/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,11 +17,33 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Globe, Eye, MessageSquare, Phone, Mail, MailOpen, Presentation, TrendingUp, Trash2 } from 'lucide-react';
+import { Globe, Eye, MessageSquare, Phone, Mail, MailOpen, Presentation, TrendingUp, Trash2, FormInput, UserPen, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Demo } from '@/hooks/useDemos';
+import { Demo, DemoSource } from '@/hooks/useDemos';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+// Source filter type
+type SourceFilter = 'all' | DemoSource;
+
+// Source display config
+const SOURCE_CONFIG: Record<DemoSource, { label: string; icon: React.ReactNode; className: string }> = {
+  web_form: {
+    label: 'Web Form',
+    icon: <FormInput className="h-3 w-3" />,
+    className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+  },
+  affiliate_manual: {
+    label: 'Manual',
+    icon: <UserPen className="h-3 w-3" />,
+    className: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+  },
+  landing_page: {
+    label: 'Landing Page',
+    icon: <Link2 className="h-3 w-3" />,
+    className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+  },
+};
 
 interface EmailStatus {
   sent: boolean;
@@ -33,6 +56,13 @@ export default function AffiliateDemos() {
   const [emailStatuses, setEmailStatuses] = useState<Record<string, EmailStatus>>({});
   const [demoToDelete, setDemoToDelete] = useState<Demo | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+
+  // Filter demos by source
+  const filteredDemos = useMemo(() => {
+    if (sourceFilter === 'all') return demos;
+    return demos.filter(d => d.source === sourceFilter);
+  }, [demos, sourceFilter]);
 
   // Fetch email statuses for all demos
   useEffect(() => {
@@ -153,6 +183,19 @@ export default function AffiliateDemos() {
           </div>
         </div>
       ),
+    },
+    {
+      key: 'source',
+      label: 'Source',
+      render: (demo: Demo) => {
+        const sourceConfig = SOURCE_CONFIG[demo.source] || SOURCE_CONFIG.affiliate_manual;
+        return (
+          <Badge className={`flex items-center gap-1 ${sourceConfig.className}`}>
+            {sourceConfig.icon}
+            {sourceConfig.label}
+          </Badge>
+        );
+      },
     },
     {
       key: 'status',
@@ -306,16 +349,43 @@ export default function AffiliateDemos() {
         </Card>
       </div>
 
-      {demos.length === 0 ? (
+      {/* Source Filter Tabs */}
+      <Tabs value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-4">
+          <TabsTrigger value="all" className="flex items-center gap-1.5">
+            All
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{demos.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="web_form" className="flex items-center gap-1.5">
+            <FormInput className="h-3.5 w-3.5" />
+            Web
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{demos.filter(d => d.source === 'web_form').length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="affiliate_manual" className="flex items-center gap-1.5">
+            <UserPen className="h-3.5 w-3.5" />
+            Manual
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{demos.filter(d => d.source === 'affiliate_manual').length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="landing_page" className="flex items-center gap-1.5">
+            <Link2 className="h-3.5 w-3.5" />
+            Landing
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{demos.filter(d => d.source === 'landing_page').length}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {filteredDemos.length === 0 ? (
         <div className="text-center py-12 bg-muted/30 rounded-lg">
-          <p className="text-muted-foreground">No demos created yet.</p>
+          <p className="text-muted-foreground">
+            {demos.length === 0 ? 'No demos created yet.' : `No ${sourceFilter === 'all' ? '' : SOURCE_CONFIG[sourceFilter as DemoSource]?.label.toLowerCase() + ' '}demos found.`}
+          </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Create demos from the lead detail page to get started.
+            {demos.length === 0 ? 'Create demos from the lead detail page to get started.' : 'Try adjusting your filter.'}
           </p>
         </div>
       ) : (
         <DataTable
-          data={demos}
+          data={filteredDemos}
           columns={columns}
           searchPlaceholder="Search demos..."
           searchKeys={['business_name', 'website_url']}
