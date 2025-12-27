@@ -1,7 +1,8 @@
-import { ReactNode, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { AIAssistantWidget } from '@/components/AIAssistantWidget';
+import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { 
   LayoutDashboard, 
   Users, 
@@ -22,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
+import { useCurrentCustomer } from '@/hooks/useCurrentCustomer';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -80,8 +82,12 @@ export function CustomerPortalLayout() {
   const location = useLocation();
   const { role, isLoading: roleLoading, isCustomer } = useUserRole();
   const { isLoading: onboardingLoading, customerProfile, isOnboardingComplete } = useCustomerOnboarding();
+  const { customer: impersonatedCustomer, isImpersonating } = useCurrentCustomer();
 
   const isLoading = roleLoading || onboardingLoading;
+  
+  // Use impersonated customer data when impersonating, otherwise use normal customerProfile
+  const displayCustomer = isImpersonating && impersonatedCustomer ? impersonatedCustomer : customerProfile;
 
   // Handle logout
   const handleLogout = async () => {
@@ -167,8 +173,14 @@ export function CustomerPortalLayout() {
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Impersonation Banner */}
+      <ImpersonationBanner />
+      
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 border-r border-border bg-card flex-col">
+      <aside className={cn(
+        "hidden md:flex w-64 border-r border-border bg-card flex-col",
+        isImpersonating && "mt-10" // Add margin when impersonation banner is visible
+      )}>
         {/* Logo / Brand */}
         <div className="p-4 border-b border-border">
           <h1 className="text-xl font-bold text-foreground">
@@ -188,21 +200,21 @@ export function CustomerPortalLayout() {
         <div className="p-4 border-t border-border">
           <div className="mb-3">
             <p className="text-sm font-medium text-foreground truncate">
-              {customerProfile?.business_name || 'Your Business'}
+              {displayCustomer?.business_name || 'Your Business'}
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              {customerProfile?.contact_name || 'Customer'}
+              {displayCustomer?.contact_name || 'Customer'}
             </p>
-            {customerProfile?.id && (
+            {displayCustomer?.id && (
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(customerProfile.id);
+                  navigator.clipboard.writeText(displayCustomer.id);
                   toast.success('Customer ID copied');
                 }}
                 className="flex items-center gap-1 mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 title="Click to copy full ID"
               >
-                <span className="font-mono">ID: {customerProfile.id.slice(0, 8)}...</span>
+                <span className="font-mono">ID: {displayCustomer.id.slice(0, 8)}...</span>
                 <Copy className="h-3 w-3" />
               </button>
             )}
@@ -219,7 +231,10 @@ export function CustomerPortalLayout() {
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 border-b border-border bg-card z-50 flex items-center justify-between px-4">
+      <div className={cn(
+        "md:hidden fixed top-0 left-0 right-0 h-14 border-b border-border bg-card z-50 flex items-center justify-between px-4",
+        isImpersonating && "top-10" // Shift down when impersonation banner is visible
+      )}>
         <h1 className="text-lg font-bold text-foreground">EverLaunch AI</h1>
         <Sheet>
           <SheetTrigger asChild>
@@ -254,7 +269,10 @@ export function CustomerPortalLayout() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-0 mt-14 md:mt-0">
+      <main className={cn(
+        "flex-1 md:ml-0",
+        isImpersonating ? "mt-24 md:mt-10" : "mt-14 md:mt-0"
+      )}>
         <Outlet />
       </main>
 
