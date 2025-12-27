@@ -17,51 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUsageStatus } from '@/components/affiliate/AffiliateCustomerDetailDialog';
-
-function getSetupProgress(stage: string | null): { completed: number; total: number; missing: string[] } {
-  const stageKey = stage?.toLowerCase() || '';
-  
-  if (stageKey.includes('complete') || stageKey.includes('done')) {
-    return { completed: 5, total: 5, missing: [] };
-  }
-  
-  let completed = 1;
-  const missing: string[] = [];
-  
-  if (stageKey.includes('phone')) {
-    completed = 2;
-  } else {
-    missing.push('Phone number not connected');
-  }
-  
-  if (stageKey.includes('hours') || stageKey.includes('business')) {
-    completed = Math.max(completed, 3);
-  } else if (completed >= 2) {
-    missing.push('Business hours not set');
-  }
-  
-  if (stageKey.includes('voice') || stageKey.includes('settings')) {
-    completed = Math.max(completed, 4);
-  } else if (completed >= 3) {
-    missing.push('Voice settings not configured');
-  }
-  
-  if (stageKey.includes('test') || stageKey.includes('live')) {
-    completed = 5;
-    missing.length = 0;
-  } else if (completed >= 4) {
-    missing.push('Live testing not complete');
-  }
-  
-  if (completed === 1 && !stageKey.includes('payment')) {
-    missing.push('Phone number not connected');
-    missing.push('Business hours not set');
-    missing.push('Voice settings not configured');
-    missing.push('Live testing not complete');
-  }
-  
-  return { completed, total: 5, missing };
-}
+import { getOnboardingProgress, ONBOARDING_STEPS, TOTAL_ONBOARDING_STEPS } from '@/lib/onboardingSteps';
+import { CommissionDisplay } from '@/components/affiliate/CommissionDisplay';
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -173,7 +130,7 @@ export default function AffiliateCustomerDetail() {
     );
   }
 
-  const progress = getSetupProgress(customer.onboarding_stage);
+  const progress = getOnboardingProgress(customer.onboarding_stage);
   const isComplete = progress.completed === progress.total;
   const usage = getUsageStatus(lastActivity);
 
@@ -407,8 +364,8 @@ Get your AI receptionist: ${affiliateUrl}`;
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-3">Missing Steps:</p>
-                {progress.missing.map((step, idx) => (
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-3">Remaining Steps:</p>
+                {progress.incompleteSteps.map((step, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
                     <XCircle className="h-4 w-4 flex-shrink-0" />
                     {step}
@@ -459,17 +416,13 @@ Get your AI receptionist: ${affiliateUrl}`;
             {commission && (
               <>
                 <Separator />
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                  <label className="text-xs font-medium text-muted-foreground uppercase">Your Commission</label>
-                  <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-2xl font-bold text-primary">
-                      {formatCurrency(Number(commission.amount))}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      / month ({commission.commission_level === 1 ? '30%' : commission.commission_level === 2 ? '15%' : '5%'})
-                    </span>
-                  </div>
-                </div>
+                <CommissionDisplay
+                  earnedAmount={Number(commission.amount)}
+                  commissionLevel={commission.commission_level}
+                  planMonthlyPrice={399}
+                  planName={customer.plan_name || 'Professional'}
+                  customerCreatedAt={customer.created_at ? new Date(customer.created_at) : null}
+                />
               </>
             )}
           </CardContent>

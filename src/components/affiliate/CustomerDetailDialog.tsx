@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { Building2, User, Mail, Phone, Calendar, CreditCard, ExternalLink, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { CustomerInfo } from '@/hooks/useAffiliateCommissions';
+import { CommissionDisplay } from '@/components/affiliate/CommissionDisplay';
 
 interface CustomerDetailDialogProps {
   customer: CustomerInfo | null;
@@ -12,22 +13,6 @@ interface CustomerDetailDialogProps {
   commissionLevel?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-}
-
-function getCommissionRate(level: number): string {
-  switch (level) {
-    case 1: return '30%';
-    case 2: return '15%';
-    case 3: return '5%';
-    default: return `${level}%`;
-  }
 }
 
 export function CustomerDetailDialog({
@@ -151,19 +136,14 @@ Get your AI receptionist: tryeverlaunch.com`;
           {commissionAmount !== undefined && commissionLevel !== undefined && (
             <>
               <Separator />
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Your Commission
-                </label>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-bold text-primary">
-                    {formatCurrency(commissionAmount)}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    / month ({getCommissionRate(commissionLevel)})
-                  </span>
-                </div>
-              </div>
+              <CommissionDisplay
+                earnedAmount={commissionAmount}
+                commissionLevel={commissionLevel}
+                planMonthlyPrice={399}
+                planName={customer.planName || 'Professional'}
+                customerCreatedAt={customer.createdAt}
+                compact
+              />
             </>
           )}
 
