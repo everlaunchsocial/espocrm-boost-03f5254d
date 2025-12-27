@@ -104,6 +104,15 @@ export function CustomerPortalLayout() {
   useEffect(() => {
     if (isLoading) return;
     
+    // Skip all redirects when impersonating - super admin should see whatever page they navigate to
+    if (isImpersonating) {
+      // Only redirect /customer root to dashboard
+      if (location.pathname === '/customer') {
+        navigate('/customer/dashboard');
+      }
+      return;
+    }
+    
     // If role is null (lookup failed or not set), don't redirect to onboarding
     if (role === null) {
       return; // Will show "no access" message instead of forcing onboarding
@@ -125,7 +134,7 @@ export function CustomerPortalLayout() {
     if (location.pathname === '/customer') {
       navigate('/customer/dashboard');
     }
-  }, [isLoading, role, customerProfile, isOnboardingComplete, location.pathname, navigate, canAccessCustomerPortal]);
+  }, [isLoading, role, customerProfile, isOnboardingComplete, location.pathname, navigate, canAccessCustomerPortal, isImpersonating]);
 
   // Loading state
   if (isLoading) {
