@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet, Navigate, useNavigate } from 'react-router-d
 import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { AIAssistantWidget } from '@/components/AIAssistantWidget';
 import VoiceNotesSheet from '@/components/VoiceNotesSheet';
+import { PortalSwitcher } from '@/components/PortalSwitcher';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -396,6 +397,9 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
 
           {/* RIGHT SIDE OF HEADER */}
           <div className="flex items-center gap-3">
+            {/* Portal Switcher for dual-role users */}
+            <PortalSwitcher />
+            
             {/* Voice Notes */}
             <VoiceNotesSheet />
             

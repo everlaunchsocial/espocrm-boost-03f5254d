@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { AIAssistantWidget } from '@/components/AIAssistantWidget';
 import VoiceNotesSheet from '@/components/VoiceNotesSheet';
+import { PortalSwitcher } from '@/components/PortalSwitcher';
 import {
   LayoutDashboard,
   Users,
@@ -359,6 +360,7 @@ export function CRMLayout({ children }: CRMLayoutProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <PortalSwitcher />
             <VoiceNotesSheet />
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
