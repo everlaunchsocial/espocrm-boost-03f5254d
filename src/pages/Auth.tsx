@@ -10,6 +10,14 @@ import { Loader2, Users, AlertCircle, Chrome } from 'lucide-react';
 import { useAuthRole, getRedirectPathForRole } from '@/hooks/useAuthRole';
 import { Separator } from '@/components/ui/separator';
 
+// Helper to clear all impersonation data
+function clearAllImpersonation() {
+  localStorage.removeItem('impersonating_affiliate_id');
+  localStorage.removeItem('impersonating_affiliate_username');
+  localStorage.removeItem('impersonating_customer_id');
+  localStorage.removeItem('impersonating_customer_name');
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -76,10 +84,19 @@ export default function Auth() {
     }
   }, [roleError, userId, retryCount, refetch]);
 
+  // Clear impersonation on initial auth page load (fresh session start)
+  useEffect(() => {
+    clearAllImpersonation();
+  }, []);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         navigate('/reset-password');
+      }
+      // Clear impersonation on sign in
+      if (event === 'SIGNED_IN') {
+        clearAllImpersonation();
       }
     });
 
