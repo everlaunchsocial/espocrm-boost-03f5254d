@@ -2554,7 +2554,9 @@ export type Database = {
           billing_cycle_start: string | null
           business_hours: Json | null
           business_name: string | null
+          business_phone: string | null
           business_type: string | null
+          city: string | null
           contact_name: string | null
           created_at: string
           customer_plan_id: string | null
@@ -2580,10 +2582,13 @@ export type Database = {
           plan_name: string | null
           settings_updated_at: string
           sms_notifications_enabled: boolean | null
+          state: string | null
+          street_address: string | null
           testing_code: string | null
           user_id: string
           website_url: string | null
           welcome_email_sent_at: string | null
+          zip_code: string | null
         }
         Insert: {
           additional_notification_emails?: string[] | null
@@ -2594,7 +2599,9 @@ export type Database = {
           billing_cycle_start?: string | null
           business_hours?: Json | null
           business_name?: string | null
+          business_phone?: string | null
           business_type?: string | null
+          city?: string | null
           contact_name?: string | null
           created_at?: string
           customer_plan_id?: string | null
@@ -2620,10 +2627,13 @@ export type Database = {
           plan_name?: string | null
           settings_updated_at?: string
           sms_notifications_enabled?: boolean | null
+          state?: string | null
+          street_address?: string | null
           testing_code?: string | null
           user_id: string
           website_url?: string | null
           welcome_email_sent_at?: string | null
+          zip_code?: string | null
         }
         Update: {
           additional_notification_emails?: string[] | null
@@ -2634,7 +2644,9 @@ export type Database = {
           billing_cycle_start?: string | null
           business_hours?: Json | null
           business_name?: string | null
+          business_phone?: string | null
           business_type?: string | null
+          city?: string | null
           contact_name?: string | null
           created_at?: string
           customer_plan_id?: string | null
@@ -2660,10 +2672,13 @@ export type Database = {
           plan_name?: string | null
           settings_updated_at?: string
           sms_notifications_enabled?: boolean | null
+          state?: string | null
+          street_address?: string | null
           testing_code?: string | null
           user_id?: string
           website_url?: string | null
           welcome_email_sent_at?: string | null
+          zip_code?: string | null
         }
         Relationships: [
           {

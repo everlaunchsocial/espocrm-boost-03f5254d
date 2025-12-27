@@ -6,20 +6,15 @@ import { useCustomerOnboarding } from '@/hooks/useCustomerOnboarding';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ONBOARDING_STEPS } from '@/lib/onboardingSteps';
 
 interface CustomerOnboardingLayoutProps {
   children: ReactNode;
   currentStep: number;
 }
 
-const steps = [
-  { number: 1, title: 'Business Profile' },
-  { number: 2, title: 'Voice & Personality' },
-  { number: 3, title: 'Knowledge & Content' },
-  { number: 4, title: 'Lead Capture' },
-  { number: 5, title: 'Calendar' },
-  { number: 6, title: 'Deploy' },
-];
+// Use the shared step configuration
+const steps = ONBOARDING_STEPS;
 
 export function CustomerOnboardingLayout({ children, currentStep }: CustomerOnboardingLayoutProps) {
   const navigate = useNavigate();

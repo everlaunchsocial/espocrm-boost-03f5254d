@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow, differenceInHours, differenceInDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { getOnboardingProgress, TOTAL_ONBOARDING_STEPS } from '@/lib/onboardingSteps';
+import { CommissionDisplay } from '@/components/affiliate/CommissionDisplay';
 
 export interface AffiliateCustomerData {
   id: string;
@@ -49,53 +51,6 @@ function formatCurrency(amount: number): string {
     style: 'currency',
     currency: 'USD',
   }).format(amount);
-}
-
-function getSetupProgress(stage: string | null): { completed: number; total: number; missing: string[] } {
-  const stageKey = stage?.toLowerCase() || '';
-  
-  if (stageKey.includes('complete') || stageKey.includes('done')) {
-    return { completed: 5, total: 5, missing: [] };
-  }
-  
-  // Simulate progress based on stage
-  let completed = 1; // Payment is assumed complete if they're a customer
-  const missing: string[] = [];
-  
-  if (stageKey.includes('phone')) {
-    completed = 2;
-  } else {
-    missing.push('Phone number not connected');
-  }
-  
-  if (stageKey.includes('hours') || stageKey.includes('business')) {
-    completed = Math.max(completed, 3);
-  } else if (completed >= 2) {
-    missing.push('Business hours not set');
-  }
-  
-  if (stageKey.includes('voice') || stageKey.includes('settings')) {
-    completed = Math.max(completed, 4);
-  } else if (completed >= 3) {
-    missing.push('Voice settings not configured');
-  }
-  
-  if (stageKey.includes('test') || stageKey.includes('live')) {
-    completed = 5;
-    missing.length = 0;
-  } else if (completed >= 4) {
-    missing.push('Live testing not complete');
-  }
-  
-  // If none of the above matched, assume only payment complete
-  if (completed === 1 && !stageKey.includes('payment')) {
-    missing.push('Phone number not connected');
-    missing.push('Business hours not set');
-    missing.push('Voice settings not configured');
-    missing.push('Live testing not complete');
-  }
-  
-  return { completed, total: 5, missing };
 }
 
 export type UsageStatus = 'active' | 'low' | 'at_risk' | 'unknown';
@@ -207,7 +162,7 @@ export function AffiliateCustomerDetailDialog({
     );
   }
 
-  const progress = getSetupProgress(customer.onboardingStage);
+  const progress = getOnboardingProgress(customer.onboardingStage);
   const isComplete = progress.completed === progress.total;
 
   const handleEmailClick = () => {
@@ -370,11 +325,11 @@ Get your AI receptionist: ${affiliateUrl}`;
               </Badge>
             </div>
 
-            {!isComplete && progress.missing.length > 0 && (
+            {!isComplete && progress.incompleteSteps.length > 0 && (
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-2">
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Missing Steps:</p>
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Remaining Steps:</p>
                 <ul className="space-y-1">
-                  {progress.missing.map((step, idx) => (
+                  {progress.incompleteSteps.map((step, idx) => (
                     <li key={idx} className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
                       <XCircle className="h-3 w-3" />
                       {step}
@@ -416,19 +371,14 @@ Get your AI receptionist: ${affiliateUrl}`;
           {customer.commissionAmount !== undefined && customer.commissionLevel !== undefined && (
             <>
               <Separator />
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Your Commission
-                </label>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl font-bold text-primary">
-                    {formatCurrency(customer.commissionAmount)}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    / month ({getCommissionRate(customer.commissionLevel)})
-                  </span>
-                </div>
-              </div>
+              <CommissionDisplay
+                earnedAmount={customer.commissionAmount}
+                commissionLevel={customer.commissionLevel}
+                planMonthlyPrice={399}
+                planName={customer.planName || 'Professional'}
+                customerCreatedAt={customer.createdAt}
+                compact
+              />
             </>
           )}
 
