@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { AIAssistantWidget } from '@/components/AIAssistantWidget';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
+import VoiceNotesSheet from '@/components/VoiceNotesSheet';
 import { 
   LayoutDashboard, 
   Users, 
@@ -245,36 +246,39 @@ export function CustomerPortalLayout() {
         isImpersonating && "top-10" // Shift down when impersonation banner is visible
       )}>
         <h1 className="text-lg font-bold text-foreground">EverLaunch AI</h1>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0">
-            <div className="p-4 border-b border-border">
-              <h1 className="text-xl font-bold text-foreground">
-                EverLaunch AI
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Customer Portal
-              </p>
-            </div>
-            <div className="p-4">
-              <NavLinks />
-            </div>
-            <div className="p-4 border-t border-border mt-auto">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start gap-2"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
+        <div className="flex items-center gap-1">
+          <VoiceNotesSheet />
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
               </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-0">
+              <div className="p-4 border-b border-border">
+                <h1 className="text-xl font-bold text-foreground">
+                  EverLaunch AI
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Customer Portal
+                </p>
+              </div>
+              <div className="p-4">
+                <NavLinks />
+              </div>
+              <div className="p-4 border-t border-border mt-auto">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       {/* Main Content */}

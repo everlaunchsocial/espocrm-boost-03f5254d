@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { AIAssistantWidget } from '@/components/AIAssistantWidget';
+import VoiceNotesSheet from '@/components/VoiceNotesSheet';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -395,6 +396,9 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
 
           {/* RIGHT SIDE OF HEADER */}
           <div className="flex items-center gap-3">
+            {/* Voice Notes */}
+            <VoiceNotesSheet />
+            
             {/* Notification Bell Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
