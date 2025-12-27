@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Phone, Calendar, Users, Sparkles } from "lucide-react";
+import { Loader2, Phone, Calendar, Users, Sparkles, Check, ChevronsUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getStoredAffiliateId, storeAffiliateAttribution } from "@/utils/affiliateAttribution";
@@ -13,17 +12,114 @@ import { getAffiliateUsernameFromPath } from "@/utils/subdomainRouting";
 import { useAffiliateContext } from "@/hooks/useAffiliateContext";
 import { z } from "zod";
 import { normalizeUrl, isValidUrl } from "@/utils/normalizeUrl";
+import { cn } from "@/lib/utils";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const businessTypes = [
-  "Home Services (Plumber, HVAC, Electrician)",
-  "Medical / Dental Practice",
-  "Legal Services",
-  "Real Estate",
-  "Auto Services",
-  "Restaurant / Hospitality",
-  "Salon / Spa",
-  "Fitness / Gym",
-  "Financial Services",
+  // Home & Trade Services
+  "Plumber",
+  "HVAC",
+  "Electrician",
+  "Roofer",
+  "General Contractor",
+  "Landscaper",
+  "Pool Service",
+  "Pest Control",
+  "Cleaning Service",
+  "Handyman",
+  "Locksmith",
+  "Appliance Repair",
+  "Garage Door Service",
+  "Window & Door",
+  "Painting",
+  "Flooring",
+  "Home Remodeling",
+  
+  // Medical & Health
+  "Medical Practice",
+  "Dental Practice",
+  "Chiropractor",
+  "Physical Therapy",
+  "Veterinarian",
+  "Optometrist",
+  "Mental Health / Counseling",
+  "Med Spa",
+  "Urgent Care",
+  "Home Health Care",
+  
+  // Professional Services
+  "Law Firm",
+  "Accounting / CPA",
+  "Insurance Agency",
+  "Real Estate Agency",
+  "Property Management",
+  "Financial Advisor",
+  "Mortgage Broker",
+  "Tax Preparation",
+  
+  // Auto & Transportation
+  "Auto Repair",
+  "Auto Dealership",
+  "Towing Service",
+  "Auto Detailing",
+  "Tire Shop",
+  "Body Shop",
+  
+  // Food & Hospitality
+  "Restaurant",
+  "Catering",
+  "Bar / Nightclub",
+  "Hotel / Motel",
+  "Event Venue",
+  "Food Truck",
+  
+  // Personal Care & Wellness
+  "Hair Salon",
+  "Barber Shop",
+  "Nail Salon",
+  "Day Spa",
+  "Massage Therapy",
+  "Tattoo Studio",
+  "Gym / Fitness Center",
+  "Yoga / Pilates Studio",
+  "Personal Trainer",
+  
+  // Retail & Commerce
+  "Retail Store",
+  "E-commerce",
+  "Jewelry Store",
+  "Florist",
+  "Pet Store / Grooming",
+  "Furniture Store",
+  
+  // Education & Childcare
+  "Tutoring",
+  "Driving School",
+  "Music School",
+  "Dance Studio",
+  "Daycare / Preschool",
+  "After School Program",
+  
+  // Other Services
+  "Photography / Videography",
+  "IT Services",
+  "Marketing Agency",
+  "Consulting",
+  "Funeral Home",
+  "Storage Facility",
+  "Printing / Signs",
   "Other",
 ];
 
@@ -379,21 +475,46 @@ export default function DemoRequestPage() {
                 
                 <div className="space-y-2">
                   <Label htmlFor="businessType">Business Type</Label>
-                  <Select 
-                    value={formData.businessType} 
-                    onValueChange={(value) => handleChange("businessType", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your industry" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {businessTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between",
+                          !formData.businessType && "text-muted-foreground"
+                        )}
+                      >
+                        {formData.businessType || "Select your industry"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search industry..." />
+                        <CommandList>
+                          <CommandEmpty>No industry found.</CommandEmpty>
+                          <CommandGroup>
+                            {businessTypes.map((type) => (
+                              <CommandItem
+                                key={type}
+                                value={type}
+                                onSelect={() => handleChange("businessType", type)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.businessType === type ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {type}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {submitError && (
