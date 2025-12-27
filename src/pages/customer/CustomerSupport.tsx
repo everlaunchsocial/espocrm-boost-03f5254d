@@ -61,19 +61,19 @@ export default function CustomerSupport() {
                 Live Chat
               </CardTitle>
               <CardDescription>
-                Chat with our AI support assistant
+                Chat with our support team
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Get instant answers to common questions using our AI-powered chat support.
+                Our live chat support is being enhanced to serve you better.
               </p>
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={openChatWidget}
+                disabled
               >
-                Open Chat
+                Coming Soon
               </Button>
             </CardContent>
           </Card>

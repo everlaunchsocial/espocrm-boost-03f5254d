@@ -490,10 +490,12 @@ Keep responses helpful, concise, and professional.`;
                         <p className="text-xs text-muted-foreground mt-1">Call this number to test your AI over the phone</p>
                       </div>
                     ) : (
-                      <div className="mt-2">
-                        <p className="text-sm text-muted-foreground">No phone number provisioned yet</p>
-                        <Button variant="link" size="sm" className="h-auto p-0 text-primary" asChild>
-                          <a href="/customer/settings/deploy">Get a phone number →</a>
+                      <div className="mt-2 p-3 bg-destructive/10 rounded-lg border border-destructive/30">
+                        <p className="text-sm font-medium text-destructive flex items-center gap-2">
+                          ⚠️ No phone number provisioned yet
+                        </p>
+                        <Button variant="link" size="sm" className="h-auto p-0 text-destructive font-semibold" asChild>
+                          <a href="/customer/ai-settings">Get a Phone Number →</a>
                         </Button>
                       </div>
                     )}

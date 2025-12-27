@@ -206,7 +206,7 @@ serve(async (req: Request): Promise<Response> => {
           company: businessName,
           website: websiteUrl || null,
           industry: businessType || null,
-          source: "web", // Using 'web' as it's an allowed source value
+          source: "web_form", // Track that this lead came from the public web form
           status: "new",
           affiliate_id: effectiveAffiliateId,
           has_website: !!websiteUrl,
