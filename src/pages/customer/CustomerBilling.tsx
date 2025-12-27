@@ -1,10 +1,12 @@
-import { CreditCard, Clock, AlertTriangle, CheckCircle, Receipt, Mail } from 'lucide-react';
+import { CreditCard, Clock, AlertTriangle, CheckCircle, Receipt, ExternalLink, Download, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useCurrentCustomerBilling } from '@/hooks/useCustomerBilling';
+import { useCustomerBillingInfo, useCreateCustomerPortalSession } from '@/hooks/useCustomerBillingInfo';
 import { format } from 'date-fns';
 
 function getStatusBadge(status: string) {
@@ -22,6 +24,22 @@ function getStatusBadge(status: string) {
   }
 }
 
+function getInvoiceStatusBadge(status: string) {
+  switch (status?.toLowerCase()) {
+    case 'paid':
+      return <Badge variant="default" className="bg-green-600">Paid</Badge>;
+    case 'open':
+      return <Badge variant="secondary">Upcoming</Badge>;
+    case 'draft':
+      return <Badge variant="outline">Draft</Badge>;
+    case 'uncollectible':
+    case 'void':
+      return <Badge variant="destructive">Failed</Badge>;
+    default:
+      return <Badge variant="secondary">{status || 'Unknown'}</Badge>;
+  }
+}
+
 function formatCurrency(amount: number | null | undefined) {
   if (amount == null) return '$0.00';
   return new Intl.NumberFormat('en-US', {
@@ -30,8 +48,17 @@ function formatCurrency(amount: number | null | undefined) {
   }).format(amount);
 }
 
+function capitalizeFirst(str: string | null | undefined): string {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 export default function CustomerBilling() {
-  const { data: billing, isLoading, error } = useCurrentCustomerBilling();
+  const { data: billing, isLoading: billingLoading } = useCurrentCustomerBilling();
+  const { data: billingInfo, isLoading: infoLoading } = useCustomerBillingInfo();
+  const portalMutation = useCreateCustomerPortalSession();
+
+  const isLoading = billingLoading || infoLoading;
 
   // Calculate usage percentage
   const usagePercentage = billing?.minutes_included && billing.minutes_included > 0
@@ -43,6 +70,10 @@ export default function CustomerBilling() {
     : 0;
 
   const hasOverage = (billing?.overage_minutes || 0) > 0;
+
+  const handleManageBilling = () => {
+    portalMutation.mutate();
+  };
 
   return (
     <div className="p-6 md:p-8">
@@ -79,7 +110,7 @@ export default function CustomerBilling() {
               </CardContent>
             </Card>
           </div>
-        ) : error || !billing ? (
+        ) : !billing && !billingInfo ? (
           <Card>
             <CardContent className="py-12">
               <div className="flex flex-col items-center justify-center text-center">
@@ -92,7 +123,6 @@ export default function CustomerBilling() {
                 </p>
                 <Button variant="outline" asChild>
                   <a href="mailto:support@everlaunch.ai">
-                    <Mail className="h-4 w-4 mr-2" />
                     Contact Support
                   </a>
                 </Button>
@@ -104,48 +134,59 @@ export default function CustomerBilling() {
             {/* Current Plan Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  Your Plan
-                </CardTitle>
-                <CardDescription>
-                  Your subscription details and billing information.
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                      Your Plan
+                    </CardTitle>
+                    <CardDescription>
+                      Your subscription details and billing information.
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    onClick={handleManageBilling}
+                    disabled={portalMutation.isPending}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {portalMutation.isPending ? 'Opening...' : 'Manage Billing'}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-2xl font-bold text-foreground">
-                        {billing.plan_name || 'Standard Plan'}
+                        {billing?.plan_name || billingInfo?.plan?.name || 'Standard Plan'}
                       </h3>
                       <p className="text-lg text-muted-foreground">
-                        {formatCurrency(billing.monthly_price)}/month
+                        {formatCurrency(billing?.monthly_price || billingInfo?.plan?.monthly_price)}/month
                       </p>
                     </div>
-                    {getStatusBadge('active')}
+                    {getStatusBadge(billingInfo?.subscription?.subscriptionStatus || 'active')}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
                     <div>
                       <p className="text-sm text-muted-foreground">Included Minutes</p>
                       <p className="text-lg font-semibold text-foreground">
-                        {billing.minutes_included?.toLocaleString() || 0} min/month
+                        {(billing?.minutes_included || billingInfo?.plan?.minutes_included || 0).toLocaleString()} min/month
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Overage Rate</p>
                       <p className="text-lg font-semibold text-foreground">
-                        {formatCurrency(billing.overage_rate)}/min
+                        {formatCurrency(billing?.overage_rate || billingInfo?.plan?.overage_rate)}/min
                       </p>
                     </div>
                   </div>
 
-                  {billing.billing_cycle_start && billing.billing_cycle_end && (
+                  {billingInfo?.subscription?.currentPeriodStart && billingInfo?.subscription?.currentPeriodEnd && (
                     <div className="pt-4 border-t border-border">
                       <p className="text-sm text-muted-foreground">Current Billing Period</p>
                       <p className="text-foreground">
-                        {format(new Date(billing.billing_cycle_start), 'MMM d, yyyy')} – {format(new Date(billing.billing_cycle_end), 'MMM d, yyyy')}
+                        {format(new Date(billingInfo.subscription.currentPeriodStart), 'MMM d, yyyy')} – {format(new Date(billingInfo.subscription.currentPeriodEnd), 'MMM d, yyyy')}
                       </p>
                     </div>
                   )}
@@ -157,6 +198,73 @@ export default function CustomerBilling() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Next Billing Date Card */}
+            {billingInfo?.subscription?.nextBillingDate && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="py-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-full bg-primary/10">
+                        <Calendar className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                          Next Billing Date
+                        </p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {format(new Date(billingInfo.subscription.nextBillingDate), 'MMMM d, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">Amount</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {formatCurrency(billingInfo.subscription.nextBillingAmount || billing?.monthly_price)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Payment Method Card */}
+            {billingInfo?.subscription?.paymentMethodLast4 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    Payment Method
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-lg bg-muted">
+                        <CreditCard className="h-6 w-6 text-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">
+                          {capitalizeFirst(billingInfo.subscription.paymentMethodBrand)} •••• {billingInfo.subscription.paymentMethodLast4}
+                        </p>
+                        {billingInfo.subscription.paymentMethodExpMonth && billingInfo.subscription.paymentMethodExpYear && (
+                          <p className="text-sm text-muted-foreground">
+                            Expires: {billingInfo.subscription.paymentMethodExpMonth}/{billingInfo.subscription.paymentMethodExpYear.toString().slice(-2)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline"
+                      onClick={handleManageBilling}
+                      disabled={portalMutation.isPending}
+                    >
+                      Update Payment Method
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Usage Card */}
             <Card>
@@ -174,7 +282,7 @@ export default function CustomerBilling() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-foreground">
-                        {Math.round(billing.total_minutes_used || 0).toLocaleString()} of {billing.minutes_included?.toLocaleString() || 0} minutes used
+                        {Math.round(billing?.total_minutes_used || 0).toLocaleString()} of {(billing?.minutes_included || 0).toLocaleString()} minutes used
                       </span>
                       <span className="text-sm text-muted-foreground">
                         {Math.round(usagePercentage)}%
@@ -194,7 +302,7 @@ export default function CustomerBilling() {
                     <div className={`p-4 rounded-lg ${hasOverage ? 'bg-destructive/10' : 'bg-muted/50'}`}>
                       <p className="text-sm text-muted-foreground">Overage</p>
                       <p className={`text-2xl font-bold ${hasOverage ? 'text-destructive' : 'text-foreground'}`}>
-                        {Math.round(billing.overage_minutes || 0).toLocaleString()}
+                        {Math.round(billing?.overage_minutes || 0).toLocaleString()}
                       </p>
                       <p className="text-xs text-muted-foreground">minutes</p>
                     </div>
@@ -208,10 +316,10 @@ export default function CustomerBilling() {
                           Overage charges this period
                         </p>
                         <p className="text-lg font-bold text-destructive">
-                          {formatCurrency(billing.overage_cost)}
+                          {formatCurrency(billing?.overage_cost)}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Based on {Math.round(billing.overage_minutes || 0)} overage minutes at {formatCurrency(billing.overage_rate)}/min
+                          Based on {Math.round(billing?.overage_minutes || 0)} overage minutes at {formatCurrency(billing?.overage_rate)}/min
                         </p>
                       </div>
                     </div>
@@ -221,7 +329,7 @@ export default function CustomerBilling() {
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Estimated Total This Period</span>
                       <span className="text-xl font-bold text-foreground">
-                        {formatCurrency(billing.total_estimated_cost)}
+                        {formatCurrency(billing?.total_estimated_cost)}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -232,7 +340,7 @@ export default function CustomerBilling() {
               </CardContent>
             </Card>
 
-            {/* Billing History Note */}
+            {/* Billing History */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -240,22 +348,54 @@ export default function CustomerBilling() {
                   Billing History
                 </CardTitle>
                 <CardDescription>
-                  View your past invoices and payments.
+                  Your past invoices and payments.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Receipt className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                  <p className="text-muted-foreground mb-4">
-                    Detailed billing history is not available in the portal yet.
-                  </p>
-                  <Button variant="outline" asChild>
-                    <a href="mailto:support@everlaunch.ai">
-                      <Mail className="h-4 w-4 mr-2" />
-                      Request Past Receipts
-                    </a>
-                  </Button>
-                </div>
+                {billingInfo?.invoices && billingInfo.invoices.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Invoice</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {billingInfo.invoices.map((invoice) => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">
+                            {format(new Date(invoice.date), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell>{invoice.description}</TableCell>
+                          <TableCell>{formatCurrency(invoice.amount)}</TableCell>
+                          <TableCell>{getInvoiceStatusBadge(invoice.status)}</TableCell>
+                          <TableCell className="text-right">
+                            {invoice.pdfUrl ? (
+                              <Button variant="ghost" size="sm" asChild>
+                                <a href={invoice.pdfUrl} target="_blank" rel="noopener noreferrer">
+                                  <Download className="h-4 w-4 mr-1" />
+                                  PDF
+                                </a>
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Receipt className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                    <p className="text-muted-foreground">
+                      No billing history available yet.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
