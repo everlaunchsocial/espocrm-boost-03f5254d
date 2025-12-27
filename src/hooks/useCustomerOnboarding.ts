@@ -46,7 +46,13 @@ export interface CustomerProfile {
   minutes_included: number;
   embed_installed_at: string | null;
   phone_tested_at: string | null;
-  testing_code: string | null; // PHASE A: 4-digit code for testing hotline
+  testing_code: string | null;
+  // Address fields
+  street_address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  business_phone: string | null;
 }
 
 export interface VoiceSettings {

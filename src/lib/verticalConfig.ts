@@ -5,7 +5,6 @@ export type VerticalKey =
   | 'legal' 
   | 'real-estate' 
   | 'pest-control' 
-  | 'network-marketing'
   | 'med-spa';
 
 export interface VerticalConfig {
@@ -246,43 +245,6 @@ export const verticalConfig: Record<VerticalKey, VerticalConfig> = {
       { question: 'Can it identify what type of pest problem someone has?', answer: 'Yes! The AI asks qualifying questions to understand the pest type and urgency.' },
       { question: 'What if the AI can\'t answer a question?', answer: 'It transfers the call to you or takes a detailed message.' },
       { question: 'Can I try it before committing?', answer: 'Yes! Request a custom demo for your business.' },
-    ],
-  },
-  'network-marketing': {
-    key: 'network-marketing',
-    name: 'Network Marketing',
-    industry: 'Network Marketing',
-    headline: 'Scale Your Follow-Up To 100+ Prospects Automatically',
-    subheadline: 'Your AI Recruiting Partner That Never Sleeps',
-    solutionSubheadline: 'The Professional System That Proves You\'re Serious',
-    leadTerm: 'Prospect',
-    heroImage: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1920&q=80',
-    thumbnail: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&q=80',
-    painPoints: [
-      { icon: '📞', title: 'Missing prospect calls', description: 'Calls coming in while you\'re in presentations' },
-      { icon: '🎯', title: 'Follow-up overload', description: 'Can\'t personally follow up with 100+ leads' },
-      { icon: '⏰', title: 'Team support drain', description: 'Team needs support but you\'re unavailable' },
-      { icon: '💼', title: 'Credibility gap', description: 'Looking unprofessional without business infrastructure' },
-    ],
-    features: [
-      'Qualifies prospects 24/7 - even while you sleep',
-      'Books 3-way calls with you and your upline',
-      'Answers new team member questions instantly',
-      'Follows up with cold leads automatically',
-      'Professional system that proves you\'re serious',
-      'Scales your personal attention to 100+ prospects',
-    ],
-    demoPrompts: ['Prospect qualification', 'Team support question', '3-way call scheduling', 'Product inquiry'],
-    testimonial: {
-      quote: "I went from personally following up with 20 prospects to the AI handling 100+. My recruiting went through the roof because I finally looked professional.",
-      name: 'Marcus Johnson',
-      business: 'Top Leader - Wellness MLM',
-    },
-    faqs: [
-      { question: 'How long does setup take?', answer: 'About 15 minutes. We guide you through everything.' },
-      { question: 'Does it make income claims?', answer: 'Never. The AI is fully FTC-compliant and focuses on the opportunity without making income promises.' },
-      { question: 'Is this approved by my MLM company?', answer: 'EverLaunch is a third-party business tool. Check your company\'s policies on business systems.' },
-      { question: 'Can my team members use it too?', answer: 'Absolutely! Each person gets their own AI. You can earn affiliate commissions when they sign up.' },
     ],
   },
   'med-spa': {
