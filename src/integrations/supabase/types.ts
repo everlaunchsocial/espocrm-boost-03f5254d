@@ -2614,6 +2614,10 @@ export type Database = {
           business_phone: string | null
           business_type: string | null
           city: string | null
+          complimentary_expires_at: string | null
+          complimentary_granted_at: string | null
+          complimentary_granted_by: string | null
+          complimentary_reason: string | null
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
@@ -2644,6 +2648,7 @@ export type Database = {
           sms_notifications_enabled: boolean | null
           state: string | null
           street_address: string | null
+          subscription_type: string
           testing_code: string | null
           user_id: string
           website_url: string | null
@@ -2662,6 +2667,10 @@ export type Database = {
           business_phone?: string | null
           business_type?: string | null
           city?: string | null
+          complimentary_expires_at?: string | null
+          complimentary_granted_at?: string | null
+          complimentary_granted_by?: string | null
+          complimentary_reason?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -2692,6 +2701,7 @@ export type Database = {
           sms_notifications_enabled?: boolean | null
           state?: string | null
           street_address?: string | null
+          subscription_type?: string
           testing_code?: string | null
           user_id: string
           website_url?: string | null
@@ -2710,6 +2720,10 @@ export type Database = {
           business_phone?: string | null
           business_type?: string | null
           city?: string | null
+          complimentary_expires_at?: string | null
+          complimentary_granted_at?: string | null
+          complimentary_granted_by?: string | null
+          complimentary_reason?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -2740,6 +2754,7 @@ export type Database = {
           sms_notifications_enabled?: boolean | null
           state?: string | null
           street_address?: string | null
+          subscription_type?: string
           testing_code?: string | null
           user_id?: string
           website_url?: string | null
