@@ -115,7 +115,8 @@ import SuggestionLog from "./pages/admin/SuggestionLog";
 import AIAssistantAnalytics from "./pages/admin/AIAssistantAnalytics";
 import Testing from "./pages/admin/Testing";
 import BillingSettings from "./pages/admin/BillingSettings";
-
+import AdminTeam from "./pages/admin/AdminTeam";
+import AdminRoles from "./pages/admin/AdminRoles";
 
 // Customer Portal pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -286,6 +287,8 @@ const App = () => (
             <Route path="/admin/affiliates" element={<AdminAffiliates />} />
             <Route path="/admin/customers" element={<AdminCustomers />} />
             <Route path="/admin/genealogy" element={<AdminGenealogy />} />
+            <Route path="/admin/team" element={<AdminTeam />} />
+            <Route path="/admin/roles" element={<AdminRoles />} />
             <Route path="/admin/payouts" element={<AdminPayouts />} />
             <Route path="/admin/customer-usage" element={<AdminCustomerUsage />} />
             <Route path="/admin/signup-analytics" element={<SignupAnalytics />} />
