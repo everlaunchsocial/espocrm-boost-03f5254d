@@ -15,8 +15,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Search, Eye, Building2, User, Phone, Mail } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Search, Eye, Building2, User, Phone, Mail, Settings, Gift } from "lucide-react";
 import { format } from "date-fns";
+import { CustomerSubscriptionManager } from "@/components/admin/CustomerSubscriptionManager";
 
 interface Customer {
   id: string;
@@ -30,10 +37,18 @@ interface Customer {
   customer_source: string | null;
   created_at: string;
   affiliate_username?: string | null;
+  customer_plan_id: string | null;
+  subscription_type: string;
+  complimentary_reason: string | null;
+  complimentary_granted_by: string | null;
+  complimentary_granted_at: string | null;
+  complimentary_expires_at: string | null;
+  plan_name?: string | null;
 }
 
 export default function AdminCustomers() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const navigate = useNavigate();
   const { role } = useUserRole();
   const isSuperAdmin = role === "super_admin";
@@ -54,16 +69,29 @@ export default function AdminCustomers() {
         .from("affiliates")
         .select("id, username");
 
+      // Fetch plans to map IDs to names
+      const { data: plans } = await supabase
+        .from("customer_plans")
+        .select("id, name");
+
       const affiliateMap = new Map(
         affiliates?.map((a) => [a.id, a.username]) || []
       );
 
-      // Map affiliate usernames to customers
+      const planMap = new Map(
+        plans?.map((p) => [p.id, p.name]) || []
+      );
+
+      // Map affiliate usernames and plan names to customers
       return (customerData || []).map((c) => ({
         ...c,
         affiliate_username: c.affiliate_id
           ? affiliateMap.get(c.affiliate_id)
           : null,
+        plan_name: c.customer_plan_id
+          ? planMap.get(c.customer_plan_id)
+          : null,
+        subscription_type: c.subscription_type || 'paying',
       })) as Customer[];
     },
   });
@@ -114,6 +142,25 @@ export default function AdminCustomers() {
     }
   };
 
+  const getSubscriptionBadge = (customer: Customer) => {
+    if (customer.subscription_type === "complimentary") {
+      return (
+        <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+          <Gift className="h-3 w-3 mr-1" />
+          Complimentary
+        </Badge>
+      );
+    }
+    if (customer.plan_name) {
+      return (
+        <Badge variant="outline" className="text-foreground">
+          {customer.plan_name}
+        </Badge>
+      );
+    }
+    return <Badge variant="secondary">No Plan</Badge>;
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-4">
@@ -150,9 +197,9 @@ export default function AdminCustomers() {
             <TableRow>
               <TableHead>Business</TableHead>
               <TableHead>Contact</TableHead>
+              <TableHead>Plan</TableHead>
               <TableHead>Onboarding</TableHead>
               <TableHead>Source</TableHead>
-              <TableHead>Joined</TableHead>
               <TableHead>Joined</TableHead>
               {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
@@ -160,7 +207,7 @@ export default function AdminCustomers() {
           <TableBody>
             {filteredCustomers?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isSuperAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">
                   No customers found
                 </TableCell>
               </TableRow>
@@ -197,6 +244,9 @@ export default function AdminCustomers() {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    {getSubscriptionBadge(customer)}
+                  </TableCell>
                   <TableCell>{getOnboardingBadge(customer.onboarding_stage)}</TableCell>
                   <TableCell>
                     {customer.customer_source === 'direct' || !customer.affiliate_username ? (
@@ -214,14 +264,24 @@ export default function AdminCustomers() {
                   </TableCell>
                   {isSuperAdmin && (
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewAs(customer)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View As
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedCustomer(customer)}
+                          title="Manage Subscription"
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewAs(customer)}
+                          title="View As Customer"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -230,6 +290,48 @@ export default function AdminCustomers() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Customer Detail Modal */}
+      <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              {selectedCustomer?.business_name || selectedCustomer?.contact_name || "Customer Details"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedCustomer && (
+            <div className="space-y-4">
+              {/* Customer Info */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Contact:</span>
+                  <p className="font-medium">{selectedCustomer.contact_name || "N/A"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Email:</span>
+                  <p className="font-medium">{selectedCustomer.lead_email || "N/A"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Phone:</span>
+                  <p className="font-medium">{selectedCustomer.phone || "N/A"}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Joined:</span>
+                  <p className="font-medium">{format(new Date(selectedCustomer.created_at), "MMM d, yyyy")}</p>
+                </div>
+              </div>
+
+              {/* Subscription Manager */}
+              <CustomerSubscriptionManager 
+                customer={selectedCustomer} 
+                onClose={() => setSelectedCustomer(null)} 
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
