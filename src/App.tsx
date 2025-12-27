@@ -119,7 +119,8 @@ import BillingSettings from "./pages/admin/BillingSettings";
 
 // Customer Portal pages
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
-import CustomerSettings from "./pages/customer/CustomerSettings";
+import AIAssistantSettings from "./pages/customer/AIAssistantSettings";
+import CustomerAccountSettings from "./pages/customer/CustomerAccountSettings";
 import VoiceSettings from "./pages/customer/VoiceSettings";
 import KnowledgeSettings from "./pages/customer/KnowledgeSettings";
 import LeadCaptureSettings from "./pages/customer/LeadCaptureSettings";
@@ -229,12 +230,13 @@ const App = () => (
           <Route element={<CustomerPortalLayout />}>
             <Route path="/customer" element={<CustomerDashboard />} />
             <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-            <Route path="/customer/settings" element={<CustomerSettings />} />
-            <Route path="/customer/settings/voice" element={<VoiceSettings />} />
-            <Route path="/customer/settings/knowledge" element={<KnowledgeSettings />} />
-            <Route path="/customer/settings/leads" element={<LeadCaptureSettings />} />
-            <Route path="/customer/settings/calendar" element={<CalendarSettings />} />
-            <Route path="/customer/settings/deploy" element={<DeploySettings />} />
+            <Route path="/customer/account" element={<CustomerAccountSettings />} />
+            <Route path="/customer/ai-settings" element={<AIAssistantSettings />} />
+            <Route path="/customer/ai-settings/voice" element={<VoiceSettings />} />
+            <Route path="/customer/ai-settings/knowledge" element={<KnowledgeSettings />} />
+            <Route path="/customer/ai-settings/leads" element={<LeadCaptureSettings />} />
+            <Route path="/customer/ai-settings/calendar" element={<CalendarSettings />} />
+            <Route path="/customer/ai-settings/deploy" element={<DeploySettings />} />
             <Route path="/customer/leads" element={<CustomerLeads />} />
             <Route path="/customer/billing" element={<CustomerBilling />} />
             <Route path="/customer/support" element={<CustomerSupport />} />
