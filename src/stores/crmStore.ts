@@ -152,8 +152,8 @@ const sampleAccounts: Account[] = [
 
 const sampleLeads: Lead[] = [
   { id: '1', firstName: 'Emily', lastName: 'Davis', email: 'emily.d@startup.co', phone: '+1 555-0201', company: 'StartupCo', title: 'Founder', source: 'web', status: 'new', pipelineStatus: 'new_lead', createdAt: new Date('2024-11-20'), updatedAt: new Date('2024-11-20') },
-  { id: '2', firstName: 'James', lastName: 'Wilson', email: 'james.w@enterprise.com', phone: '+1 555-0202', company: 'Enterprise Ltd', title: 'Director', source: 'referral', status: 'contacted', pipelineStatus: 'contact_attempted', createdAt: new Date('2024-11-18'), updatedAt: new Date('2024-11-22') },
-  { id: '3', firstName: 'Lisa', lastName: 'Anderson', email: 'lisa.a@growth.io', phone: '+1 555-0203', company: 'GrowthIO', title: 'Head of Ops', source: 'campaign', status: 'qualified', pipelineStatus: 'demo_sent', createdAt: new Date('2024-11-15'), updatedAt: new Date('2024-11-25') },
+  { id: '2', firstName: 'James', lastName: 'Wilson', email: 'james.w@enterprise.com', phone: '+1 555-0202', company: 'Enterprise Ltd', title: 'Director', source: 'referral', status: 'contacted', pipelineStatus: 'contacted', createdAt: new Date('2024-11-18'), updatedAt: new Date('2024-11-22') },
+  { id: '3', firstName: 'Lisa', lastName: 'Anderson', email: 'lisa.a@growth.io', phone: '+1 555-0203', company: 'GrowthIO', title: 'Head of Ops', source: 'campaign', status: 'qualified', pipelineStatus: 'demo_requested', createdAt: new Date('2024-11-15'), updatedAt: new Date('2024-11-25') },
 ];
 
 const sampleDeals: Deal[] = [

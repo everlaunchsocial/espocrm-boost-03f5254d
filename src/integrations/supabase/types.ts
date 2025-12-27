@@ -4599,6 +4599,53 @@ export type Database = {
           },
         ]
       }
+      lead_activities: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          lead_id: string
+          metadata: Json | null
+          subject: string | null
+          type: string
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          lead_id: string
+          metadata?: Json | null
+          subject?: string | null
+          type: string
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          lead_id?: string
+          metadata?: Json | null
+          subject?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_intents: {
         Row: {
           created_at: string
@@ -4836,6 +4883,44 @@ export type Database = {
             columns: ["sequence_id"]
             isOneToOne: false
             referencedRelation: "sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_stage_history: {
+        Row: {
+          changed_at: string | null
+          changed_by: string | null
+          from_stage: string | null
+          id: string
+          lead_id: string
+          notes: string | null
+          to_stage: string
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by?: string | null
+          from_stage?: string | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          to_stage: string
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by?: string | null
+          from_stage?: string | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          to_stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_stage_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -5103,6 +5188,8 @@ export type Database = {
           created_at: string
           done_for_you: boolean
           email: string | null
+          estimated_value: number | null
+          expected_close_date: string | null
           facebook_url: string | null
           first_name: string
           google_business_status: string | null
@@ -5122,6 +5209,7 @@ export type Database = {
           import_batch_id: string | null
           industry: string | null
           instagram_handle: string | null
+          last_activity_at: string | null
           last_name: string
           last_pattern_analysis: string | null
           learned_best_days: string[] | null
@@ -5129,13 +5217,19 @@ export type Database = {
           learned_channel_preference: string | null
           learned_optimal_gap_hours: number | null
           learning_confidence: number | null
+          lost_reason: string | null
+          next_action: string | null
+          next_action_date: string | null
           notes: string | null
           phone: string | null
           pipeline_status: string
           priority: boolean
+          probability: number | null
           quiet_mode: boolean
           service_category: string | null
           source: string
+          source_details: Json | null
+          stage_changed_at: string | null
           state: string | null
           status: string
           title: string | null
@@ -5152,6 +5246,8 @@ export type Database = {
           created_at?: string
           done_for_you?: boolean
           email?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
           facebook_url?: string | null
           first_name: string
           google_business_status?: string | null
@@ -5171,6 +5267,7 @@ export type Database = {
           import_batch_id?: string | null
           industry?: string | null
           instagram_handle?: string | null
+          last_activity_at?: string | null
           last_name: string
           last_pattern_analysis?: string | null
           learned_best_days?: string[] | null
@@ -5178,13 +5275,19 @@ export type Database = {
           learned_channel_preference?: string | null
           learned_optimal_gap_hours?: number | null
           learning_confidence?: number | null
+          lost_reason?: string | null
+          next_action?: string | null
+          next_action_date?: string | null
           notes?: string | null
           phone?: string | null
           pipeline_status?: string
           priority?: boolean
+          probability?: number | null
           quiet_mode?: boolean
           service_category?: string | null
           source?: string
+          source_details?: Json | null
+          stage_changed_at?: string | null
           state?: string | null
           status?: string
           title?: string | null
@@ -5201,6 +5304,8 @@ export type Database = {
           created_at?: string
           done_for_you?: boolean
           email?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
           facebook_url?: string | null
           first_name?: string
           google_business_status?: string | null
@@ -5220,6 +5325,7 @@ export type Database = {
           import_batch_id?: string | null
           industry?: string | null
           instagram_handle?: string | null
+          last_activity_at?: string | null
           last_name?: string
           last_pattern_analysis?: string | null
           learned_best_days?: string[] | null
@@ -5227,13 +5333,19 @@ export type Database = {
           learned_channel_preference?: string | null
           learned_optimal_gap_hours?: number | null
           learning_confidence?: number | null
+          lost_reason?: string | null
+          next_action?: string | null
+          next_action_date?: string | null
           notes?: string | null
           phone?: string | null
           pipeline_status?: string
           priority?: boolean
+          probability?: number | null
           quiet_mode?: boolean
           service_category?: string | null
           source?: string
+          source_details?: Json | null
+          stage_changed_at?: string | null
           state?: string | null
           status?: string
           title?: string | null
