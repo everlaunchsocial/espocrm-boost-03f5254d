@@ -87,7 +87,7 @@ export default function AdminCustomers() {
       customer.business_name || customer.contact_name || "Customer"
     );
 
-    navigate("/customer");
+    navigate("/customer/dashboard");
   };
 
   const filteredCustomers = customers?.filter((customer) => {
