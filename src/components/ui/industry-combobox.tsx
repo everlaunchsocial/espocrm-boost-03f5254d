@@ -94,7 +94,6 @@ export const INDUSTRY_OPTIONS: IndustryOption[] = [
   { value: 'wedding', label: 'Wedding Services', group: 'Personal Services' },
   
   // Other
-  { value: 'network-marketing', label: 'Network Marketing', group: 'Other' },
   { value: 'funeral', label: 'Funeral Home', group: 'Other' },
   { value: 'pet-services', label: 'Pet Services', group: 'Other' },
   { value: 'it-support', label: 'IT Support', group: 'Other' },

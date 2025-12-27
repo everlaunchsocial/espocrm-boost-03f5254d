@@ -5,20 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRight, Building2, Globe, User, Phone, Stethoscope, Hammer, Thermometer, Scale, Home, Bug, Users, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, Globe, User, Phone, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-
-const VERTICALS = [
-  { key: 'dentist', name: 'Dental Practice', icon: Stethoscope },
-  { key: 'home-improvement', name: 'Home Improvement', icon: Hammer },
-  { key: 'hvac', name: 'HVAC Services', icon: Thermometer },
-  { key: 'legal', name: 'Legal Services', icon: Scale },
-  { key: 'real-estate', name: 'Real Estate', icon: Home },
-  { key: 'pest-control', name: 'Pest Control', icon: Bug },
-  { key: 'network-marketing', name: 'Network Marketing', icon: Users },
-  { key: 'med-spa', name: 'Medical Spa', icon: Sparkles },
-];
+import { IndustryCombobox } from '@/components/ui/industry-combobox';
+import { normalizeUrl, isValidUrl, getUrlValidationError } from '@/utils/normalizeUrl';
 
 export default function OnboardingStep1() {
   const navigate = useNavigate();
@@ -26,29 +16,31 @@ export default function OnboardingStep1() {
   
   const [businessType, setBusinessType] = useState('');
   const [businessName, setBusinessName] = useState('');
+  const [streetAddress, setStreetAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [businessPhone, setBusinessPhone] = useState('');
   const [contactName, setContactName] = useState('');
   const [phone, setPhone] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [websiteError, setWebsiteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (customerProfile) {
       setBusinessType(customerProfile.business_type || '');
       setBusinessName(customerProfile.business_name || '');
+      setStreetAddress(customerProfile.street_address || '');
+      setCity(customerProfile.city || '');
+      setState(customerProfile.state || '');
+      setZipCode(customerProfile.zip_code || '');
       setWebsiteUrl(customerProfile.website_url || '');
+      setBusinessPhone(customerProfile.business_phone || '');
       setContactName(customerProfile.contact_name || '');
       setPhone(customerProfile.phone || '');
     }
   }, [customerProfile]);
-
-  const formatWebsiteUrl = (url: string) => {
-    if (!url) return '';
-    url = url.trim();
-    if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-      return `https://${url}`;
-    }
-    return url;
-  };
 
   const formatPhoneNumber = (value: string) => {
     const digits = value.replace(/\D/g, '');
@@ -62,29 +54,49 @@ export default function OnboardingStep1() {
     setPhone(formatted);
   };
 
+  const handleBusinessPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setBusinessPhone(formatted);
+  };
+
   const validatePhone = (phoneNumber: string) => {
     if (!phoneNumber) return true; // Optional field
     const cleaned = phoneNumber.replace(/\D/g, '');
     return cleaned.length >= 10 && cleaned.length <= 15;
   };
 
-  const handleVerticalSelect = async (verticalKey: string) => {
-    setBusinessType(verticalKey);
+  const handleIndustryChange = async (value: string) => {
+    setBusinessType(value);
     await updateProfile({
-      business_type: verticalKey,
+      business_type: value,
       onboarding_stage: 'wizard_step_1',
       onboarding_current_step: 1
     });
     toast.success('Industry selected');
   };
 
+  const handleWebsiteBlur = () => {
+    if (websiteUrl) {
+      const normalized = normalizeUrl(websiteUrl);
+      setWebsiteUrl(normalized);
+      const error = getUrlValidationError(normalized);
+      setWebsiteError(error);
+    }
+    handleSave(false);
+  };
+
   const handleSave = async (showToast = false) => {
-    const formattedWebsite = formatWebsiteUrl(websiteUrl);
+    const formattedWebsite = normalizeUrl(websiteUrl);
     
     const success = await updateProfile({
       business_type: businessType,
       business_name: businessName,
+      street_address: streetAddress,
+      city: city,
+      state: state,
+      zip_code: zipCode,
       website_url: formattedWebsite,
+      business_phone: businessPhone,
       contact_name: contactName,
       phone: phone,
       onboarding_stage: 'wizard_step_1',
@@ -113,8 +125,18 @@ export default function OnboardingStep1() {
       return;
     }
 
+    if (websiteUrl && !isValidUrl(websiteUrl)) {
+      toast.error('Please enter a valid website URL');
+      return;
+    }
+
     if (phone && !validatePhone(phone)) {
-      toast.error('Please enter a valid phone number');
+      toast.error('Please enter a valid cell phone number');
+      return;
+    }
+
+    if (businessPhone && !validatePhone(businessPhone)) {
+      toast.error('Please enter a valid business phone number');
       return;
     }
 
@@ -143,51 +165,6 @@ export default function OnboardingStep1() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Industry Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            Select Your Industry
-          </CardTitle>
-          <CardDescription>
-            Choose your business type so we can customize your AI assistant with industry-specific knowledge and terminology.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {VERTICALS.map((vertical) => {
-              const Icon = vertical.icon;
-              const isSelected = businessType === vertical.key;
-              return (
-                <button
-                  key={vertical.key}
-                  onClick={() => handleVerticalSelect(vertical.key)}
-                  className={cn(
-                    "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all duration-200",
-                    "hover:border-primary/50 hover:bg-primary/5",
-                    isSelected 
-                      ? "border-primary bg-primary/10 text-primary" 
-                      : "border-border bg-card text-muted-foreground"
-                  )}
-                >
-                  <Icon className={cn(
-                    "h-8 w-8 transition-colors",
-                    isSelected ? "text-primary" : "text-muted-foreground"
-                  )} />
-                  <span className={cn(
-                    "text-sm font-medium text-center",
-                    isSelected ? "text-primary" : "text-foreground"
-                  )}>
-                    {vertical.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Business Details */}
       <Card>
         <CardHeader>
@@ -200,6 +177,7 @@ export default function OnboardingStep1() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Business Name */}
           <div className="space-y-2">
             <Label htmlFor="businessName" className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -214,6 +192,69 @@ export default function OnboardingStep1() {
             />
           </div>
 
+          {/* Industry */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              Industry <span className="text-destructive">*</span>
+            </Label>
+            <IndustryCombobox
+              value={businessType}
+              onChange={handleIndustryChange}
+              placeholder="Select your industry..."
+            />
+          </div>
+
+          {/* Address Section */}
+          <div className="space-y-4">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              Business Address
+            </Label>
+            
+            <div className="space-y-2">
+              <Input
+                id="streetAddress"
+                placeholder="Street Address"
+                value={streetAddress}
+                onChange={(e) => setStreetAddress(e.target.value)}
+                onBlur={handleBlur}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="col-span-2 md:col-span-2">
+                <Input
+                  id="city"
+                  placeholder="City"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  onBlur={handleBlur}
+                />
+              </div>
+              <div>
+                <Input
+                  id="state"
+                  placeholder="State"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  onBlur={handleBlur}
+                />
+              </div>
+              <div>
+                <Input
+                  id="zipCode"
+                  placeholder="Zip Code"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                  onBlur={handleBlur}
+                  maxLength={10}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Website URL */}
           <div className="space-y-2">
             <Label htmlFor="websiteUrl" className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-muted-foreground" />
@@ -221,16 +262,46 @@ export default function OnboardingStep1() {
             </Label>
             <Input
               id="websiteUrl"
-              placeholder="www.yourbusiness.com"
+              placeholder="yoursite.com"
               value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
-              onBlur={handleBlur}
+              onChange={(e) => {
+                setWebsiteUrl(e.target.value);
+                setWebsiteError(null);
+              }}
+              onBlur={handleWebsiteBlur}
+              className={websiteError ? 'border-destructive' : ''}
             />
-            <p className="text-xs text-muted-foreground">
-              We'll use your website to train your AI assistant.
-            </p>
+            {websiteError ? (
+              <p className="text-xs text-destructive">{websiteError}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                We'll use your website to train your AI assistant.
+              </p>
+            )}
           </div>
 
+          {/* Business Phone */}
+          <div className="space-y-2">
+            <Label htmlFor="businessPhone" className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              Business Phone
+            </Label>
+            <Input
+              id="businessPhone"
+              placeholder="555-555-5555"
+              value={businessPhone}
+              onChange={handleBusinessPhoneChange}
+              onBlur={handleBlur}
+              maxLength={12}
+            />
+          </div>
+
+          {/* Divider */}
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium text-muted-foreground mb-4">Your Contact Information</p>
+          </div>
+
+          {/* Contact Name */}
           <div className="space-y-2">
             <Label htmlFor="contactName" className="flex items-center gap-2">
               <User className="h-4 w-4 text-muted-foreground" />
@@ -245,10 +316,11 @@ export default function OnboardingStep1() {
             />
           </div>
 
+          {/* Cell Phone */}
           <div className="space-y-2">
             <Label htmlFor="phone" className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-muted-foreground" />
-              Phone Number
+              Cell Phone
             </Label>
             <Input
               id="phone"
