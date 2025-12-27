@@ -69,26 +69,22 @@ export default function AdminCustomers() {
   });
 
   const handleViewAs = async (customer: Customer) => {
-    // Log the impersonation
-    await supabase.from("audit_logs").insert({
-      user_id: (await supabase.auth.getUser()).data.user?.id,
-      action: "impersonate_customer",
-      resource_type: "customer",
-      resource_id: customer.id,
-      details: {
-        customer_business: customer.business_name,
-        customer_user_id: customer.user_id,
-      },
+    const user = (await supabase.auth.getUser()).data.user;
+    
+    // Log the impersonation start
+    await supabase.from("impersonation_logs").insert({
+      admin_user_id: user?.id,
+      impersonated_affiliate_id: null, // Not an affiliate
+      impersonated_username: customer.business_name || customer.contact_name || "Customer",
+      action: "start",
+      user_agent: navigator.userAgent,
     });
 
-    // Store impersonation data
+    // Store impersonation data using consistent keys
+    localStorage.setItem("impersonating_customer_id", customer.id);
     localStorage.setItem(
-      "impersonation",
-      JSON.stringify({
-        customerId: customer.id,
-        customerName: customer.business_name || customer.contact_name || "Customer",
-        returnPath: "/admin/customers",
-      })
+      "impersonating_customer_name",
+      customer.business_name || customer.contact_name || "Customer"
     );
 
     navigate("/customer");

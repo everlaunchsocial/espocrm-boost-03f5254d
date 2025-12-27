@@ -5,19 +5,54 @@ import { Button } from '@/components/ui/button';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 
+type ImpersonationType = 'affiliate' | 'customer' | null;
+
+interface ImpersonationState {
+  type: ImpersonationType;
+  id: string | null;
+  name: string | null;
+}
+
 export function ImpersonationBanner() {
   const navigate = useNavigate();
   const location = useLocation();
   const { role } = useUserRole();
-  const [impersonatingUsername, setImpersonatingUsername] = useState<string | null>(null);
-  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
+  const [impersonation, setImpersonation] = useState<ImpersonationState>({
+    type: null,
+    id: null,
+    name: null,
+  });
 
   // Read from localStorage - called on mount and on every route change
   const syncFromStorage = useCallback(() => {
-    const username = localStorage.getItem('impersonating_affiliate_username');
-    const id = localStorage.getItem('impersonating_affiliate_id');
-    setImpersonatingUsername(username);
-    setImpersonatingId(id);
+    // Check for affiliate impersonation
+    const affiliateId = localStorage.getItem('impersonating_affiliate_id');
+    const affiliateUsername = localStorage.getItem('impersonating_affiliate_username');
+    
+    if (affiliateId && affiliateUsername) {
+      setImpersonation({
+        type: 'affiliate',
+        id: affiliateId,
+        name: affiliateUsername,
+      });
+      return;
+    }
+
+    // Check for customer impersonation
+    const customerId = localStorage.getItem('impersonating_customer_id');
+    const customerName = localStorage.getItem('impersonating_customer_name');
+    
+    if (customerId && customerName) {
+      setImpersonation({
+        type: 'customer',
+        id: customerId,
+        name: customerName,
+      });
+      return;
+    }
+
+    // No impersonation
+    setImpersonation({ type: null, id: null, name: null });
   }, []);
 
   // Sync on mount
@@ -41,19 +76,19 @@ export function ImpersonationBanner() {
   }, [syncFromStorage]);
 
   // Only show banner if impersonating AND user is super_admin
-  if (!impersonatingUsername || role !== 'super_admin') {
+  if (!impersonation.type || role !== 'super_admin') {
     return null;
   }
 
   const handleExitView = async () => {
     // Log impersonation end
-    if (impersonatingId && impersonatingUsername) {
+    if (impersonation.id && impersonation.name) {
       try {
         const user = (await supabase.auth.getUser()).data.user;
         await supabase.from('impersonation_logs').insert({
           admin_user_id: user?.id,
-          impersonated_affiliate_id: impersonatingId,
-          impersonated_username: impersonatingUsername,
+          impersonated_affiliate_id: impersonation.type === 'affiliate' ? impersonation.id : null,
+          impersonated_username: impersonation.name,
           action: 'end',
           user_agent: navigator.userAgent,
         });
@@ -62,23 +97,34 @@ export function ImpersonationBanner() {
       }
     }
 
-    localStorage.removeItem('impersonating_affiliate_id');
-    localStorage.removeItem('impersonating_affiliate_username');
-    setImpersonatingUsername(null);
-    setImpersonatingId(null);
-    navigate('/admin/affiliates');
+    // Clear based on type
+    if (impersonation.type === 'affiliate') {
+      localStorage.removeItem('impersonating_affiliate_id');
+      localStorage.removeItem('impersonating_affiliate_username');
+      navigate('/admin/affiliates');
+    } else if (impersonation.type === 'customer') {
+      localStorage.removeItem('impersonating_customer_id');
+      localStorage.removeItem('impersonating_customer_name');
+      navigate('/admin/customers');
+    }
+
+    setImpersonation({ type: null, id: null, name: null });
   };
 
+  const label = impersonation.type === 'affiliate' ? 'Affiliate' : 'Customer';
+  const bgColor = impersonation.type === 'affiliate' ? 'bg-orange-500' : 'bg-blue-500';
+  const hoverColor = impersonation.type === 'affiliate' ? 'hover:bg-orange-600' : 'hover:bg-blue-600';
+
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-orange-500 text-white py-2 px-4 flex items-center justify-center gap-4 shadow-lg">
+    <div className={`fixed top-0 left-0 right-0 z-[100] ${bgColor} text-white py-2 px-4 flex items-center justify-center gap-4 shadow-lg`}>
       <span className="font-medium">
-        Viewing as: <strong>{impersonatingUsername}</strong>
+        Viewing as {label}: <strong>{impersonation.name}</strong>
       </span>
       <Button
         variant="ghost"
         size="sm"
         onClick={handleExitView}
-        className="text-white hover:bg-orange-600 hover:text-white gap-1"
+        className={`text-white ${hoverColor} hover:text-white gap-1`}
       >
         <X className="h-4 w-4" />
         Exit View
