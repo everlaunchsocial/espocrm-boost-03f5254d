@@ -35,11 +35,12 @@ export function RoleRouteGuard() {
 
     const path = location.pathname;
     
-    // Check if user is impersonating (super_admin viewing as affiliate)
-    const isImpersonating = localStorage.getItem('impersonating_affiliate_id');
+    // Check if user is impersonating (super_admin viewing as affiliate OR customer)
+    const isImpersonatingAffiliate = localStorage.getItem('impersonating_affiliate_id');
+    const isImpersonatingCustomer = localStorage.getItem('impersonating_customer_id');
     
     // Skip role guard for super_admin when impersonating
-    if (role === 'super_admin' && isImpersonating) {
+    if (role === 'super_admin' && (isImpersonatingAffiliate || isImpersonatingCustomer)) {
       return;
     }
 
