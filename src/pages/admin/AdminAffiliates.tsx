@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAdminPermissions, PERMISSIONS } from '@/hooks/useAdminPermissions';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Eye, Search, Users } from 'lucide-react';
+import { Eye, Search, Users, Shield, MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -19,6 +20,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { PromoteToAdminDialog } from '@/components/admin/PromoteToAdminDialog';
 
 interface Affiliate {
   id: string;
@@ -35,8 +44,11 @@ interface Affiliate {
 export default function AdminAffiliates() {
   const navigate = useNavigate();
   const { role } = useUserRole();
+  const { hasPermission, isSuperAdmin } = useAdminPermissions();
   const [searchTerm, setSearchTerm] = useState('');
-  const isSuperAdmin = role === 'super_admin';
+  const [promotingAffiliate, setPromotingAffiliate] = useState<Affiliate | null>(null);
+  
+  const canPromote = hasPermission(PERMISSIONS.AFFILIATES_PROMOTE);
 
   const { data: affiliates, isLoading } = useQuery({
     queryKey: ['admin-affiliates'],
@@ -184,15 +196,28 @@ export default function AdminAffiliates() {
                   </TableCell>
                   {isSuperAdmin && (
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewAs(affiliate)}
-                        className="gap-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View As
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewAs(affiliate)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View As
+                          </DropdownMenuItem>
+                          {canPromote && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setPromotingAffiliate(affiliate)}>
+                                <Shield className="h-4 w-4 mr-2" />
+                                Promote to Admin
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   )}
                 </TableRow>
@@ -208,6 +233,14 @@ export default function AdminAffiliates() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Promote to Admin Dialog */}
+      <PromoteToAdminDialog
+        affiliate={promotingAffiliate}
+        open={!!promotingAffiliate}
+        onOpenChange={(open) => !open && setPromotingAffiliate(null)}
+        onSuccess={() => setPromotingAffiliate(null)}
+      />
     </div>
   );
 }

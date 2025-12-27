@@ -71,6 +71,8 @@ const crmNavigation = [
 
 const adminNavigation = [
   { name: 'Operations', href: '/admin/operations', icon: FolderOpen, superAdminOnly: true },
+  { name: 'Team', href: '/admin/team', icon: Users, superAdminOnly: true },
+  { name: 'Roles', href: '/admin/roles', icon: Settings, superAdminOnly: true },
   { name: 'Affiliates', href: '/admin/affiliates', icon: Users },
   { name: 'Customers', href: '/admin/customers', icon: Building2 },
   { name: 'Affiliate Videos', href: '/admin/affiliate-videos', icon: Video },

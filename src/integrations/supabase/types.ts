@@ -104,6 +104,90 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_permissions: {
+        Row: {
+          category: string
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      admin_role_permissions: {
+        Row: {
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "admin_permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "admin_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_roles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_system_role: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_system_role?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_system_role?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       affiliate_avatar_profiles: {
         Row: {
           affiliate_id: string
@@ -7370,6 +7454,41 @@ export type Database = {
           },
         ]
       }
+      user_admin_roles: {
+        Row: {
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          notes: string | null
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_admin_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "admin_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_integrations: {
         Row: {
           config: Json | null
@@ -8302,6 +8421,20 @@ export type Database = {
           occurrence_count: number
         }[]
       }
+      get_user_admin_roles: {
+        Args: { p_user_id?: string }
+        Returns: {
+          is_system_role: boolean
+          role_id: string
+          role_name: string
+        }[]
+      }
+      get_user_permissions: {
+        Args: { p_user_id?: string }
+        Returns: {
+          permission_code: string
+        }[]
+      }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       has_permission: { Args: { p_permission: string }; Returns: boolean }
       has_role: {
@@ -8317,6 +8450,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_super_admin: { Args: never; Returns: boolean }
+      is_any_admin: { Args: { p_user_id?: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       log_audit_event: {
         Args: {
@@ -8378,6 +8512,10 @@ export type Database = {
           message: string
           success: boolean
         }[]
+      }
+      user_has_permission: {
+        Args: { p_permission_code: string; p_user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
