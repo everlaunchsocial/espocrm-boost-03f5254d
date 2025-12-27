@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { AIAssistantWidget } from '@/components/AIAssistantWidget';
+import VoiceNotesSheet from '@/components/VoiceNotesSheet';
 import {
   LayoutDashboard,
   Users,
@@ -356,6 +357,7 @@ export function CRMLayout({ children }: CRMLayoutProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <VoiceNotesSheet />
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">

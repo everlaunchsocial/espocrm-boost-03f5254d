@@ -1,15 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Mic, MicOff, Plus, Trash2, Copy, FileText } from 'lucide-react';
+import { Mic, MicOff, Plus, Trash2, Copy, FileText, Loader2 } from 'lucide-react';
 import { useCallAssistant, formatDuration } from '@/hooks/useCallAssistant';
 import { useLocalNotes } from '@/hooks/useLocalNotes';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 const VoiceNotes = () => {
+  const navigate = useNavigate();
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+
+  // Auth check
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/auth', { replace: true });
+      } else {
+        setIsAuthChecking(false);
+      }
+    };
+    checkAuth();
+  }, [navigate]);
   const {
     notes,
     activeNote,
@@ -116,6 +133,14 @@ const VoiceNotes = () => {
     lastAppendedLengthRef.current = 0; // Reset delta tracking
     createNote();
   };
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!isSupported) {
     return (
