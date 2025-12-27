@@ -17,6 +17,11 @@ export function RoleRouteGuard() {
   const { enabled: testModeEnabled } = useTestMode();
 
   useEffect(() => {
+    // BYPASS: Always allow /reset-password regardless of auth state
+    if (location.pathname === '/reset-password') {
+      return;
+    }
+
     // BYPASS: Skip all route guards in test mode
     if (testModeEnabled) {
       console.log('[RoleRouteGuard] Test mode enabled - bypassing route guards');

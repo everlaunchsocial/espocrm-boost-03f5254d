@@ -17,69 +17,29 @@ export default function ResetPassword() {
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // This page must always render the reset form when reached via a valid recovery link.
-    // Support both legacy hash tokens and the newer query-param flows.
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsValidSession(true);
-      }
-    });
-
-    const init = async () => {
-      try {
-        const url = new URL(window.location.href);
-        const searchType = url.searchParams.get('type');
-        const searchCode = url.searchParams.get('code');
-        const tokenHash = url.searchParams.get('token_hash');
-
-        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
-        const hashType = hashParams.get('type');
-        const accessToken = hashParams.get('access_token');
-
-        const type = searchType ?? hashType;
-
-        // Newer PKCE-style flow
-        if (searchCode) {
-          const { error } = await supabase.auth.exchangeCodeForSession(searchCode);
-          if (error) throw error;
-          setIsValidSession(true);
-          return;
-        }
-
-        // token_hash recovery flow
-        if (type === 'recovery' && tokenHash) {
-          const { error } = await supabase.auth.verifyOtp({
-            type: 'recovery',
-            token_hash: tokenHash,
-          });
-          if (error) throw error;
-          setIsValidSession(true);
-          return;
-        }
-
-        // Legacy hash flow
-        if (type === 'recovery' && accessToken) {
-          setIsValidSession(true);
-          return;
-        }
-
-        // Fallback: only treat as valid if we have a session AND the URL indicates recovery
-        const { data: { session } } = await supabase.auth.getSession();
-        const hasRecoveryHint =
-          type === 'recovery' ||
-          url.search.includes('type=recovery') ||
-          window.location.hash.includes('type=recovery');
-
-        setIsValidSession(!!session && hasRecoveryHint);
-      } catch {
-        setIsValidSession(false);
-      }
-    };
-
-    init();
-
-    return () => subscription.unsubscribe();
+    // DON'T create a session here - just check if recovery tokens are present in URL
+    // Session will be created only when user submits the form
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('code');
+    const tokenHash = url.searchParams.get('token_hash');
+    const type = url.searchParams.get('type');
+    
+    // Check hash params for legacy format
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+    const hashType = hashParams.get('type');
+    const accessToken = hashParams.get('access_token');
+    
+    const hasRecoveryParams = 
+      code || 
+      tokenHash ||
+      type === 'recovery' ||
+      (hashType === 'recovery' && accessToken);
+    
+    if (hasRecoveryParams) {
+      setIsValidSession(true); // Show the form - don't create session yet
+    } else {
+      setIsValidSession(false); // Invalid - no tokens
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,12 +58,39 @@ export default function ResetPassword() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+      const tokenHash = url.searchParams.get('token_hash');
+      const type = url.searchParams.get('type');
+      
+      // Check hash params for legacy format
+      const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+      const hashAccessToken = hashParams.get('access_token');
+      const hashType = hashParams.get('type');
 
+      // PKCE flow - exchange code for session NOW (at form submission time)
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
+      } 
+      // Token hash flow
+      else if (type === 'recovery' && tokenHash) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          type: 'recovery',
+          token_hash: tokenHash,
+        });
+        if (verifyError) throw verifyError;
+      }
+      // Legacy hash flow - session should already exist from the hash
+      else if (hashType === 'recovery' && hashAccessToken) {
+        // Legacy flow - Supabase handles this automatically via the hash
+      }
+
+      // Now update the password
+      const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
       // SECURITY: Sign out after password update to force fresh login
-      // This ensures the user must authenticate with their new password
       await supabase.auth.signOut();
       
       setIsSuccess(true);
