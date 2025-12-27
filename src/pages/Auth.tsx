@@ -22,6 +22,20 @@ export default function Auth() {
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    // If a password recovery link lands here (email templates / provider config),
+    // immediately forward to the reset form while preserving tokens.
+    const url = new URL(window.location.href);
+    const type = url.searchParams.get('type');
+    const tokenHash = url.searchParams.get('token_hash');
+    const code = url.searchParams.get('code');
+    const isRecoveryInHash = window.location.hash.includes('type=recovery');
+
+    if (type === 'recovery' || tokenHash || code || isRecoveryInHash) {
+      navigate(`/reset-password${window.location.search}${window.location.hash}`, { replace: true });
+    }
+  }, [navigate]);
+
+  useEffect(() => {
     // If user is logged in and we have their role, redirect them
     if (!isRoleLoading && userId && role) {
       // If there's a redirect param, use it (e.g., from welcome email)
