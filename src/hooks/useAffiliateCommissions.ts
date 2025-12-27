@@ -180,13 +180,16 @@ export function useCommissionSummary() {
       let pendingThisMonth = 0;
       let paidThisMonth = 0;
       let lifetimeEarned = 0;
-      let thisMonthTotal = 0;
+      let recurringMonthlyTotal = 0;
 
       const byLevel = {
         level1: { pending: 0, paid: 0, total: 0 },
         level2: { pending: 0, paid: 0, total: 0 },
         level3: { pending: 0, paid: 0, total: 0 },
       };
+
+      // Track unique customers to calculate recurring commissions
+      const uniqueCustomersThisMonth = new Set<string>();
 
       for (const row of allCommissions || []) {
         const amount = Number(row.amount);
@@ -201,12 +204,14 @@ export function useCommissionSummary() {
 
         // This month calculations
         if (isThisMonth) {
-          thisMonthTotal += amount;
           if (row.status === 'pending') {
             pendingThisMonth += amount;
           } else if (row.status === 'paid') {
             paidThisMonth += amount;
           }
+          
+          // Track unique customers for recurring calculation
+          uniqueCustomersThisMonth.add(row.customer_id);
         }
 
         // By level breakdown (this month for simplicity)
@@ -220,8 +225,40 @@ export function useCommissionSummary() {
         }
       }
 
-      // Projected annual (simple: this month * 12)
-      const projectedAnnual = thisMonthTotal * 12;
+      // Calculate recurring monthly commissions based on customer plans
+      // Fetch customer plans to get monthly recurring amount
+      if (uniqueCustomersThisMonth.size > 0) {
+        const { data: customerPlans } = await supabase
+          .from('customer_profiles')
+          .select(`
+            id,
+            customer_plans (
+              monthly_price
+            )
+          `)
+          .in('id', Array.from(uniqueCustomersThisMonth));
+
+        // Get commission rate for level 1 (personal sales)
+        const { data: commissionPlan } = await supabase
+          .from('commission_plans')
+          .select('level1_rate')
+          .eq('is_default', true)
+          .single();
+
+        const level1Rate = commissionPlan?.level1_rate || 0.30;
+
+        // Calculate recurring monthly commissions (monthly_price * commission_rate)
+        for (const customer of customerPlans || []) {
+          const planData = customer.customer_plans as unknown;
+          const plan = Array.isArray(planData) ? planData[0] : planData;
+          const monthlyPrice = (plan as { monthly_price: number } | null)?.monthly_price || 0;
+          recurringMonthlyTotal += monthlyPrice * level1Rate;
+        }
+      }
+
+      // Projected annual = recurring monthly commissions × 12
+      // Only count recurring (monthly) portion, not one-time setup fees
+      const projectedAnnual = recurringMonthlyTotal * 12;
 
       return {
         pendingThisMonth,

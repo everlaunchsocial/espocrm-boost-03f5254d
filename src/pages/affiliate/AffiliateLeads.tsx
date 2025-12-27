@@ -48,7 +48,11 @@ const leadFields = [
   { name: 'facebookUrl', label: 'Facebook URL', type: 'text' as const },
   { name: 'instagramHandle', label: 'Instagram Handle', type: 'text' as const },
   { name: 'source', label: 'Source', type: 'select' as const, options: [
-    { value: 'web', label: 'Website' },
+    { value: 'web_form', label: '🌐 Web Form' },
+    { value: 'manual', label: '👤 Manual' },
+    { value: 'affiliate_link', label: '🔗 Affiliate Link' },
+    { value: 'direct', label: '💻 Direct' },
+    { value: 'web', label: 'Website (Legacy)' },
     { value: 'referral', label: 'Referral' },
     { value: 'campaign', label: 'Campaign' },
     { value: 'social', label: 'Social Media' },
@@ -64,7 +68,7 @@ const leadFields = [
   ]},
 ];
 
-const defaultFormValues = { source: 'web', status: 'new' };
+const defaultFormValues = { source: 'manual', status: 'new' };
 
 export default function AffiliateLeads() {
   const { data: leads = [], isLoading } = useAffiliateLeads();

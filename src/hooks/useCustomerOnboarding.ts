@@ -261,8 +261,32 @@ export function useCustomerOnboarding() {
     setIsLoading(false);
   }, []);
 
-  const fetchCustomerData = useCallback(async () => {
+  const fetchCustomerData = useCallback(async (impersonatedCustomerId?: string | null) => {
     try {
+      // If impersonating a customer, fetch their data directly
+      if (impersonatedCustomerId) {
+        console.log('[useCustomerOnboarding] Fetching impersonated customer data:', impersonatedCustomerId);
+        const { data: profile, error: profileError } = await supabase
+          .from('customer_profiles')
+          .select('*')
+          .eq('id', impersonatedCustomerId)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+        
+        if (profile) {
+          setProfileLoadState('found');
+          setCustomerProfile(profile as unknown as CustomerProfile);
+          await fetchRelatedData(profile as unknown as CustomerProfile);
+          return;
+        }
+        
+        // Impersonated customer not found - clear impersonation
+        console.error('[useCustomerOnboarding] Impersonated customer not found');
+        localStorage.removeItem('impersonating_customer_id');
+        localStorage.removeItem('impersonating_customer_name');
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         // No user - redirect to auth with return path to onboarding
@@ -302,6 +326,15 @@ export function useCustomerOnboarding() {
         }
         
         // Not on onboarding route and no profile - redirect to buy
+        // BUT skip redirect if super admin is just browsing customer routes
+        const { data: roleData } = await supabase.rpc('get_my_global_role');
+        if (roleData === 'super_admin' || roleData === 'admin') {
+          console.log('[useCustomerOnboarding] Admin user on customer route without profile - allowing access');
+          setProfileLoadState('not_found');
+          setIsLoading(false);
+          return;
+        }
+        
         navigate('/buy');
         return;
       }
@@ -318,7 +351,9 @@ export function useCustomerOnboarding() {
   }, [navigate, startPolling, fetchRelatedData]);
 
   useEffect(() => {
-    fetchCustomerData();
+    // Check if super admin is impersonating a customer
+    const impersonatedCustomerId = localStorage.getItem('impersonating_customer_id');
+    fetchCustomerData(impersonatedCustomerId);
   }, [fetchCustomerData]);
 
   const updateProfile = useCallback(async (updates: Partial<CustomerProfile>) => {
