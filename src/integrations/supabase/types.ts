@@ -2441,6 +2441,63 @@ export type Database = {
           },
         ]
       }
+      customer_notification_preferences: {
+        Row: {
+          created_at: string
+          customer_id: string
+          email_billing: boolean | null
+          email_missed_calls: boolean | null
+          email_new_leads: boolean | null
+          email_voicemail_transcripts: boolean | null
+          email_weekly_summary: boolean | null
+          id: string
+          sms_new_leads_realtime: boolean | null
+          sms_urgent_missed_calls: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          email_billing?: boolean | null
+          email_missed_calls?: boolean | null
+          email_new_leads?: boolean | null
+          email_voicemail_transcripts?: boolean | null
+          email_weekly_summary?: boolean | null
+          id?: string
+          sms_new_leads_realtime?: boolean | null
+          sms_urgent_missed_calls?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          email_billing?: boolean | null
+          email_missed_calls?: boolean | null
+          email_new_leads?: boolean | null
+          email_voicemail_transcripts?: boolean | null
+          email_weekly_summary?: boolean | null
+          id?: string
+          sms_new_leads_realtime?: boolean | null
+          sms_urgent_missed_calls?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notification_preferences_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customer_minutes_summary"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "customer_notification_preferences_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customer_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_phone_numbers: {
         Row: {
           area_code: string | null
@@ -2557,13 +2614,16 @@ export type Database = {
           business_phone: string | null
           business_type: string | null
           city: string | null
+          contact_email: string | null
           contact_name: string | null
+          contact_phone: string | null
           created_at: string
           customer_plan_id: string | null
           customer_source: string | null
           customer_timezone: string | null
           embed_installed_at: string | null
           id: string
+          industry: string | null
           lead_capture_enabled: boolean | null
           lead_email: string | null
           lead_sms_number: string | null
@@ -2602,13 +2662,16 @@ export type Database = {
           business_phone?: string | null
           business_type?: string | null
           city?: string | null
+          contact_email?: string | null
           contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           customer_plan_id?: string | null
           customer_source?: string | null
           customer_timezone?: string | null
           embed_installed_at?: string | null
           id?: string
+          industry?: string | null
           lead_capture_enabled?: boolean | null
           lead_email?: string | null
           lead_sms_number?: string | null
@@ -2647,13 +2710,16 @@ export type Database = {
           business_phone?: string | null
           business_type?: string | null
           city?: string | null
+          contact_email?: string | null
           contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           customer_plan_id?: string | null
           customer_source?: string | null
           customer_timezone?: string | null
           embed_installed_at?: string | null
           id?: string
+          industry?: string | null
           lead_capture_enabled?: boolean | null
           lead_email?: string | null
           lead_sms_number?: string | null

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Settings, Mic, BookOpen, Users, Calendar, Code } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Mic, BookOpen, Users, Calendar, Code } from 'lucide-react';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface SettingsLink {
   title: string;
@@ -14,48 +14,48 @@ const settingsLinks: SettingsLink[] = [
   {
     title: 'Voice & Personality',
     description: 'Configure voice gender, style, greeting, and response pace',
-    href: '/customer/settings/voice',
+    href: '/customer/ai-settings/voice',
     icon: Mic,
     available: true,
   },
   {
     title: 'Knowledge & Content',
     description: 'Manage website knowledge and uploaded documents',
-    href: '/customer/settings/knowledge',
+    href: '/customer/ai-settings/knowledge',
     icon: BookOpen,
     available: true,
   },
   {
     title: 'Lead Capture & Routing',
     description: 'Set up how leads are captured and where they go',
-    href: '/customer/settings/leads',
+    href: '/customer/ai-settings/leads',
     icon: Users,
     available: true,
   },
   {
     title: 'Calendar & Appointments',
     description: 'Connect calendar and configure booking availability',
-    href: '/customer/settings/calendar',
+    href: '/customer/ai-settings/calendar',
     icon: Calendar,
     available: true,
   },
   {
     title: 'Deploy & Install',
     description: 'Get your embed code and phone number',
-    href: '/customer/settings/deploy',
+    href: '/customer/ai-settings/deploy',
     icon: Code,
     available: true,
   },
 ];
 
-export default function CustomerSettings() {
+export default function AIAssistantSettings() {
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+          <h1 className="text-2xl font-bold text-foreground">AI Assistant Settings</h1>
           <p className="text-muted-foreground">
-            Configure your AI assistant
+            Configure your AI assistant's voice, knowledge, and behavior
           </p>
         </div>
 

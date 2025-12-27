@@ -4,7 +4,6 @@ import { SupportChatWidget } from '@/components/SupportChatWidget';
 import { AIAssistantWidget } from '@/components/AIAssistantWidget';
 import { 
   LayoutDashboard, 
-  Settings, 
   Users, 
   CreditCard, 
   HelpCircle,
@@ -16,7 +15,9 @@ import {
   Gift,
   CalendarDays,
   TrendingUp,
-  PhoneCall
+  PhoneCall,
+  Bot,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -34,7 +35,8 @@ const navItems = [
   { path: '/customer/evertrak', label: 'Evertrak', icon: PhoneCall },
   { path: '/customer/calendar', label: 'Calendar', icon: CalendarDays },
   { path: '/customer/training', label: 'Training', icon: GraduationCap },
-  { path: '/customer/settings', label: 'Settings', icon: Settings },
+  { path: '/customer/ai-settings', label: 'AI Assistant', icon: Bot },
+  { path: '/customer/account', label: 'Account', icon: User },
   { path: '/customer/leads', label: 'Leads', icon: Users },
   { path: '/customer/billing', label: 'Billing', icon: CreditCard },
   { path: '/customer/affiliate', label: 'Refer & Earn', icon: Gift },
