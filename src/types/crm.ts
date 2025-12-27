@@ -61,13 +61,14 @@ export interface Account {
 
 export type LeadPipelineStatus = 
   | 'new_lead'
-  | 'contact_attempted'
-  | 'demo_created'
-  | 'demo_sent'
-  | 'demo_engaged'
-  | 'ready_to_buy'
-  | 'customer_won'
-  | 'lost_closed';
+  | 'contacted'
+  | 'demo_requested'
+  | 'demo_completed'
+  | 'hot_lead'
+  | 'negotiating'
+  | 'ready_to_sign'
+  | 'closed_won'
+  | 'closed_lost';
 
 export interface Lead {
   id: string;
@@ -119,6 +120,16 @@ export interface Lead {
   notes?: string;
   // Import tracking
   importBatchId?: string;
+  // Pipeline fields
+  estimatedValue?: number;
+  probability?: number;
+  expectedCloseDate?: Date;
+  nextAction?: string;
+  nextActionDate?: Date;
+  lastActivityAt?: Date;
+  lostReason?: string;
+  sourceDetails?: any;
+  stageChangedAt?: Date;
   // ML-learned patterns
   learnedBestDays?: string[] | null;
   learnedBestTimes?: string[] | null;

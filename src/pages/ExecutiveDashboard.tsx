@@ -116,9 +116,9 @@ export default function ExecutiveDashboard() {
   // Conversion funnel data
   const funnelData = useMemo(() => {
     const newLeads = leads.filter(l => l.pipelineStatus === 'new_lead').length;
-    const contacted = leads.filter(l => ['contact_attempted', 'demo_created', 'demo_sent'].includes(l.pipelineStatus)).length;
-    const engaged = leads.filter(l => ['demo_engaged', 'ready_to_buy'].includes(l.pipelineStatus)).length;
-    const won = leads.filter(l => l.pipelineStatus === 'customer_won').length;
+    const contacted = leads.filter(l => ['contacted', 'demo_requested'].includes(l.pipelineStatus)).length;
+    const engaged = leads.filter(l => ['demo_completed', 'hot_lead', 'negotiating', 'ready_to_sign'].includes(l.pipelineStatus)).length;
+    const won = leads.filter(l => l.pipelineStatus === 'closed_won').length;
 
     return [
       { name: 'New Leads', value: newLeads, fill: 'hsl(var(--primary))' },
