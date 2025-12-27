@@ -423,7 +423,7 @@ export function AffiliateLayout({ children }: AffiliateLayoutProps) {
                 </DropdownMenuItem>
                 <DropdownMenuItem className="flex flex-col items-start p-3 cursor-pointer">
                   <p className="font-medium text-sm">New Training Available</p>
-                  <p className="text-xs text-muted-foreground">Check out the latest sales techniques in How-To</p>
+                  <p className="text-xs text-muted-foreground">Check out the latest training modules in How-To</p>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 

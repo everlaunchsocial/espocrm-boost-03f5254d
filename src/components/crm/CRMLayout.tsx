@@ -36,6 +36,7 @@ import {
   Lightbulb,
   ClipboardCheck,
   Target,
+  CreditCard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +79,7 @@ const adminNavigation = [
   { name: 'Customers', href: '/admin/customers', icon: Building2 },
   { name: 'Affiliate Videos', href: '/admin/affiliate-videos', icon: Video },
   { name: 'Payouts', href: '/admin/payouts', icon: DollarSign },
+  { name: 'Billing Settings', href: '/admin/billing-settings', icon: CreditCard, superAdminOnly: true },
   { name: 'Customer Usage', href: '/admin/customer-usage', icon: BarChart3 },
   { name: 'AI Usage & Costs', href: '/admin/usage', icon: DollarSign },
   { name: 'Quality Insights', href: '/admin/quality-insights', icon: Phone },
