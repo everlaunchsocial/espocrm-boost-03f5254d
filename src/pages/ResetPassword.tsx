@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,27 @@ import { Label } from '@/components/ui/label';
 import { Loader2, KeyRound, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+const RECOVERY_TOKENS_KEY = 'pw_recovery_tokens';
+
+type StoredRecoveryTokens = {
+  type: 'recovery';
+  access_token: string;
+  refresh_token: string;
+};
+
+function readStoredRecoveryTokens(): StoredRecoveryTokens | null {
+  try {
+    const raw = sessionStorage.getItem(RECOVERY_TOKENS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredRecoveryTokens>;
+    if (parsed?.type !== 'recovery') return null;
+    if (!parsed.access_token || !parsed.refresh_token) return null;
+    return parsed as StoredRecoveryTokens;
+  } catch {
+    return null;
+  }
+}
+
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
@@ -16,35 +37,30 @@ export default function ResetPassword() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
 
+  const storedTokens = useMemo(() => readStoredRecoveryTokens(), []);
+
   useEffect(() => {
-    // DON'T create a session here - just check if recovery tokens are present in URL
-    // Session will be created only when user submits the form
+    // IMPORTANT: Do NOT create a session here.
+    // Just detect whether a recovery link is present so we can show the form.
     const url = new URL(window.location.href);
     const code = url.searchParams.get('code');
     const tokenHash = url.searchParams.get('token_hash');
     const type = url.searchParams.get('type');
-    
-    // Check hash params for legacy format
-    const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
-    const hashType = hashParams.get('type');
-    const accessToken = hashParams.get('access_token');
-    
-    const hasRecoveryParams = 
-      code || 
-      tokenHash ||
+
+    // Legacy recovery links can arrive as URL hash params.
+    // We proactively moved them into sessionStorage in src/main.tsx.
+    const hasRecoveryParams =
+      !!code ||
+      !!tokenHash ||
       type === 'recovery' ||
-      (hashType === 'recovery' && accessToken);
-    
-    if (hasRecoveryParams) {
-      setIsValidSession(true); // Show the form - don't create session yet
-    } else {
-      setIsValidSession(false); // Invalid - no tokens
-    }
-  }, []);
+      !!storedTokens;
+
+    setIsValidSession(hasRecoveryParams);
+  }, [storedTokens]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -62,52 +78,50 @@ export default function ResetPassword() {
       const code = url.searchParams.get('code');
       const tokenHash = url.searchParams.get('token_hash');
       const type = url.searchParams.get('type');
-      
-      // Check hash params for legacy format
-      const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
-      const hashAccessToken = hashParams.get('access_token');
-      const hashType = hashParams.get('type');
 
-      // PKCE flow - exchange code for session NOW (at form submission time)
+      // 1) Create a temporary session ONLY at submit time
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError) throw exchangeError;
-      } 
-      // Token hash flow
-      else if (type === 'recovery' && tokenHash) {
+      } else if (type === 'recovery' && tokenHash) {
         const { error: verifyError } = await supabase.auth.verifyOtp({
           type: 'recovery',
           token_hash: tokenHash,
         });
         if (verifyError) throw verifyError;
-      }
-      // Legacy hash flow - session should already exist from the hash
-      else if (hashType === 'recovery' && hashAccessToken) {
-        // Legacy flow - Supabase handles this automatically via the hash
+      } else if (storedTokens) {
+        // Legacy implicit flow: we prevented auto-session creation by clearing the hash early.
+        // So we recreate the session manually here.
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: storedTokens.access_token,
+          refresh_token: storedTokens.refresh_token,
+        });
+        if (setSessionError) throw setSessionError;
+      } else {
+        throw new Error('Invalid or expired reset link. Please request a new one.');
       }
 
-      // Now update the password
+      // 2) Update the password
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
-      // SECURITY: Sign out after password update to force fresh login
+      // 3) Clear stored recovery tokens and sign out to prevent "auto login" after reset
+      sessionStorage.removeItem(RECOVERY_TOKENS_KEY);
       await supabase.auth.signOut();
-      
+
       setIsSuccess(true);
       toast.success('Password updated successfully! Please sign in with your new password.');
-      
-      // Redirect to login page after brief delay
+
       setTimeout(() => {
         navigate('/auth', { replace: true });
-      }, 2000);
+      }, 1500);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to update password');
+      toast.error(error?.message || 'Failed to update password');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Still checking session validity
   if (isValidSession === null) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center px-4">
@@ -116,7 +130,6 @@ export default function ResetPassword() {
     );
   }
 
-  // Invalid or expired reset link
   if (isValidSession === false) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center px-4">
@@ -128,10 +141,7 @@ export default function ResetPassword() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              className="w-full" 
-              onClick={() => navigate('/auth')}
-            >
+            <Button className="w-full" onClick={() => navigate('/auth')}>
               Back to Login
             </Button>
           </CardContent>
@@ -149,9 +159,7 @@ export default function ResetPassword() {
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
             <CardTitle>Password Updated!</CardTitle>
-            <CardDescription>
-              Redirecting you to sign in with your new password...
-            </CardDescription>
+            <CardDescription>Redirecting you to sign in with your new password...</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -166,9 +174,7 @@ export default function ResetPassword() {
             <KeyRound className="h-8 w-8 text-primary" />
           </div>
           <CardTitle>Set New Password</CardTitle>
-          <CardDescription>
-            Enter your new password below
-          </CardDescription>
+          <CardDescription>Enter your new password below</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -182,6 +188,7 @@ export default function ResetPassword() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
             <div className="space-y-2">
@@ -194,6 +201,7 @@ export default function ResetPassword() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={6}
+                autoComplete="new-password"
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
