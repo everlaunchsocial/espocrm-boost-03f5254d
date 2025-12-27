@@ -114,6 +114,7 @@ import AdminEvertrak from "./pages/admin/AdminEvertrak";
 import SuggestionLog from "./pages/admin/SuggestionLog";
 import AIAssistantAnalytics from "./pages/admin/AIAssistantAnalytics";
 import Testing from "./pages/admin/Testing";
+import BillingSettings from "./pages/admin/BillingSettings";
 
 
 // Customer Portal pages
@@ -300,6 +301,7 @@ const App = () => (
             <Route path="/admin/suggestion-log" element={<SuggestionLog />} />
             <Route path="/admin/ai-analytics" element={<AIAssistantAnalytics />} />
             <Route path="/admin/testing" element={<Testing />} />
+            <Route path="/admin/billing-settings" element={<BillingSettings />} />
             <Route path="/admin/upload-background" element={<UploadBackground />} />
             <Route path="/admin/affiliate-videos" element={<AdminAffiliateVideos />} />
             <Route path="/admin/affiliate-videos/create-profile" element={<AdminCreateAvatarProfile />} />

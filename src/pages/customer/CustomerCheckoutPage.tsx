@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { getStoredAffiliateId, storeAffiliateAttribution } from "@/utils/affiliateAttribution";
 import { getAffiliateUsernameFromPath } from "@/utils/subdomainRouting";
 import { useAffiliateContext, loadAffiliateContext } from "@/hooks/useAffiliateContext";
+import { useActiveBillingConfiguration, BillingConfiguration } from "@/hooks/useBillingConfiguration";
 
 // Plans must match database codes: starter, growth, professional
 const plans = [
@@ -78,6 +79,9 @@ export default function CustomerCheckoutPage() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
+
+  // Get active billing configuration
+  const { data: billingConfig, isLoading: billingConfigLoading } = useActiveBillingConfiguration();
 
   // Get affiliate from URL ref param, subdomain, or stored attribution
   const refFromUrl = searchParams.get("ref");
@@ -288,7 +292,7 @@ export default function CustomerCheckoutPage() {
             Change Plan
           </Button>
           
-          {/* Selected Plan Summary */}
+          {/* Selected Plan Summary with Billing Configuration */}
           <Card className="mb-6 border-primary">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -299,9 +303,41 @@ export default function CustomerCheckoutPage() {
                 </div>
               </div>
               <CardDescription>
-                {currentPlan?.minutes} minutes/month + ${currentPlan?.setupFee} setup fee
+                {currentPlan?.minutes} minutes/month
               </CardDescription>
             </CardHeader>
+            <CardContent className="pt-0">
+              {billingConfig && (
+                <div className="text-sm space-y-2 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Setup Fee:</span>
+                    <span className="font-medium">${billingConfig.setup_fee}</span>
+                  </div>
+                  {billingConfig.charge_first_month ? (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">First Month:</span>
+                      <span className="font-medium">${currentPlan?.price}</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">First Month:</span>
+                      <span className="font-medium text-green-600">Included</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t pt-2 mt-2">
+                    <span className="text-muted-foreground">Due Today:</span>
+                    <span className="font-bold text-lg">
+                      ${billingConfig.charge_first_month 
+                        ? billingConfig.setup_fee + (currentPlan?.price || 0) 
+                        : billingConfig.setup_fee}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {billingConfig.description}
+                  </p>
+                </div>
+              )}
+            </CardContent>
           </Card>
           
           {/* Account Creation Form */}

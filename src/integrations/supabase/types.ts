@@ -1094,6 +1094,72 @@ export type Database = {
           },
         ]
       }
+      billing_configuration_changes: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_configuration_name: string
+          note: string | null
+          old_configuration_name: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_configuration_name: string
+          note?: string | null
+          old_configuration_name?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_configuration_name?: string
+          note?: string | null
+          old_configuration_name?: string | null
+        }
+        Relationships: []
+      }
+      billing_configurations: {
+        Row: {
+          billing_delay_days: number
+          charge_first_month: boolean
+          created_at: string
+          description: string
+          display_name: string
+          id: string
+          is_active: boolean
+          name: string
+          setup_fee: number
+          updated_at: string
+        }
+        Insert: {
+          billing_delay_days?: number
+          charge_first_month?: boolean
+          created_at?: string
+          description: string
+          display_name: string
+          id?: string
+          is_active?: boolean
+          name: string
+          setup_fee?: number
+          updated_at?: string
+        }
+        Update: {
+          billing_delay_days?: number
+          charge_first_month?: boolean
+          created_at?: string
+          description?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          setup_fee?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       billing_subscriptions: {
         Row: {
           affiliate_id: string | null
