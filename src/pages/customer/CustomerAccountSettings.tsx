@@ -65,6 +65,7 @@ type EmailChangeFormData = z.infer<typeof emailChangeSchema>;
 type NotificationFormData = z.infer<typeof notificationSchema>;
 
 export default function CustomerAccountSettings() {
+  const [activeTab, setActiveTab] = useState('account');
   const [isLoading, setIsLoading] = useState(true);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
@@ -341,7 +342,7 @@ export default function CustomerAccountSettings() {
           </p>
         </div>
 
-        <Tabs defaultValue="account" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="account" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
