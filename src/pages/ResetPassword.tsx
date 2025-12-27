@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, KeyRound, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { getRedirectPathForRole, AppRole } from '@/hooks/useAuthRole';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -18,61 +17,67 @@ export default function ResetPassword() {
   const [isValidSession, setIsValidSession] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // SECURITY: This page should ONLY show a password entry form.
-    // It must NOT auto-login or redirect until password is successfully updated.
-    
-    // Listen for PASSWORD_RECOVERY event which confirms valid reset session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[ResetPassword] Auth event:', event);
+    // This page must always render the reset form when reached via a valid recovery link.
+    // Support both legacy hash tokens and the newer query-param flows.
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // Valid recovery session - allow password reset
-        console.log('[ResetPassword] PASSWORD_RECOVERY event received');
         setIsValidSession(true);
       }
-      // SECURITY: Do NOT auto-redirect on SIGNED_IN - we need the user to set their password first
     });
 
-    // Check URL hash for recovery token (Supabase embeds it in hash)
-    const checkForRecoverySession = async () => {
-      const hash = window.location.hash;
-      const params = new URLSearchParams(hash.replace('#', ''));
-      const accessToken = params.get('access_token');
-      const type = params.get('type');
-      
-      console.log('[ResetPassword] URL hash type:', type, 'hasAccessToken:', !!accessToken);
-      
-      // SECURITY: Only allow access if this is a recovery flow
-      if (type === 'recovery' && accessToken) {
-        console.log('[ResetPassword] Recovery token found in URL - showing password form');
-        setIsValidSession(true);
-        return;
-      }
-      
-      // Check if we have a session from a recent PASSWORD_RECOVERY event
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('[ResetPassword] Session check:', !!session);
-      
-      if (session) {
-        // SECURITY: Check if this is a legitimate recovery flow
-        // The hash should contain recovery type, or we got here via PASSWORD_RECOVERY event
-        const isFromRecoveryLink = type === 'recovery' || hash.includes('type=recovery');
-        
-        if (isFromRecoveryLink) {
+    const init = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const searchType = url.searchParams.get('type');
+        const searchCode = url.searchParams.get('code');
+        const tokenHash = url.searchParams.get('token_hash');
+
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+        const hashType = hashParams.get('type');
+        const accessToken = hashParams.get('access_token');
+
+        const type = searchType ?? hashType;
+
+        // Newer PKCE-style flow
+        if (searchCode) {
+          const { error } = await supabase.auth.exchangeCodeForSession(searchCode);
+          if (error) throw error;
           setIsValidSession(true);
-        } else {
-          // User navigated here directly while logged in - this is NOT a password reset
-          // Show expired message to prevent confusion
-          console.log('[ResetPassword] User is logged in but not in recovery flow - showing expired');
-          setIsValidSession(false);
+          return;
         }
-      } else {
-        // No session at all - invalid or expired link
-        console.log('[ResetPassword] No session found - link expired');
+
+        // token_hash recovery flow
+        if (type === 'recovery' && tokenHash) {
+          const { error } = await supabase.auth.verifyOtp({
+            type: 'recovery',
+            token_hash: tokenHash,
+          });
+          if (error) throw error;
+          setIsValidSession(true);
+          return;
+        }
+
+        // Legacy hash flow
+        if (type === 'recovery' && accessToken) {
+          setIsValidSession(true);
+          return;
+        }
+
+        // Fallback: only treat as valid if we have a session AND the URL indicates recovery
+        const { data: { session } } = await supabase.auth.getSession();
+        const hasRecoveryHint =
+          type === 'recovery' ||
+          url.search.includes('type=recovery') ||
+          window.location.hash.includes('type=recovery');
+
+        setIsValidSession(!!session && hasRecoveryHint);
+      } catch {
         setIsValidSession(false);
       }
     };
-    
-    checkForRecoverySession();
+
+    init();
 
     return () => subscription.unsubscribe();
   }, []);
