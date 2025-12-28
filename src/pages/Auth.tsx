@@ -213,6 +213,9 @@ export default function Auth() {
               ? 'Enter your email to receive a password reset link'
               : 'Sign in to your EverLaunch account'}
           </CardDescription>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Deployment check: 2025-12-28
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
